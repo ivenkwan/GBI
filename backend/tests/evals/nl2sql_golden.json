@@ -1,0 +1,202 @@
+[
+  {
+    "id": "nl2sql_001",
+    "category": "simple_aggregation",
+    "difficulty": "easy",
+    "nl_query": "Show me total revenue by region",
+    "expected_sql": "SELECT region, SUM(revenue) AS total_revenue FROM public.sales GROUP BY region ORDER BY total_revenue DESC",
+    "tables_used": ["public.sales"],
+    "expected_columns": ["region", "total_revenue"],
+    "tolerance": "fuzzy"
+  },
+  {
+    "id": "nl2sql_002",
+    "category": "simple_aggregation",
+    "difficulty": "easy",
+    "nl_query": "How many customers do we have in each country?",
+    "expected_sql": "SELECT country, COUNT(*) AS customer_count FROM public.customers GROUP BY country ORDER BY customer_count DESC",
+    "tables_used": ["public.customers"],
+    "expected_columns": ["country", "customer_count"],
+    "tolerance": "fuzzy"
+  },
+  {
+    "id": "nl2sql_003",
+    "category": "filtering",
+    "difficulty": "easy",
+    "nl_query": "List all orders from the last 30 days",
+    "expected_sql": "SELECT * FROM public.orders WHERE order_date >= CURRENT_DATE - INTERVAL '30 days' ORDER BY order_date DESC",
+    "tables_used": ["public.orders"],
+    "expected_columns": [],
+    "tolerance": "fuzzy"
+  },
+  {
+    "id": "nl2sql_004",
+    "category": "time_series",
+    "difficulty": "medium",
+    "nl_query": "Show me monthly revenue for 2025",
+    "expected_sql": "SELECT DATE_TRUNC('month', transaction_date) AS month, SUM(amount) AS revenue FROM public.transactions WHERE transaction_date BETWEEN '2025-01-01' AND '2025-12-31' GROUP BY month ORDER BY month",
+    "tables_used": ["public.transactions"],
+    "expected_columns": ["month", "revenue"],
+    "tolerance": "fuzzy"
+  },
+  {
+    "id": "nl2sql_005",
+    "category": "joining",
+    "difficulty": "medium",
+    "nl_query": "Show customer names with their total order amounts",
+    "expected_sql": "SELECT c.name, SUM(o.amount) AS total_orders FROM public.customers c JOIN public.orders o ON c.id = o.customer_id GROUP BY c.name ORDER BY total_orders DESC",
+    "tables_used": ["public.customers", "public.orders"],
+    "expected_columns": ["name", "total_orders"],
+    "tolerance": "fuzzy"
+  },
+  {
+    "id": "nl2sql_006",
+    "category": "filtering",
+    "difficulty": "medium",
+    "nl_query": "Which products have revenue greater than $100,000?",
+    "expected_sql": "SELECT product_name, SUM(revenue) AS total_revenue FROM public.sales GROUP BY product_name HAVING SUM(revenue) > 100000 ORDER BY total_revenue DESC",
+    "tables_used": ["public.sales"],
+    "expected_columns": ["product_name", "total_revenue"],
+    "tolerance": "fuzzy"
+  },
+  {
+    "id": "nl2sql_007",
+    "category": "time_series",
+    "difficulty": "medium",
+    "nl_query": "What was the week-over-week growth in signups?",
+    "expected_sql": "SELECT week, signups, LAG(signups) OVER (ORDER BY week) AS prev_week_signups, ROUND((signups - LAG(signups) OVER (ORDER BY week)) * 100.0 / NULLIF(LAG(signups) OVER (ORDER BY week), 0), 2) AS growth_pct FROM (SELECT DATE_TRUNC('week', signup_date) AS week, COUNT(*) AS signups FROM public.users GROUP BY week) sub ORDER BY week",
+    "tables_used": ["public.users"],
+    "expected_columns": ["week", "signups", "growth_pct"],
+    "tolerance": "semantic"
+  },
+  {
+    "id": "nl2sql_008",
+    "category": "ranking",
+    "difficulty": "medium",
+    "nl_query": "Show the top 10 customers by lifetime value",
+    "expected_sql": "SELECT customer_id, customer_name, SUM(order_amount) AS lifetime_value FROM public.orders GROUP BY customer_id, customer_name ORDER BY lifetime_value DESC LIMIT 10",
+    "tables_used": ["public.orders"],
+    "expected_columns": ["customer_id", "customer_name", "lifetime_value"],
+    "tolerance": "fuzzy"
+  },
+  {
+    "id": "nl2sql_009",
+    "category": "subquery",
+    "difficulty": "hard",
+    "nl_query": "Find customers who have placed orders above the average order value",
+    "expected_sql": "SELECT DISTINCT c.id, c.name FROM public.customers c JOIN public.orders o ON c.id = o.customer_id WHERE o.amount > (SELECT AVG(amount) FROM public.orders) ORDER BY c.name",
+    "tables_used": ["public.customers", "public.orders"],
+    "expected_columns": ["id", "name"],
+    "tolerance": "fuzzy"
+  },
+  {
+    "id": "nl2sql_010",
+    "category": "cte",
+    "difficulty": "hard",
+    "nl_query": "Calculate the month-over-month revenue growth rate",
+    "expected_sql": "WITH monthly_revenue AS (SELECT DATE_TRUNC('month', transaction_date) AS month, SUM(amount) AS revenue FROM public.transactions GROUP BY month) SELECT month, revenue, LAG(revenue) OVER (ORDER BY month) AS prev_month_revenue, ROUND((revenue - LAG(revenue) OVER (ORDER BY month)) * 100.0 / NULLIF(LAG(revenue) OVER (ORDER BY month), 0), 2) AS growth_pct FROM monthly_revenue ORDER BY month",
+    "tables_used": ["public.transactions"],
+    "expected_columns": ["month", "revenue", "growth_pct"],
+    "tolerance": "semantic"
+  },
+  {
+    "id": "nl2sql_011",
+    "category": "simple_aggregation",
+    "difficulty": "easy",
+    "nl_query": "What is the average order value?",
+    "expected_sql": "SELECT AVG(amount) AS average_order_value FROM public.orders",
+    "tables_used": ["public.orders"],
+    "expected_columns": ["average_order_value"],
+    "tolerance": "fuzzy"
+  },
+  {
+    "id": "nl2sql_012",
+    "category": "filtering",
+    "difficulty": "easy",
+    "nl_query": "Show me inactive users who haven't logged in for 90 days",
+    "expected_sql": "SELECT id, name, email, last_login FROM public.users WHERE last_login < CURRENT_DATE - INTERVAL '90 days' OR last_login IS NULL ORDER BY last_login ASC NULLS FIRST",
+    "tables_used": ["public.users"],
+    "expected_columns": ["id", "name", "email", "last_login"],
+    "tolerance": "fuzzy"
+  },
+  {
+    "id": "nl2sql_013",
+    "category": "joining",
+    "difficulty": "medium",
+    "nl_query": "Which regions have the highest average deal size?",
+    "expected_sql": "SELECT r.region_name, AVG(d.amount) AS avg_deal_size FROM public.deals d JOIN public.regions r ON d.region_id = r.id GROUP BY r.region_name ORDER BY avg_deal_size DESC",
+    "tables_used": ["public.deals", "public.regions"],
+    "expected_columns": ["region_name", "avg_deal_size"],
+    "tolerance": "fuzzy"
+  },
+  {
+    "id": "nl2sql_014",
+    "category": "aggregation",
+    "difficulty": "medium",
+    "nl_query": "Show me the revenue breakdown by product category for Q1 2025",
+    "expected_sql": "SELECT p.category, SUM(s.revenue) AS total_revenue FROM public.sales s JOIN public.products p ON s.product_id = p.id WHERE s.transaction_date BETWEEN '2025-01-01' AND '2025-03-31' GROUP BY p.category ORDER BY total_revenue DESC",
+    "tables_used": ["public.sales", "public.products"],
+    "expected_columns": ["category", "total_revenue"],
+    "tolerance": "fuzzy"
+  },
+  {
+    "id": "nl2sql_015",
+    "category": "cohort_analysis",
+    "difficulty": "hard",
+    "nl_query": "Show the retention rate by signup cohort and month",
+    "expected_sql": "SELECT DATE_TRUNC('month', u.signup_date) AS cohort, DATE_TRUNC('month', a.activity_date) AS activity_month, COUNT(DISTINCT u.id) AS cohort_size, COUNT(DISTINCT a.user_id) AS active_users FROM public.users u LEFT JOIN public.activity a ON u.id = a.user_id AND a.activity_date >= u.signup_date GROUP BY cohort, activity_month ORDER BY cohort, activity_month",
+    "tables_used": ["public.users", "public.activity"],
+    "expected_columns": ["cohort", "activity_month", "cohort_size", "active_users"],
+    "tolerance": "semantic"
+  },
+  {
+    "id": "nl2sql_016",
+    "category": "simple_aggregation",
+    "difficulty": "easy",
+    "nl_query": "Count the number of transactions per day this week",
+    "expected_sql": "SELECT DATE(transaction_date) AS day, COUNT(*) AS transaction_count FROM public.transactions WHERE transaction_date >= DATE_TRUNC('week', CURRENT_DATE) GROUP BY day ORDER BY day",
+    "tables_used": ["public.transactions"],
+    "expected_columns": ["day", "transaction_count"],
+    "tolerance": "fuzzy"
+  },
+  {
+    "id": "nl2sql_017",
+    "category": "ranking",
+    "difficulty": "hard",
+    "nl_query": "Rank sales representatives by total revenue and show their region",
+    "expected_sql": "SELECT sr.name, r.region_name, SUM(s.revenue) AS total_revenue, RANK() OVER (ORDER BY SUM(s.revenue) DESC) AS rank FROM public.sales_representatives sr JOIN public.sales s ON sr.id = s.rep_id JOIN public.regions r ON sr.region_id = r.id GROUP BY sr.name, r.region_name ORDER BY rank",
+    "tables_used": ["public.sales_representatives", "public.sales", "public.regions"],
+    "expected_columns": ["name", "region_name", "total_revenue", "rank"],
+    "tolerance": "fuzzy"
+  },
+  {
+    "id": "nl2sql_018",
+    "category": "filtering",
+    "difficulty": "easy",
+    "nl_query": "Find all customers from Germany and France",
+    "expected_sql": "SELECT * FROM public.customers WHERE country IN ('Germany', 'France') ORDER BY name",
+    "tables_used": ["public.customers"],
+    "expected_columns": [],
+    "tolerance": "fuzzy"
+  },
+  {
+    "id": "nl2sql_019",
+    "category": "time_series",
+    "difficulty": "medium",
+    "nl_query": "Compare revenue this quarter vs the same quarter last year",
+    "expected_sql": "SELECT SUM(CASE WHEN transaction_date BETWEEN '2025-01-01' AND '2025-03-31' THEN amount ELSE 0 END) AS this_year_q1, SUM(CASE WHEN transaction_date BETWEEN '2024-01-01' AND '2024-03-31' THEN amount ELSE 0 END) AS last_year_q1 FROM public.transactions WHERE transaction_date BETWEEN '2024-01-01' AND '2025-03-31'",
+    "tables_used": ["public.transactions"],
+    "expected_columns": ["this_year_q1", "last_year_q1"],
+    "tolerance": "semantic"
+  },
+  {
+    "id": "nl2sql_020",
+    "category": "subquery",
+    "difficulty": "hard",
+    "nl_query": "Show products that have never been purchased",
+    "expected_sql": "SELECT p.id, p.product_name FROM public.products p WHERE p.id NOT IN (SELECT DISTINCT product_id FROM public.orders) ORDER BY p.product_name",
+    "tables_used": ["public.products", "public.orders"],
+    "expected_columns": ["id", "product_name"],
+    "tolerance": "fuzzy"
+  }
+]

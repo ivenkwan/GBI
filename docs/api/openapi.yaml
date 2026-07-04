@@ -1,0 +1,169 @@
+openapi: 3.1.0
+info:
+  title: GenBI API
+  version: 0.1.0
+  description: Generative BI Platform API
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Development
+
+paths:
+  /health:
+    get:
+      operationId: health_check
+      summary: Liveness probe
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /chat:
+    post:
+      operationId: chat
+      summary: Natural language to SQL + chart + narrative
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRequest"
+      responses:
+        "200":
+          description: Chat response with SQL, chart, and narrative
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatResponse"
+
+  /charts/render:
+    post:
+      operationId: render_chart
+      summary: Render a chart via Flint MCP
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChartRenderRequest"
+      responses:
+        "200":
+          description: Rendered chart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChartRenderResponse"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        version:
+          type: string
+
+    ChatRequest:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+          minLength: 1
+          maxLength: 5000
+        conversation_id:
+          type: string
+
+    ChatResponse:
+      type: object
+      properties:
+        conversation_id:
+          type: string
+        query:
+          type: string
+        sql:
+          type: string
+        sql_explanation:
+          type: string
+        chart_spec:
+          type: object
+        narrative:
+          type: string
+        chart_image_base64:
+          type: string
+        warnings:
+          type: array
+          items:
+            type: string
+
+    ChartRenderRequest:
+      type: object
+      required: [spec]
+      properties:
+        spec:
+          $ref: "#/components/schemas/ChartAssemblyInput"
+        backend:
+          type: string
+          enum: [vegalite, echarts, chartjs]
+          default: vegalite
+        format:
+          type: string
+          enum: [png, svg]
+          default: png
+
+    ChartRenderResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        format:
+          type: string
+        image_base64:
+          type: string
+        svg:
+          type: string
+        warnings:
+          type: array
+          items:
+            type: string
+        errors:
+          type: array
+          items:
+            type: string
+
+    ChartAssemblyInput:
+      type: object
+      required: [chartType, data]
+      properties:
+        chartType:
+          type: string
+        encodings:
+          type: object
+        baseSize:
+          type: object
+          properties:
+            width:
+              type: integer
+            height:
+              type: integer
+        semantic_types:
+          type: object
+        data:
+          type: object
+          properties:
+            values:
+              type: array
+            url:
+              type: string

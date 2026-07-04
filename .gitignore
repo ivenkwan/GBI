@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+.env
+*.env.local
+
+# Node
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+npm-debug.log*
+pnpm-debug.log*
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-data/
+
+# Test
+.coverage
+htmlcov/
+.pytest_cache/
+*.cover
+
+# Langfuse
+.langfuse/
+
+# DBT
+semantic/dbt/logs/
+semantic/dbt/target/
+
+# Certificates
+*.pem
+*.key
+*.crt
+!infra/certs/.gitkeep

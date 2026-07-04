@@ -1,0 +1,111 @@
+services:
+  # =========================================================================
+  # Core Services
+  # =========================================================================
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: genbi-postgres
+    environment:
+      POSTGRES_USER: genbi
+      POSTGRES_PASSWORD: genbi
+      POSTGRES_DB: genbi
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U genbi"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: genbi-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # =========================================================================
+  # Application Services
+  # =========================================================================
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: genbi-backend
+    env_file:
+      - ../backend/.env
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ../backend:/app
+      - flint_data:/tmp/genbi-charts
+    command: uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: genbi-frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    volumes:
+      - ../frontend:/app
+      - /app/node_modules
+    command: pnpm dev
+
+  # =========================================================================
+  # Semantic Layer
+  # =========================================================================
+  cube:
+    image: cubejs/cube:latest
+    container_name: genbi-cube
+    env_file:
+      - ../semantic/cube/.env
+    ports:
+      - "4000:4000"
+
+  # =========================================================================
+  # Observability
+  # =========================================================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: genbi-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: genbi-grafana
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+
+  otel_collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: genbi-otel
+    ports:
+      - "4318:4318"
+      - "8888:8888"
+
+volumes:
+  postgres_data:
+  flint_data:
