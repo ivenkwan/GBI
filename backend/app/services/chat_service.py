@@ -5,8 +5,8 @@ Flow:
       -> RouterAgent (intent classification)
         -> NL2SQLAgent (SQL generation with schema context + few-shot examples)
           -> ValidationAgent (safety check + EXPLAIN)
-            -> Connector (read-only execution)
-              -> ChartGenAgent (Flint chart spec + render)
+            -> Connector (read-only execution, cached)
+              -> ChartGenAgent (Flint chart spec + render + hallucination check)
                 -> NarrativeAgent (insight paragraph)
                   -> AuditLog (persist trace)
 
@@ -20,6 +20,7 @@ from uuid import uuid4
 from app.agents.base import AgentConfig
 from app.agents.registry import get_agent
 from app.core.logging import logger
+from app.core.cache import get_cache, _hash_sql as cache_hash_sql
 
 
 class ChatService:
@@ -93,7 +94,7 @@ class ChatService:
                     warnings=warnings + ["Generated SQL failed safety validation"],
                 )
 
-            # Step 4: Execute -- run the query
+            # Step 4: Execute -- run the query (cached)
             data, exec_warnings = await self._step_execute(
                 sql=validated_sql or sql,
             )
@@ -107,7 +108,7 @@ class ChatService:
                     warnings=warnings + ["Query execution returned no data"],
                 )
 
-            # Step 5: Chart -- generate spec + render
+            # Step 5: Chart -- generate spec + validate + render
             chart_output = await self._step_chart(
                 data=data,
                 query=query,
@@ -219,7 +220,7 @@ class ChatService:
                 yield _emit("done", {"status": "no_data", "warnings": warnings})
                 return
 
-            # Step 5: Chart
+            # Step 5: Chart (with hallucination detection)
             chart_output = await self._step_chart(data=data, query=query)
             warnings.extend(chart_output.get("warnings", []))
             yield _emit("chart", {
@@ -274,7 +275,11 @@ class ChatService:
         query: str,
         user_id: str,
     ) -> tuple[str | None, list[str]]:
-        """Step 2: Generate SQL from natural language."""
+        """Step 2: Generate SQL from natural language.
+
+        Schema context is cached at L1+L2 per (query_hash, tenant_id).
+        Metric definitions from Cube.dev are cached at L2 per tenant.
+        """
         try:
             agent_cls = get_agent("nl2sql")
             if not agent_cls:
@@ -289,13 +294,22 @@ class ChatService:
                 )
             )
 
-            # Load metric definitions from Cube.dev semantic layer
+            # Load metric definitions from Cube.dev semantic layer (cached)
             metric_context = ""
             try:
-                from app.semantic.cube_client import get_cube_client
-                cube = get_cube_client()
-                metric_context = await cube.get_agent_context(query=query)
-                logger.info("Metric context loaded", length=len(metric_context))
+                cache = get_cache()
+
+                # Check cache for metric definitions
+                cached_metrics = await cache.get_metric_definitions(self.tenant_id)
+                if cached_metrics is not None:
+                    metric_context = cached_metrics
+                    logger.info("Metric context loaded from cache")
+                else:
+                    from app.semantic.cube_client import get_cube_client
+                    cube = get_cube_client()
+                    metric_context = await cube.get_agent_context(query=query)
+                    await cache.set_metric_definitions(self.tenant_id, metric_context)
+                    logger.info("Metric context loaded and cached", length=len(metric_context))
             except Exception as e:
                 logger.warning(f"Metric context unavailable -- continuing without: {e}")
 
@@ -345,8 +359,19 @@ class ChatService:
             return False, [f"Validation error: {str(e)}"], None
 
     async def _step_execute(self, sql: str) -> tuple[list[dict] | None, list[str]]:
-        """Step 4: Execute SQL against the data source."""
+        """Step 4: Execute SQL against the data source. Cached at L1+L2."""
         try:
+            # Check cache first
+            cache = get_cache()
+            cached_result = await cache.get_query_result(sql, self.tenant_id)
+            if cached_result is not None:
+                logger.info(
+                    "Query result cache hit",
+                    row_count=len(cached_result),
+                    tenant_id=self.tenant_id,
+                )
+                return cached_result, []
+
             from app.connectors.postgresql_connector import PostgreSQLConnector
             from app.core.config import settings
 
@@ -361,6 +386,10 @@ class ChatService:
                     row_count=len(results),
                     tenant_id=self.tenant_id,
                 )
+
+                # Cache the result
+                await cache.set_query_result(sql, self.tenant_id, results)
+
                 return results, []
 
         except Exception as e:
@@ -372,7 +401,12 @@ class ChatService:
         data: list[dict],
         query: str,
     ) -> dict:
-        """Step 5: Generate chart spec and render via Flint/Altair bridge."""
+        """Step 5: Generate chart spec, validate, and render via Flint/Altair bridge.
+
+        Chart hallucination detection runs between generation and rendering.
+        If the spec has errors, auto-correction is attempted before the fallback
+        render path. Every correction is logged and surfaced as a warning.
+        """
         try:
             agent_cls = get_agent("chart_gen")
             if not agent_cls:
@@ -394,12 +428,74 @@ class ChatService:
             if not result.success:
                 return {"warnings": result.errors}
 
+            chart_spec = result.output.get("chart_spec", {})
+
+            # --- Hallucination detection ---
+            if chart_spec and data:
+                try:
+                    from app.agents.validation.chart_validator import (
+                        validate_chart_spec,
+                    )
+
+                    validation = validate_chart_spec(
+                        spec=chart_spec,
+                        data=data,
+                        auto_correct=True,
+                    )
+
+                    validation_warnings = validation.warnings + validation.fix_summary
+
+                    if validation.corrected_spec is not None:
+                        logger.info(
+                            "Chart spec auto-corrected",
+                            corrections=validation.fix_summary,
+                            original_type=chart_spec.get("chartType"),
+                            corrected_type=validation.corrected_spec.get("chartType"),
+                        )
+                        chart_spec = validation.corrected_spec
+
+                    if not validation.is_valid:
+                        error_codes = [
+                            i.code for i in validation.issues if i.severity == "error"
+                        ]
+                        logger.warning(
+                            "Chart spec has uncorrectable errors",
+                            errors=error_codes,
+                        )
+                        validation_warnings.insert(
+                            0,
+                            f"Chart spec has uncorrectable errors: {', '.join(error_codes)}",
+                        )
+                    elif validation_warnings:
+                        logger.info(
+                            "Chart spec validated with warnings",
+                            warning_count=len(validation_warnings),
+                        )
+
+                except ImportError:
+                    validation_warnings = []
+                    logger.debug("Chart validator not available -- skipping")
+                except Exception as e:
+                    validation_warnings = [f"Chart validation skipped: {e}"]
+                    logger.warning(f"Chart validation exception: {e}")
+            else:
+                validation_warnings = []
+
+            # --- Cache the validated chart spec ---
+            if chart_spec and data:
+                try:
+                    cache = get_cache()
+                    data_hash = cache_hash_sql(json.dumps(data[:10], default=str))
+                    await cache.set_chart_spec(data_hash, self.tenant_id, chart_spec)
+                except Exception:
+                    pass  # Non-critical
+
             return {
-                "chart_spec": result.output.get("chart_spec"),
+                "chart_spec": chart_spec,
                 "image_base64": result.output.get("image_base64"),
                 "svg": result.output.get("svg"),
                 "backend": result.output.get("backend"),
-                "warnings": result.warnings,
+                "warnings": result.warnings + validation_warnings,
             }
 
         except Exception as e:
