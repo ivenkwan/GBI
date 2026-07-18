@@ -51,3 +51,6 @@ semantic/dbt/target/
 *.key
 *.crt
 !infra/certs/.gitkeep
+
+# Graphify (knowledge graph output)
+graphify-out/
