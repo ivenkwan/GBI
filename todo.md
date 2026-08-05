@@ -100,6 +100,12 @@ User Query
 
 ## Phase 5b — Environment Provisioning & Bootstrap (new)
 
+> ⚠️ **STATUS: UNVERIFIED.** All code is written and statically checked (every
+> file parses; integration points traced by hand), but **nothing has been
+> executed** — no Docker build, no test run. Treat this phase as unverified
+> until [Phase 7](#phase-7--build--test-verification-new) lands. Do not ship or
+> rely on these changes passing until then.
+
 > **Added:** 2026-08-05. Goal: a single `make setup && make up` (or one shell
 > script) takes a clean machine to a fully running platform — all services
 > healthy, dependencies installed, DB migrated and seeded, secrets generated,
@@ -404,6 +410,12 @@ can be verified against a running stack rather than by static reading.
 
 ## Phase 6 — Security & Integrity Hardening (post-review)
 
+> ⚠️ **STATUS: UNVERIFIED.** Code is written and statically checked, but the
+> load-bearing changes (golden eval invoking `NL2SQLAgent`, `ChartGenAgent`
+> through `llm_client`, connector tenant GUC, RLS policies) have **not been
+> executed**. Treat as unverified until [Phase 7](#phase-7--build--test-verification-new)
+> lands.
+
 > **Added:** 2026-08-05, following a full codebase review. Each item closes a gap
 > between a documented guarantee (CLAUDE.md) and the actual code. All findings
 > have file:line citations verified against the current tree.
@@ -669,3 +681,261 @@ Tasks have no hard ordering dependency, but the lowest-risk high-impact order is
 
 Each task should be its own commit/PR. Run `uv run pytest tests/ -v -m "not e2e"`
 after each.
+
+---
+
+## Phase 7 — Build & Test Verification (new)
+
+> **Added:** 2026-08-06. Phases 5b and 6 were implemented and statically verified
+> (all files parse, integration points traced by hand), but the two things that
+> require a live environment were NOT executed: the test suite and the Docker
+> build (including the custom AGE image). These tasks close that loop. They are
+> verification/validation work, not new features.
+
+| # | Task | Severity | Status |
+|---|---|---|---|
+| 1 | Run the backend test suite for real; fix what fails | 🔴 High | ☐ |
+| 2 | Build the stack via `make setup`; fix the AGE image + any boot failures | 🔴 High | ☐ |
+| 3 | Run `make verify` green end-to-end on a clean provision | 🟠 Medium | ☐ |
+| 4 | Add a CI job that builds the custom Postgres image | 🟠 Medium | ☐ |
+| 5 | Closeout: flip Phase 5b + Phase 6 from UNVERIFIED → verified | 🟠 Medium | ☐ |
+
+---
+
+### Task 1 — Run the test suite for real and remediate failures
+
+**Why it matters:** Phase 6 changed load-bearing code — the golden eval now
+invokes `NL2SQLAgent` (was tautological), `ChartGenAgent` routes through
+`llm_client`, and the connector gained a tenant GUC. None of it has actually
+been executed. "It parses" ≠ "it works."
+
+**How to run:**
+```bash
+make setup                                                       # provisions the stack
+docker compose -f infra/docker-compose.dev.yml exec backend \
+  uv run pytest tests/ -v -m "not e2e" --tb=short
+```
+Or locally without Docker (faster iteration):
+```bash
+cd backend && uv sync --dev
+uv run pytest tests/ -v -m "not e2e" --tb=short
+uv run pytest tests/evals/ -v                                    # the rewritten gate
+```
+
+**Known risks to watch for (traced, not yet confirmed):**
+
+1. **pytest-asyncio collection of the new async class methods.**
+   `test_nl2sql_eval.py`'s `TestEvalSuite.test_full_suite_accuracy` and
+   `test_suite_detects_corrupted_mock` are `async def` methods on a plain
+   class. `asyncio_mode = "auto"` (`pyproject.toml`) auto-marks free async
+   functions, but **class-based async tests may need an explicit marker or a
+   `pytest_asyncio.fixture`** depending on the pytest-asyncio version. If they
+   show as skipped/errored with "coroutine never awaited", add
+   `@pytest.mark.asyncio` to the class or convert to module-level async
+   functions. Verify first — don't assume.
+
+2. **The golden eval imports `NL2SQLAgent` which imports `langchain_anthropic`
+   at module load** (`nl2sql_agent.py:16`). If `uv sync --dev` didn't install
+   it (it's in base deps, should be fine), collection errors. Confirm
+   `langchain-anthropic>=0.3` resolves.
+
+3. **`load_prompt("nl2sql-system")` path resolution at test time.**
+   `llm_client.load_prompt` computes the path as
+   `Path(__file__).parent.parent.parent.parent / ".claude" / "prompts"`
+   (`llm_client.py:327`). From `backend/app/core/llm_client.py` that's
+   `<repo>/.claude/prompts/` — correct when run from the repo, but inside the
+   Docker container (`WORKDIR /app`, i.e. `backend/`) it resolves to
+   `/app/.claude/prompts` which **does not exist**. The prompt returns `""` and
+   tests still pass (agent builds its own user message), but it's a latent bug
+   for runtime. File as a follow-up: make the prompt path configurable via
+   `settings` (e.g. `PROMPT_DIR`) with a container-aware default.
+
+4. **CI uses stock `pgvector/pgvector:pg16` — no AGE** (`ci.yml` services
+   block). Any test that touches `graph_schema` / AGE will fail in CI even if
+   it passes locally with the custom image. Either (a) skip AGE tests in CI
+   with a marker, or (b) point CI at the custom image (Task 4). Decide which.
+
+5. **No Redis service in CI.** `cache.py` degrades gracefully (returns None),
+   so cache-dependent tests should still pass — but the readiness probe test
+   (if one exists) would report Redis unreachable. Confirm no test asserts
+   `cache.set` then `cache.get` round-trips without Redis available.
+
+**Scope rule:** this task is *run + fix failures*. If a failure reveals a
+design issue (not a bug), write a new Phase 7 task for it rather than
+expanding scope here.
+
+**Done when:** `uv run pytest tests/ -v -m "not e2e"` exits 0 locally AND in
+CI, with the golden eval (`tests/evals/`) green and `test_suite_detects_corrupted_mock`
+proving the gate can fail.
+
+---
+
+### Task 2 — Build the stack via `make setup`; fix the AGE image + boot failures
+
+**Why it matters:** The #1 blocker from the original review was that the
+platform could not boot. Phase 5b wrote the provisioning, but none of it has
+been built. The custom AGE image is the highest-risk component (compiles AGE
+from source against PG16 headers).
+
+**How to run:**
+```bash
+make setup    # or, to isolate the image build:
+docker compose -f infra/docker-compose.dev.yml build postgres
+```
+
+**Known risks to watch for:**
+
+1. **AGE PG16 branch build failures (highest risk).**
+   `infra/postgres/Dockerfile` clones `--branch PG16` from `apache/age` and
+   runs `make PG_CONFIG=.../pg_config install`. AGE's PG16 support has
+   historically lagged behind PG releases and occasionally needs:
+   - A specific AGE release tag instead of `HEAD` of the branch (pin a tag
+     like `v1.5.0` if `PG16` branch HEAD is broken).
+   - The PG server compiled with `--with-llvm` (the pgvector image already
+     has LLVM, but verify `llvm-dev`/`clang` are the versions AGE expects).
+   - `llvm15` specifically on older Alpine (PG16 bundles LLVM 16; mismatched
+     `llvm-dev` causes link errors).
+   If the build fails, the fix is usually: pin the AGE tag, and match the
+   `llvm-dev`/`clang` major version to what `pg_config --configure` reports.
+
+2. **`CREATE EXTENSION age` requires superuser.**
+   Docker's entrypoint makes `POSTGRES_USER` a superuser, so `genbi` can run
+   `CREATE EXTENSION age` — but verify the `init.sql` guard's
+   `pg_available_extensions` check actually sees AGE after the image build
+   (a failed `.so` install would make AGE "available" per the catalog but
+   unloadable). If the guard logs "AGE not available" despite the image
+   building, the `.so` didn't land in `pkglibdir`.
+
+3. **`gen-env.sh` Fernet dependency.** The script calls
+   `python3 -c "from cryptography.fernet import Fernet..."` — if `cryptography`
+   isn't installed on the host, it falls back to a raw base64 key, which is
+   fine but worth confirming the fallback branch works (I wrote it
+   defensively; it hasn't run).
+
+4. **uv/pnpm lockfile generation in `setup.sh`.** The script runs `uv lock`
+   and `pnpm install --lockfile-only` if lockfiles are missing, then warns to
+   commit them. Confirm the generated `backend/uv.lock` actually satisfies
+   `uv sync --frozen` in the Dockerfile (the whole point of Task 3's
+   Dockerfile change).
+
+5. **Alembic stamp path.** `setup.sh` runs
+   `alembic stamp 0001_baseline` inside the backend container. Verify the
+   `alembic.ini` `script_location = app/db/migrations` resolves from
+   `WORKDIR /app` — should be fine, but a wrong cwd produces a silent "alembic
+   not available" fallback message.
+
+**Done when:** `make setup` completes, `docker compose ps` shows every service
+`(healthy)`, and the AGE graph check in `verify.sh` reports
+`genbi_graph` exists (or the graceful "AGE not available" warning if AGE is
+disabled).
+
+---
+
+### Task 3 — `make verify` green on a clean provision
+
+**Why it matters:** `verify.sh` is the acceptance gate for the whole
+provisioning effort. It checks all 7 wires (backend liveness/readiness, Cube,
+Redis, Postgres seed+AGE, frontend, Prometheus). Getting it green proves the
+platform is actually up, not just that containers started.
+
+**How to run:** `make verify` (after Task 2).
+
+**Known risks:** This task is mostly "run it and triage." The most likely
+failure is the **backend readiness probe returning 503** — it now does real
+`SELECT 1` + Redis ping. If the backend boots before migrations complete (the
+`start_period: 30s` healthcheck should cover this, but verify), readiness will
+flap. Second likely failure: **Cube** — its healthcheck uses `wget` which may
+not exist in `cubejs/cube:latest`; if so, switch to `curl` or a TCP check.
+
+**Done when:** `make verify` prints all ✅ and exits 0 on a machine that just
+ran `make setup` from clean.
+
+---
+
+### Task 4 — CI builds the custom Postgres image
+
+**Why it matters:** CI currently uses `pgvector/pgvector:pg16` as the test DB
+service (`ci.yml`). After Phase 5b, the project's own schema (`init.sql`)
+runs `CREATE EXTENSION age` (guarded, so it won't crash — but AGE-dependent
+code paths are untestable in CI). Also: the custom image itself has no CI
+coverage, so an AGE upstream breakage ships green.
+
+**Deliverable:**
+- Add a `postgres-image` job to `.github/workflows/ci.yml` that builds
+  `infra/postgres/Dockerfile` and pushes to the registry (or just builds to
+  validate it compiles on every PR).
+- Point the `backend-lint-test` job's `services.postgres.image` at the custom
+  image (either the registry tag from the build job, or build it inline via
+  a `docker build` step before the services block — GitHub Actions services
+  can't `build:`, so you need a pre-built tag or a different approach).
+- Add a marker like `@pytest.mark.age` to AGE-dependent tests so they run in
+  CI once the image is available, and are skipped otherwise.
+
+**⚠️ GitHub Actions limitation:** the `services:` block only accepts
+`image:`, not `build:`. Options: (a) build & push the image in a prior job
+and reference the tag, (b) use a `docker-compose`-based service setup instead
+of the `services:` block, or (c) keep CI on stock pgvector and accept that AGE
+tests are local-only (mark them `@pytest.mark.age` + skip in CI). Option (c)
+is the lowest-effort honest choice; (a) is the most correct.
+
+**Done when:** CI builds the AGE image on every PR (failing the build if AGE
+upstream breaks), and AGE-marked tests either run in CI or are explicitly
+skipped with a documented reason.
+
+---
+
+### Task 5 — Closeout: flip Phase 5b + Phase 6 from UNVERIFIED → verified
+
+**Why it matters:** Phase 5b and Phase 6 both carry a `⚠️ STATUS: UNVERIFIED`
+banner at the top. That banner is the source of truth for whether the work in
+those phases can be relied on. It must not stay UNVERIFIED forever, and it must
+not be flipped prematurely. This task is the single, explicit gate that moves
+the status — it is NOT done automatically by Tasks 1–4, because status is a
+human-confirmed declaration, not a side effect.
+
+**Entry criteria (ALL must be met before flipping):**
+1. Task 1 complete — `uv run pytest tests/ -v -m "not e2e"` and
+   `uv run pytest tests/evals/` both exit 0, locally and in CI.
+2. Task 2 complete — `make setup` builds the stack including the custom AGE
+   image; `docker compose ps` shows every service `(healthy)`.
+3. Task 3 complete — `make verify` prints all ✅ and exits 0 on a clean
+   provision.
+4. Task 4 complete (or explicitly deferred with rationale) — CI builds the
+   custom Postgres image, and AGE-marked tests are either running or
+   documented-skipped.
+
+**The edit:**
+- Remove the `⚠️ STATUS: UNVERIFIED` blockquote from the Phase 5b header
+  (lines ~103–107) and the Phase 6 header (lines ~413–417).
+- Replace each with a `✅ STATUS: VERIFIED` line citing the date and the
+  Phase 7 task numbers that closed it, e.g.:
+  `> ✅ STATUS: VERIFIED 2026-08-XX. Closed by Phase 7 Tasks 1–3.`
+- Mark Task 5 ✅ in the Phase 7 table.
+
+**Anti-scope:** if any of Tasks 1–4 surfaced a new bug that was filed as a
+follow-up task (rather than fixed inline), the status flip may proceed **only
+if** the follow-ups are non-blocking for the core guarantees those phases
+claim (RLS enforced, masking wired, eval gate real, stack boots). Blocking
+follow-ups must be resolved first.
+
+**Done when:** both phase headers read `✅ STATUS: VERIFIED` with a date and
+citation, and Task 5 is ✅.
+
+---
+
+### Sequencing
+
+1. **Task 2 first** (build the image + boot the stack) — because Task 1's test
+   run benefits from a working environment, and Task 3 depends on the stack
+   being up.
+2. **Task 1** (run tests, fix failures) — against the now-bootable stack.
+3. **Task 3** (verify green) — once tests pass and the stack is stable.
+4. **Task 4** (CI image) — hardens the pipeline so regressions are caught
+   before merge, not at the next provision.
+5. **Task 5** (closeout) — the final, explicit gate. Run only after 1–4 are
+   ✅ (or 4 is documented-deferred). This is what flips Phases 5b and 6 from
+   UNVERIFIED to VERIFIED — nothing else does.
+
+These five tasks convert "implemented and statically checked" into "verified
+working." Until Task 5 is ✅, treat Phases 5b/6 as **unverified** — the code
+is written carefully but has never executed.
