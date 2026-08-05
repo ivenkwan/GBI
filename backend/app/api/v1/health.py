@@ -1,6 +1,11 @@
 """Health check endpoints."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Response, status
+from sqlalchemy import text
+
+from app.core.cache import get_cache
+from app.core.config import settings
+from app.db.session import async_session
 
 router = APIRouter()
 
@@ -12,12 +17,44 @@ async def health_check():
 
 
 @router.get("/health/ready")
-async def readiness_check():
-    """Readiness probe — checks DB and Redis connectivity."""
-    # TODO: actual DB/Redis ping
-    return {
-        "status": "ready",
-        "database": "connected",
-        "redis": "connected",
-        "mcp_flint": "connected",
-    }
+async def readiness_check(response: Response):
+    """Readiness probe — actually pings DB and Redis.
+
+    Returns 200 only when both dependencies are reachable; 503 otherwise, with
+    per-dependency status so operators can see what's broken. This is the probe
+    used by Docker healthchecks (Task 5) and ``make verify`` (Task 8) — it must
+    never report "ready" when a dependency is down.
+
+    Note on ``mcp_flint``: Flint runs as a per-render subprocess, not a
+    persistent server, so there is no socket to ping. We report its configured
+    state rather than fake "connected".
+    """
+    checks = {}
+
+    # Database — real ping via SELECT 1 on the async engine
+    db_ok = False
+    try:
+        async with async_session() as session:
+            await session.execute(text("SELECT 1"))
+        db_ok = True
+    except Exception as e:
+        checks["database_error"] = str(e)[:200]
+    checks["database"] = "connected" if db_ok else "unreachable"
+
+    # Redis — real ping (re-checks every call, not memoized like _ensure)
+    redis_ok = False
+    try:
+        redis_ok = await get_cache().ping()
+    except Exception as e:
+        checks["redis_error"] = str(e)[:200]
+    checks["redis"] = "connected" if redis_ok else "unreachable"
+
+    # Flint — configured, not a live socket (subprocess-spawned per render)
+    checks["mcp_flint"] = (
+        "configured" if settings.FLINT_MCP_BACKENDS else "unconfigured"
+    )
+
+    ready = db_ok and redis_ok
+    if not ready:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    return {"status": "ready" if ready else "degraded", **checks}

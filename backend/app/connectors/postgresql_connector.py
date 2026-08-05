@@ -133,19 +133,20 @@ class PostgreSQLConnector(BaseConnector):
                 f"Received: {sql[:100]}"
             )
 
-        # Read-only enforcement + timeout
-        wrapped_sql = f"""
-            SET LOCAL statement_timeout = '30s';
-            SET LOCAL default_transaction_read_only = on;
-            {sql}
-        """
-
+        # Read-only enforcement + timeout — each SET must be its own execute()
+        # because the asyncpg extended (prepared-statement) protocol does not
+        # allow multiple semicolon-separated statements in a single round-trip.
+        # Issuing them separately keeps the connector the single source of these
+        # guarantees for every code path that hits the database.
         async with self._session_factory() as session:
-            # Set transaction to read-only
+            # Mark the transaction read-only at the DB level. Must precede any
+            # data statement; emitted first so the transaction begins read-only.
             await session.execute(text("SET TRANSACTION READ ONLY"))
+            await session.execute(text("SET LOCAL statement_timeout = '30s'"))
+            await session.execute(text("SET LOCAL default_transaction_read_only = on"))
 
             result = await session.execute(
-                text(wrapped_sql),
+                text(sql),
                 params or {},
             )
 
@@ -170,12 +171,14 @@ class PostgreSQLConnector(BaseConnector):
         """Execute SQL and return raw cursor result.
 
         For EXPLAIN plans, introspection queries, and other non-data queries.
+        Applies the same timeout + read-only enforcement as ``execute``.
         """
         if not self._connected:
             raise ConnectionError("Not connected. Call connect() first.")
 
         async with self._session_factory() as session:
             await session.execute(text("SET TRANSACTION READ ONLY"))
+            await session.execute(text("SET LOCAL statement_timeout = '30s'"))
             result = await session.execute(text(sql))
             return result
 
