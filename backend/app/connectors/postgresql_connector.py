@@ -48,6 +48,7 @@ class PostgreSQLConnector(BaseConnector):
         self,
         connection_url: str,
         schema: str = "public",
+        tenant_id: str | None = None,
         pool_size: int = 10,
         max_overflow: int = 5,
         echo: bool = False,
@@ -57,12 +58,17 @@ class PostgreSQLConnector(BaseConnector):
         Args:
             connection_url: SQLAlchemy asyncpg connection string.
             schema: Default schema for query resolution.
+            tenant_id: Tenant identifier. When set, the per-transaction GUC
+                ``app.current_tenant_id`` is injected so PostgreSQL row-level
+                security policies (see infra/postgres/init.sql) scope every
+                query to this tenant. Required for multi-tenant queries.
             pool_size: Connection pool size.
             max_overflow: Max overflow connections.
             echo: SQL echo mode for debugging.
         """
         self.connection_url = connection_url
         self.schema = schema
+        self.tenant_id = tenant_id
         self._engine = None
         self._session_factory = None
         self._connected = False
@@ -144,6 +150,14 @@ class PostgreSQLConnector(BaseConnector):
             await session.execute(text("SET TRANSACTION READ ONLY"))
             await session.execute(text("SET LOCAL statement_timeout = '30s'"))
             await session.execute(text("SET LOCAL default_transaction_read_only = on"))
+            # Tenant GUC — drives row-level security policies (see init.sql).
+            # Parameterized via the GUC string only when a tenant is bound, so
+            # RLS scopes every SELECT to this tenant.
+            if self.tenant_id:
+                await session.execute(
+                    text("SET LOCAL app.current_tenant_id = :tid"),
+                    {"tid": str(self.tenant_id)},
+                )
 
             result = await session.execute(
                 text(sql),
@@ -179,6 +193,11 @@ class PostgreSQLConnector(BaseConnector):
         async with self._session_factory() as session:
             await session.execute(text("SET TRANSACTION READ ONLY"))
             await session.execute(text("SET LOCAL statement_timeout = '30s'"))
+            if self.tenant_id:
+                await session.execute(
+                    text("SET LOCAL app.current_tenant_id = :tid"),
+                    {"tid": str(self.tenant_id)},
+                )
             result = await session.execute(text(sql))
             return result
 

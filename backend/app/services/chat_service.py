@@ -19,6 +19,7 @@ from uuid import uuid4
 
 from app.agents.base import AgentConfig
 from app.agents.registry import get_agent
+from app.core.config import settings
 from app.core.logging import logger
 from app.core.cache import get_cache, _hash_sql as cache_hash_sql
 
@@ -112,6 +113,7 @@ class ChatService:
             chart_output = await self._step_chart(
                 data=data,
                 query=query,
+                user_id=user_id,
             )
             warnings.extend(chart_output.get("warnings", []))
 
@@ -221,7 +223,7 @@ class ChatService:
                 return
 
             # Step 5: Chart (with hallucination detection)
-            chart_output = await self._step_chart(data=data, query=query)
+            chart_output = await self._step_chart(data=data, query=query, user_id=user_id)
             warnings.extend(chart_output.get("warnings", []))
             yield _emit("chart", {
                 "chart_spec": chart_output.get("chart_spec"),
@@ -261,7 +263,7 @@ class ChatService:
             if not agent_cls:
                 return "chat_data", []
 
-            agent = agent_cls(AgentConfig(model_name="claude-haiku-4"))
+            agent = agent_cls(AgentConfig(model_name=settings.LLM_FAST_MODEL))
             result = await agent.execute(query=query)
             intent = result.output.get("intent", "chat_data")
             plan = result.output.get("dispatch_plan", [])
@@ -287,7 +289,7 @@ class ChatService:
 
             agent = agent_cls(
                 AgentConfig(
-                    model_name="claude-opus-4",
+                    model_name=settings.LLM_REASONING_MODEL,
                     temperature=0,
                     max_tokens=4096,
                     thinking=True,
@@ -359,9 +361,15 @@ class ChatService:
             return False, [f"Validation error: {str(e)}"], None
 
     async def _step_execute(self, sql: str) -> tuple[list[dict] | None, list[str]]:
-        """Step 4: Execute SQL against the data source. Cached at L1+L2."""
+        """Step 4: Execute SQL against the data source. Cached at L1+L2.
+
+        PII masking is applied here — the single chokepoint between the data
+        source and the rest of the pipeline. Masking BEFORE caching means
+        cached rows are also safe: no PII persists in Redis/L1 either. This
+        fulfills the CLAUDE.md §7 guarantee that no PII enters LLM context.
+        """
         try:
-            # Check cache first
+            # Check cache first (cached rows are already masked)
             cache = get_cache()
             cached_result = await cache.get_query_result(sql, self.tenant_id)
             if cached_result is not None:
@@ -374,9 +382,11 @@ class ChatService:
 
             from app.connectors.postgresql_connector import PostgreSQLConnector
             from app.core.config import settings
+            from app.core.masking import get_masker_for_tenant
 
             connector = PostgreSQLConnector(
                 connection_url=settings.DATABASE_URL,
+                tenant_id=self.tenant_id,
             )
 
             async with connector:
@@ -387,7 +397,11 @@ class ChatService:
                     tenant_id=self.tenant_id,
                 )
 
-                # Cache the result
+                # Mask PII before the data reaches agents or the cache. This is
+                # the load-bearing line for the "no PII in LLM context" rule.
+                results = get_masker_for_tenant(self.tenant_id).mask_rows(results)
+
+                # Cache the (masked) result
                 await cache.set_query_result(sql, self.tenant_id, results)
 
                 return results, []
@@ -400,6 +414,7 @@ class ChatService:
         self,
         data: list[dict],
         query: str,
+        user_id: str = "",
     ) -> dict:
         """Step 5: Generate chart spec, validate, and render via Flint/Altair bridge.
 
@@ -414,7 +429,7 @@ class ChatService:
 
             agent = agent_cls(
                 AgentConfig(
-                    model_name="claude-haiku-4",
+                    model_name=settings.LLM_FAST_MODEL,
                     temperature=0,
                     max_tokens=2048,
                 )
@@ -423,6 +438,7 @@ class ChatService:
                 data=data,
                 query=query,
                 tenant_id=self.tenant_id,
+                user_id=user_id,
             )
 
             if not result.success:
@@ -517,7 +533,7 @@ class ChatService:
 
             agent = agent_cls(
                 AgentConfig(
-                    model_name="claude-haiku-4",
+                    model_name=settings.LLM_FAST_MODEL,
                     temperature=0.3,
                     max_tokens=512,
                 )

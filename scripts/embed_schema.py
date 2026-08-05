@@ -56,13 +56,13 @@ async def get_schema_metadata(
         LEFT JOIN pg_catalog.pg_description pgd
             ON pgd.objoid = pgc.oid
             AND pgd.objsubid = c.ordinal_position
-        WHERE t.table_schema = $1
+        WHERE t.table_schema = :schema
             AND t.table_type = 'BASE TABLE'
         ORDER BY t.table_name, c.ordinal_position
     """
 
     async with connector:
-        rows = await connector.execute(query, params=[schema])
+        rows = await connector.execute(query, params={"schema": schema})
 
     # Group columns by table
     tables: dict[str, dict[str, Any]] = {}
@@ -172,18 +172,23 @@ async def sync_schema(
                 embedding_vector = await generate_embedding(embedding_text)
                 embeddings += 1
 
-                # Upsert into schema_embeddings
+                # Upsert into schema_embeddings. Uses named :param placeholders
+                # (PostgreSQLConnector routes through SQLAlchemy text(), which
+                # requires named params — NOT $1 positional).
                 upsert_sql = """
                     INSERT INTO schema_embeddings (
                         id, tenant_id, table_schema, table_name,
                         full_name, table_description, columns_json,
-                        embedding_text, embedding, updated_at
+                        embedding_text, embedding, created_at, updated_at
                     ) VALUES (
-                        $1, $2, $3, $4, $5, $6, $7, $8, $9::vector(1536), $10
+                        :id, :tenant_id, :table_schema, :table_name,
+                        :full_name, :table_description, :columns_json,
+                        :embedding_text, :embedding::vector(1536), :now, :now
                     )
                     ON CONFLICT (tenant_id, table_schema, table_name)
                     DO UPDATE SET
                         columns_json = EXCLUDED.columns_json,
+                        table_description = EXCLUDED.table_description,
                         embedding_text = EXCLUDED.embedding_text,
                         embedding = EXCLUDED.embedding,
                         updated_at = EXCLUDED.updated_at
@@ -191,18 +196,18 @@ async def sync_schema(
 
                 await connector.execute(
                     upsert_sql,
-                    params=[
-                        str(uuid4()),
-                        "00000000-0000-0000-0000-000000000001",  # default tenant
-                        table["table_schema"],
-                        table["table_name"],
-                        table["full_name"],
-                        table.get("table_description", ""),
-                        columns_json,
-                        embedding_text,
-                        embedding_vector,
-                        now,
-                    ],
+                    params={
+                        "id": str(uuid4()),
+                        "tenant_id": "00000000-0000-0000-0000-000000000001",  # default tenant
+                        "table_schema": table["table_schema"],
+                        "table_name": table["table_name"],
+                        "full_name": table["full_name"],
+                        "table_description": table.get("table_description", ""),
+                        "columns_json": columns_json,
+                        "embedding_text": embedding_text,
+                        "embedding": embedding_vector,
+                        "now": now,
+                    },
                 )
 
                 logger.info(

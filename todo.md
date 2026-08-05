@@ -108,14 +108,14 @@ User Query
 
 | # | Task | Severity | Status |
 |---|---|---|---|
-| 1 | Author one-command bootstrap script (`scripts/setup.sh`) + Makefile | 🔴 Blocker | ☐ |
-| 2 | Fix the AGE-on-pgvector image problem so `init.sql` stops failing | 🔴 Blocker | ☐ |
-| 3 | Add the missing config/lock files the Dockerfiles require | 🔴 Blocker | ☐ |
-| 4 | Add `alembic.ini` + first migration; reconcile the three schema sources | 🔴 Blocker | ☐ |
-| 5 | Healthchecks + dependency ordering on every compose service | 🟠 High | ☐ |
-| 6 | Generated `.env` files with random secrets; `make secrets` helper | 🟠 High | ☐ |
-| 7 | Postgres role for Apache AGE + Cube dev config | 🟠 Medium | ☐ |
-| 8 | `make verify` smoke test (health endpoints + DB round-trip) | 🟠 Medium | ☐ |
+| 1 | Author one-command bootstrap script (`scripts/setup.sh`) + Makefile | 🔴 Blocker | ✅ |
+| 2 | Fix the AGE-on-pgvector image problem so `init.sql` stops failing | 🔴 Blocker | ✅ |
+| 3 | Add the missing config/lock files the Dockerfiles require | 🔴 Blocker | ✅ |
+| 4 | Add `alembic.ini` + first migration; reconcile the three schema sources | 🔴 Blocker | ✅ |
+| 5 | Healthchecks + dependency ordering on every compose service | 🟠 High | ✅ |
+| 6 | Generated `.env` files with random secrets; `make secrets` helper | 🟠 High | ✅ |
+| 7 | Postgres role for Apache AGE + Cube dev config | 🟠 Medium | ✅ |
+| 8 | `make verify` smoke test (health endpoints + DB round-trip) | 🟠 Medium | ✅ |
 
 ---
 
@@ -414,10 +414,10 @@ can be verified against a running stack rather than by static reading.
 
 | # | Task | Severity | Status |
 |---|---|---|---|
-| 1 | Wire PII masking into the pipeline + attach observability in `main.py` | 🔴 High | ☐ |
-| 2 | Add RLS + `FORCE` to every tenant table; fail-fast on default JWT secret | 🔴 High | ☐ |
-| 3 | Route `ChartGenAgent` through `llm_client`; dereference `settings.LLM_*_MODEL` | 🟠 Medium | ☐ |
-| 4 | Rewrite the golden NL2SQL eval to actually invoke `NL2SQLAgent` | 🟠 Medium | ☐ |
+| 1 | Wire PII masking into the pipeline + attach observability in `main.py` | 🔴 High | ✅ |
+| 2 | Add RLS + `FORCE` to every tenant table; fail-fast on default JWT secret | 🔴 High | ✅ |
+| 3 | Route `ChartGenAgent` through `llm_client`; dereference `settings.LLM_*_MODEL` | 🟠 Medium | ✅ |
+| 4 | Rewrite the golden NL2SQL eval to actually invoke `NL2SQLAgent` | 🟠 Medium | ✅ |
 
 ---
 
