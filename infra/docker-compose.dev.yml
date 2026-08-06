@@ -41,8 +41,8 @@ services:
   # =========================================================================
   backend:
     build:
-      context: ../backend
-      dockerfile: Dockerfile
+      context: ..          # repo root, so .claude/prompts is in-context
+      dockerfile: backend/Dockerfile
     container_name: genbi-backend
     env_file:
       - ../backend/.env
@@ -55,6 +55,7 @@ services:
         condition: service_healthy
     volumes:
       - ../backend:/app
+      - ../.claude/prompts:/app/.claude/prompts:ro
       - flint_data:/tmp/genbi-charts
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/api/v1/health').status==200 else 1)\""]

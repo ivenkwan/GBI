@@ -607,6 +607,14 @@ class CacheService:
     # Stats
     # ------------------------------------------------------------------
 
+    async def ping(self) -> bool:
+        """Health probe — True if Redis (L2) is reachable right now.
+
+        Used by the /health/ready readiness check. Does not probe L1 (in-memory),
+        which is always available if the process is running.
+        """
+        return await self._l2.ping()
+
     def get_stats(self) -> dict:
         """Get cache performance metrics."""
         return {

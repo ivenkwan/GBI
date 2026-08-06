@@ -4,7 +4,7 @@ All settings load from environment variables with sensible defaults.
 Secrets are NEVER hardcoded — always use env vars or .env file.
 """
 
-from pydantic import model_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -32,7 +32,22 @@ class Settings(BaseSettings):
     APP_ENV: str = "development"
     DEBUG: bool = True
     LOG_LEVEL: str = "DEBUG"
-    CORS_ORIGINS: list[str] = ["http://localhost:3000"]
+    # Stored as a raw string (comma-separated) so pydantic-settings can parse it
+    # from .env files without requiring JSON list syntax. Use `cors_origins_list`
+    # to get the parsed list in code (e.g. CORSMiddleware).
+    CORS_ORIGINS: str = "http://localhost:3000"
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        """Parse CORS_ORIGINS into a list, accepting JSON or comma-separated."""
+        v = self.CORS_ORIGINS.strip()
+        if v.startswith("["):
+            import json
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                pass
+        return [origin.strip() for origin in v.split(",") if origin.strip()]
 
     # --- LLM ---
     ANTHROPIC_API_KEY: str = ""
@@ -66,6 +81,12 @@ class Settings(BaseSettings):
     # --- Flint Chart MCP ---
     FLINT_MCP_BACKENDS: str = "vegalite,echarts,chartjs"
     FLINT_MCP_DATA_ROOTS: str = "/tmp/genbi-charts"
+
+    # --- Prompts ---
+    # Directory holding versioned prompt templates (loaded by llm_client.load_prompt).
+    # Defaults to the repo's .claude/prompts/ on host runs; override for containers
+    # where the working dir differs. The Dockerfile bakes the prompts into /app/.claude.
+    PROMPT_DIR: str = ""
 
     @model_validator(mode="after")
     def _enforce_production_secrets(self):
