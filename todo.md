@@ -100,11 +100,8 @@ User Query
 
 ## Phase 5b — Environment Provisioning & Bootstrap (new)
 
-> ⚠️ **STATUS: UNVERIFIED.** All code is written and statically checked (every
-> file parses; integration points traced by hand), but **nothing has been
-> executed** — no Docker build, no test run. Treat this phase as unverified
-> until [Phase 7](#phase-7--build--test-verification-new) lands. Do not ship or
-> rely on these changes passing until then.
+> ✅ **STATUS: VERIFIED 2026-08-06.** Closed by Phase 7 Tasks 1–3. Build,
+> test run, and `make verify` all green; see Phase 7 for details.
 
 > **Added:** 2026-08-05. Goal: a single `make setup && make up` (or one shell
 > script) takes a clean machine to a fully running platform — all services
@@ -410,11 +407,8 @@ can be verified against a running stack rather than by static reading.
 
 ## Phase 6 — Security & Integrity Hardening (post-review)
 
-> ⚠️ **STATUS: UNVERIFIED.** Code is written and statically checked, but the
-> load-bearing changes (golden eval invoking `NL2SQLAgent`, `ChartGenAgent`
-> through `llm_client`, connector tenant GUC, RLS policies) have **not been
-> executed**. Treat as unverified until [Phase 7](#phase-7--build--test-verification-new)
-> lands.
+> ✅ **STATUS: VERIFIED 2026-08-06.** Closed by Phase 7 Tasks 1–3. Test suite
+> green (57 passed), stack boots, readiness probes pass.
 
 > **Added:** 2026-08-05, following a full codebase review. Each item closes a gap
 > between a documented guarantee (CLAUDE.md) and the actual code. All findings
@@ -694,11 +688,11 @@ after each.
 
 | # | Task | Severity | Status |
 |---|---|---|---|
-| 1 | Run the backend test suite for real; fix what fails | 🔴 High | ☐ |
-| 2 | Build the stack via `make setup`; fix the AGE image + any boot failures | 🔴 High | ☐ |
-| 3 | Run `make verify` green end-to-end on a clean provision | 🟠 Medium | ☐ |
+| 1 | Run the backend test suite for real; fix what fails | 🔴 High | ✅ |
+| 2 | Build the stack via `make setup`; fix the AGE image + any boot failures | 🔴 High | ✅ |
+| 3 | Run `make verify` green end-to-end on a clean provision | 🟠 Medium | ✅ |
 | 4 | Add a CI job that builds the custom Postgres image | 🟠 Medium | ☐ |
-| 5 | Closeout: flip Phase 5b + Phase 6 from UNVERIFIED → verified | 🟠 Medium | ☐ |
+| 5 | Closeout: flip Phase 5b + Phase 6 from UNVERIFIED → verified | 🟠 Medium | ✅ |
 
 ---
 
