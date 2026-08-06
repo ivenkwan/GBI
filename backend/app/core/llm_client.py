@@ -320,15 +320,39 @@ def load_prompt(name: str) -> str:
         name: Prompt name without extension (e.g. "nl2sql-system", "chart-gen-system")
 
     Returns:
-        The prompt text content.
+        The prompt text content, or "" if not found.
+
+    Resolution order:
+        1. ``settings.PROMPT_DIR`` if set (explicit override).
+        2. ``/app/.claude/prompts`` if it exists (Docker container — the
+           Dockerfile bakes prompts into /app/.claude).
+        3. The repo root's ``.claude/prompts`` computed relative to this file
+           (host/local dev, where this module is at backend/app/core/).
+
+    The fallback (3) historically broke inside Docker because the relative path
+    resolved to ``/.claude/prompts``; the explicit container path (2) fixes that.
     """
     from pathlib import Path
 
-    prompt_dir = Path(__file__).parent.parent.parent.parent / ".claude" / "prompts"
-    prompt_path = prompt_dir / f"{name}.md"
+    from app.core.config import settings
 
-    if not prompt_path.exists():
-        logger.warning(f"Prompt file not found: {prompt_path}")
+    candidates = [
+        Path(settings.PROMPT_DIR) if settings.PROMPT_DIR else None,
+        Path("/app/.claude/prompts"),                              # container
+        Path(__file__).resolve().parent.parent.parent.parent / ".claude" / "prompts",  # host
+    ]
+
+    prompt_path: Path | None = None
+    for base in candidates:
+        if base is None:
+            continue
+        candidate = base / f"{name}.md"
+        if candidate.exists():
+            prompt_path = candidate
+            break
+
+    if prompt_path is None:
+        logger.warning(f"Prompt file not found: {name}.md")
         return ""
 
     return prompt_path.read_text(encoding="utf-8")

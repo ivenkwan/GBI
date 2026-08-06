@@ -36,8 +36,8 @@ services:
 
   backend:
     build:
-      context: ../backend
-      dockerfile: Dockerfile
+      context: ..          # repo root, so .claude/prompts is in-context
+      dockerfile: backend/Dockerfile
     container_name: genbi-backend-prod
     env_file:
       - ../backend/.env

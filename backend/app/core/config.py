@@ -67,6 +67,12 @@ class Settings(BaseSettings):
     FLINT_MCP_BACKENDS: str = "vegalite,echarts,chartjs"
     FLINT_MCP_DATA_ROOTS: str = "/tmp/genbi-charts"
 
+    # --- Prompts ---
+    # Directory holding versioned prompt templates (loaded by llm_client.load_prompt).
+    # Defaults to the repo's .claude/prompts/ on host runs; override for containers
+    # where the working dir differs. The Dockerfile bakes the prompts into /app/.claude.
+    PROMPT_DIR: str = ""
+
     @model_validator(mode="after")
     def _enforce_production_secrets(self):
         """Fail fast if production is launched with an insecure secret.
