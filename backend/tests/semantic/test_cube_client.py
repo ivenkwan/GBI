@@ -361,6 +361,7 @@ class TestGetCubeClient:
 
     def test_uses_settings_defaults(self):
         """Without args, should use settings.CUBE_API_URL."""
+        from app.semantic.cube_client import get_cube_client
         import app.semantic.cube_client as mod
         mod._cube_client = None
 

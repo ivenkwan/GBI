@@ -33,13 +33,17 @@ gen_fernet() {
 # Emit a line only if the key isn't already going to be replaced. We rewrite
 # the whole file from the template each time.
 
-write_if_needed() {
+# Returns 0 (true) when we SHOULD write (file missing, or --force).
+should_write() {
   local target="$1"
-  if [[ -f "$target" && "$FORCE" -eq 0 ]]; then
-    echo "  exists: $target (use --force to overwrite)"
+  if [[ "$FORCE" -eq 1 ]]; then
     return 0
   fi
-  return 1  # caller writes
+  if [[ -f "$target" ]]; then
+    echo "  exists: $target (use --force to overwrite)"
+    return 1
+  fi
+  return 0
 }
 
 # --- backend/.env ------------------------------------------------------------
@@ -47,7 +51,7 @@ write_if_needed() {
 BACKEND_ENV="$REPO_ROOT/backend/.env"
 TEMPLATE="$REPO_ROOT/.env.example"
 
-if write_if_needed "$BACKEND_ENV" || [[ "$FORCE" -eq 1 ]]; then
+if should_write "$BACKEND_ENV"; then
   if [[ ! -f "$TEMPLATE" ]]; then
     echo "ERROR: template $TEMPLATE not found" >&2; exit 1
   fi
@@ -59,11 +63,15 @@ if write_if_needed "$BACKEND_ENV" || [[ "$FORCE" -eq 1 ]]; then
   PG_PASS="genbi"
   PG_DB="genbi"
 
-  # Substitute placeholders. The DATABASE_URLs point at the compose service
-  # name 'postgres' when running in Docker, but host devs use localhost — we
-  # keep localhost (the example default) since gen-env also serves local dev.
+  # Substitute placeholders. DATABASE_URL/REDIS_URL use the compose service
+  # names ('postgres', 'redis') as hosts — the .env file is consumed by the
+  # backend container, where 'localhost' would mean the container itself.
+  # Host-based (non-Docker) dev should override these via a local .env override.
   sed \
     -e "s|^ANTHROPIC_API_KEY=.*|ANTHROPIC_API_KEY=sk-ant-REPLACE-ME|" \
+    -e "s|^DATABASE_URL=.*|DATABASE_URL=postgresql+asyncpg://${PG_USER}:${PG_PASS}@postgres:5432/${PG_DB}|" \
+    -e "s|^DATABASE_URL_SYNC=.*|DATABASE_URL_SYNC=postgresql://${PG_USER}:${PG_PASS}@postgres:5432/${PG_DB}|" \
+    -e "s|^REDIS_URL=.*|REDIS_URL=redis://redis:6379/0|" \
     -e "s|^JWT_SECRET_KEY=.*|JWT_SECRET_KEY=${JWT_SECRET}|" \
     -e "s|^CUBE_API_SECRET=.*|CUBE_API_SECRET=${CUBE_SECRET}|" \
     -e "s|^TENANT_ENCRYPTION_KEY=.*|TENANT_ENCRYPTION_KEY=${TENANT_KEY}|" \
@@ -81,7 +89,7 @@ fi
 CUBE_ENV="$REPO_ROOT/semantic/cube/.env"
 CUBE_TEMPLATE="$REPO_ROOT/semantic/cube/.env.example"
 
-if write_if_needed "$CUBE_ENV" || [[ "$FORCE" -eq 1 ]]; then
+if should_write "$CUBE_ENV"; then
   if [[ ! -f "$CUBE_TEMPLATE" ]]; then
     echo "ERROR: template $CUBE_TEMPLATE not found" >&2; exit 1
   fi
