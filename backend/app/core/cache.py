@@ -177,6 +177,30 @@ class RedisCache:
         self._available = False
         self._init_attempted = False
 
+    async def ping(self) -> bool:
+        """Health probe — True if Redis is reachable right now.
+
+        Distinct from ``_ensure``: ``_ensure`` is lazy and memoizes a failure for
+        the process lifetime (so a transient Redis blip at startup never
+        recovers). ``ping`` re-checks on every call, making it suitable for
+        readiness probes.
+        """
+        try:
+            import redis.asyncio as aioredis
+
+            client = aioredis.from_url(
+                settings.REDIS_URL,
+                socket_connect_timeout=2,
+            )
+            try:
+                await client.ping()
+                return True
+            finally:
+                await client.aclose()
+        except Exception as e:
+            logger.debug(f"Redis ping failed: {e}")
+            return False
+
     async def _ensure(self) -> bool:
         """Lazy-init Redis connection. Returns True if available."""
         if self._init_attempted:
@@ -582,6 +606,14 @@ class CacheService:
     # ------------------------------------------------------------------
     # Stats
     # ------------------------------------------------------------------
+
+    async def ping(self) -> bool:
+        """Health probe — True if Redis (L2) is reachable right now.
+
+        Used by the /health/ready readiness check. Does not probe L1 (in-memory),
+        which is always available if the process is running.
+        """
+        return await self._l2.ping()
 
     def get_stats(self) -> dict:
         """Get cache performance metrics."""

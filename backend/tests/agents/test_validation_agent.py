@@ -50,14 +50,25 @@ async def test_valid_explain(agent):
 
 
 @pytest.mark.unit
-async def test_injects_timeout(agent):
-    """Validation should inject statement_timeout."""
+async def test_reports_timeout_policy_without_mutating_sql(agent):
+    """Validation reports the timeout policy and returns CLEAN SQL.
+
+    The validator must not inject `SET LOCAL statement_timeout` into the SQL
+    string itself — that enforcement belongs to the connector at execution
+    time. Wrapping the SQL here caused the connector's read-only/SELECT gate
+    to reject every validated query (the wrapped string no longer started with
+    SELECT). This test guards against that regression.
+    """
     result = await agent.execute(
         sql="SELECT * FROM sales"
     )
     validated_sql = result.output.get("validated_sql", "")
-    assert "SET LOCAL statement_timeout" in validated_sql
-    assert "SELECT * FROM sales" in validated_sql
+    # SQL is returned clean and unmutated
+    assert validated_sql == "SELECT * FROM sales"
+    assert "SET LOCAL" not in validated_sql
+    assert ";" not in validated_sql
+    # Timeout is surfaced as policy metadata instead
+    assert result.output.get("statement_timeout") == agent.STATEMENT_TIMEOUT
 
 
 # ---------------------------------------------------------------------------

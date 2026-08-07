@@ -48,6 +48,7 @@ class PostgreSQLConnector(BaseConnector):
         self,
         connection_url: str,
         schema: str = "public",
+        tenant_id: str | None = None,
         pool_size: int = 10,
         max_overflow: int = 5,
         echo: bool = False,
@@ -57,12 +58,17 @@ class PostgreSQLConnector(BaseConnector):
         Args:
             connection_url: SQLAlchemy asyncpg connection string.
             schema: Default schema for query resolution.
+            tenant_id: Tenant identifier. When set, the per-transaction GUC
+                ``app.current_tenant_id`` is injected so PostgreSQL row-level
+                security policies (see infra/postgres/init.sql) scope every
+                query to this tenant. Required for multi-tenant queries.
             pool_size: Connection pool size.
             max_overflow: Max overflow connections.
             echo: SQL echo mode for debugging.
         """
         self.connection_url = connection_url
         self.schema = schema
+        self.tenant_id = tenant_id
         self._engine = None
         self._session_factory = None
         self._connected = False
@@ -133,19 +139,28 @@ class PostgreSQLConnector(BaseConnector):
                 f"Received: {sql[:100]}"
             )
 
-        # Read-only enforcement + timeout
-        wrapped_sql = f"""
-            SET LOCAL statement_timeout = '30s';
-            SET LOCAL default_transaction_read_only = on;
-            {sql}
-        """
-
+        # Read-only enforcement + timeout — each SET must be its own execute()
+        # because the asyncpg extended (prepared-statement) protocol does not
+        # allow multiple semicolon-separated statements in a single round-trip.
+        # Issuing them separately keeps the connector the single source of these
+        # guarantees for every code path that hits the database.
         async with self._session_factory() as session:
-            # Set transaction to read-only
+            # Mark the transaction read-only at the DB level. Must precede any
+            # data statement; emitted first so the transaction begins read-only.
             await session.execute(text("SET TRANSACTION READ ONLY"))
+            await session.execute(text("SET LOCAL statement_timeout = '30s'"))
+            await session.execute(text("SET LOCAL default_transaction_read_only = on"))
+            # Tenant GUC — drives row-level security policies (see init.sql).
+            # Parameterized via the GUC string only when a tenant is bound, so
+            # RLS scopes every SELECT to this tenant.
+            if self.tenant_id:
+                await session.execute(
+                    text("SET LOCAL app.current_tenant_id = :tid"),
+                    {"tid": str(self.tenant_id)},
+                )
 
             result = await session.execute(
-                text(wrapped_sql),
+                text(sql),
                 params or {},
             )
 
@@ -170,12 +185,19 @@ class PostgreSQLConnector(BaseConnector):
         """Execute SQL and return raw cursor result.
 
         For EXPLAIN plans, introspection queries, and other non-data queries.
+        Applies the same timeout + read-only enforcement as ``execute``.
         """
         if not self._connected:
             raise ConnectionError("Not connected. Call connect() first.")
 
         async with self._session_factory() as session:
             await session.execute(text("SET TRANSACTION READ ONLY"))
+            await session.execute(text("SET LOCAL statement_timeout = '30s'"))
+            if self.tenant_id:
+                await session.execute(
+                    text("SET LOCAL app.current_tenant_id = :tid"),
+                    {"tid": str(self.tenant_id)},
+                )
             result = await session.execute(text(sql))
             return result
 

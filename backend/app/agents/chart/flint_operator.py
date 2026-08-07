@@ -61,11 +61,12 @@ async def flint_chart_operator(
     from app.agents.chart.flint_bridge import FlintChartBridge
     from app.agents.chart_gen_agent import ChartGenAgent
     from app.agents.base import AgentConfig
+    from app.core.config import settings
 
     # Generate spec
     agent = ChartGenAgent(
         config=AgentConfig(
-            model_name="claude-haiku-4",
+            model_name=settings.LLM_FAST_MODEL,
             temperature=0,
         )
     )

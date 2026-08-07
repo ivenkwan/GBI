@@ -3,12 +3,17 @@ services:
   # Core Services
   # =========================================================================
   postgres:
-    image: pgvector/pgvector:pg16
+    build:
+      context: ./postgres
+      dockerfile: Dockerfile
+    image: genbi/postgres-pgvector-age:pg16
     container_name: genbi-postgres
     environment:
       POSTGRES_USER: genbi
       POSTGRES_PASSWORD: genbi
       POSTGRES_DB: genbi
+      # Opt out of AGE at boot if you don't need lineage (dev convenience).
+      GENBI_ENABLE_AGE: ${GENBI_ENABLE_AGE:-true}
     ports:
       - "5432:5432"
     volumes:
@@ -36,8 +41,8 @@ services:
   # =========================================================================
   backend:
     build:
-      context: ../backend
-      dockerfile: Dockerfile
+      context: ..          # repo root, so .claude/prompts is in-context
+      dockerfile: backend/Dockerfile
     container_name: genbi-backend
     env_file:
       - ../backend/.env
@@ -50,7 +55,14 @@ services:
         condition: service_healthy
     volumes:
       - ../backend:/app
+      - ../.claude/prompts:/app/.claude/prompts:ro
       - flint_data:/tmp/genbi-charts
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/api/v1/health').status==200 else 1)\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     command: uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
@@ -63,7 +75,8 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     volumes:
       - ../frontend:/app
       - /app/node_modules
@@ -79,6 +92,15 @@ services:
       - ../semantic/cube/.env
     ports:
       - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/cubejs-api/v1/load >/dev/null 2>&1 || wget -qO- http://localhost:4000/ >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   # =========================================================================
   # Observability

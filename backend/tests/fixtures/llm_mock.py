@@ -4,32 +4,41 @@ This module provides reusable mock LLM responses for every agent type.
 All unit and integration tests MUST use these mocks — never call real LLM APIs.
 
 Usage:
-    from tests.fixtures.llm_mock import mock_nl2sql_response, MockLLMClient
+    from tests.fixtures.llm_mock import MOCK_NL2SQL_RESPONSE, MockLLMClient
 
     async def test_nl2sql_agent():
-        agent = NL2SQLAgent(config)
-        # Inject mock client that returns pre-canned responses
-        agent._llm_override = MockLLMClient(mock_nl2sql_response)
+        client = MockLLMClient(MOCK_NL2SQL_RESPONSE)
+        # Inject mock client where the agent fetches it:
+        agent._llm_override = client
         result = await agent.execute(query="Show me revenue by region")
         assert result.success
         assert "SELECT" in result.output["sql"]
 """
 
+import json
+
 # ---------------------------------------------------------------------------
 # Mock LLM Client
 # ---------------------------------------------------------------------------
+
 
 class MockLLMClient:
     """Drop-in mock for LLMClient.invoke().
 
     Use in tests to avoid real LLM API calls. Returns pre-canned responses
-    based on a scenario map or a single default response.
+    based on a scenario map or a single default response. Records every call
+    so tests can assert on what was sent.
     """
 
     def __init__(self, default_response: dict | None = None):
         self.default_response = default_response or {}
         self.calls: list[dict] = []  # Track all calls for assertions
-        self.scenarios: dict[str, dict] = {}  # Scenario-specific responses
+        self.scenarios: dict[str, dict] = {}  # substring-keyed responses
+
+    def add_scenario(self, key: str, response: dict) -> "MockLLMClient":
+        """Register a response returned when `key` is a substring of the message."""
+        self.scenarios[key] = response
+        return self
 
     async def invoke(self, **kwargs) -> "MockLLMResult":
         """Record the call and return a pre-canned response."""
@@ -37,7 +46,7 @@ class MockLLMClient:
         messages = kwargs.get("messages", "")
         message_text = messages if isinstance(messages, str) else str(messages)
 
-        # Check scenario map
+        # Check scenario map (substring match on the message text)
         for key, response in self.scenarios.items():
             if key in message_text:
                 return MockLLMResult(**response)
@@ -59,7 +68,6 @@ class MockLLMResult:
 
         # Auto-parse JSON content
         if self.parsed is None and self.content.strip().startswith("{"):
-            import json
             try:
                 self.parsed = json.loads(self.content)
             except json.JSONDecodeError:
@@ -203,6 +211,7 @@ MOCK_NARRATIVE_RESPONSE = {
 # Fixture helpers
 # ---------------------------------------------------------------------------
 
+
 def create_mock_llm_client(scenario: str = "default") -> MockLLMClient:
     """Create a MockLLMClient pre-loaded with common scenarios.
 
@@ -210,38 +219,27 @@ def create_mock_llm_client(scenario: str = "default") -> MockLLMClient:
         scenario: One of "default", "time_series", "visualize", "destructive".
 
     Returns:
-        MockLLMClient with scenario-specific responses.
+        MockLLMClient with scenario-appropriate responses registered. Each
+        registered response is substring-keyed against the NL query text, so
+        the mock returns the right answer for the query under test.
     """
     client = MockLLMClient()
 
-    # Map scenarios to responses
-    scenario_map = {
-        "default": {
-            "router": MOCK_ROUTER_RESPONSE,
-            "nl2sql": MOCK_NL2SQL_RESPONSE,
-            "chart_gen": MOCK_CHARTGEN_RESPONSE,
-            "narrative": MOCK_NARRATIVE_RESPONSE,
-        },
-        "time_series": {
-            "nl2sql": MOCK_NL2SQL_RESPONSE_TIME_SERIES,
-        },
-        "visualize": {
-            "router": MOCK_ROUTER_RESPONSE_VISUALIZE,
-        },
-        "destructive": {
-            "nl2sql": MOCK_NL2SQL_DESTRUCTIVE,
-        },
-    }
+    # Always provide a default router + narrative so pipelines don't NPE.
+    client.add_scenario("chat_data", MOCK_ROUTER_RESPONSE)
+    client.add_scenario("chat_visualize", MOCK_ROUTER_RESPONSE_VISUALIZE)
+    client.add_scenario("revenue", MOCK_NARRATIVE_RESPONSE)  # narrative default
 
-    # Flatten scenario map into response-keyed entries
-    for scenario_name, agent_map in scenario_map.items():
-        for agent_name, response in agent_map.items():
-            # We match on agent names in the message content
-            # (the actual matching logic in MockLLMClient is substring-based)
-            pass
+    if scenario == "default":
+        client.add_scenario("region", MOCK_NL2SQL_RESPONSE)
+        client.add_scenario("revenue", MOCK_NL2SQL_RESPONSE)
+        client.add_scenario("chart", MOCK_CHARTGEN_RESPONSE)
+    elif scenario == "time_series":
+        client.add_scenario("month", MOCK_NL2SQL_RESPONSE_TIME_SERIES)
+        client.add_scenario("transaction", MOCK_NL2SQL_RESPONSE_TIME_SERIES)
+    elif scenario == "visualize":
+        client.add_scenario("chart", MOCK_CHARTGEN_RESPONSE)
+    elif scenario == "destructive":
+        client.add_scenario("drop", MOCK_NL2SQL_DESTRUCTIVE)
 
     return client
-
-
-# Re-export json for the module-level dicts
-import json

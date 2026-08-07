@@ -28,6 +28,7 @@ class ChartGenAgent(BaseAgent):
         intent: str | None = None,
         preferred_chart_type: str | None = None,
         tenant_id: str = "default",
+        user_id: str = "",
         **kwargs,
     ) -> AgentResult:
         """Generate a chart spec from data or description."""
@@ -47,7 +48,9 @@ class ChartGenAgent(BaseAgent):
             )
 
         # Generate chart spec from data
-        spec = await self._generate_chart_spec(data, preferred_chart_type)
+        spec = await self._generate_chart_spec(
+            data, preferred_chart_type, tenant_id=tenant_id, user_id=user_id
+        )
 
         # Render via Flint MCP
         bridge = FlintChartBridge(tenant_id=tenant_id)
@@ -70,18 +73,21 @@ class ChartGenAgent(BaseAgent):
         )
 
     async def _generate_chart_spec(
-        self, data: list[dict], preferred_chart_type: str | None = None
+        self,
+        data: list[dict],
+        preferred_chart_type: str | None = None,
+        tenant_id: str = "default",
+        user_id: str = "",
     ) -> dict:
-        """Generate a ChartAssemblyInput spec using Claude."""
-        from app.core.config import settings
-        from langchain_anthropic import ChatAnthropic
+        """Generate a ChartAssemblyInput spec using the centralized LLM client.
 
-        llm = ChatAnthropic(
-            model=settings.LLM_FAST_MODEL,
-            temperature=0,
-            max_tokens=2048,
-            api_key=settings.ANTHROPIC_API_KEY,
-        )
+        Routes through llm_client (not a direct ChatAnthropic instance) so the
+        call gets retry, token-budget enforcement, JSON extraction, and audit
+        logging — required by CLAUDE.md §6 for every LLM call.
+        """
+        import json
+
+        from app.core.llm_client import LLMCallOptions, get_llm_client
 
         # Infer semantic types from data
         semantic_types = self._infer_semantic_types(data)
@@ -103,12 +109,25 @@ Return ONLY a valid JSON object with these keys: chartType, encodings, baseSize,
 The data key should contain the full data as inline values.
 Do NOT include any explanatory text — only the JSON object."""
 
-        import json
-        response = await llm.ainvoke(prompt)
+        result = await get_llm_client().invoke(
+            messages=prompt,
+            use_reasoning=False,  # fast model for spec generation
+            options=LLMCallOptions(
+                temperature=0,
+                max_tokens=2048,
+                response_format="json",
+            ),
+            tenant_id=tenant_id,
+            user_id=user_id,
+        )
+
+        # The client already extracts JSON via _extract_json; fall back only if
+        # the model returned nothing parseable.
+        if result.parsed:
+            return result.parsed
         try:
-            return json.loads(response.content)
-        except json.JSONDecodeError:
-            # Fallback: build a basic spec
+            return json.loads(result.content)
+        except (json.JSONDecodeError, TypeError):
             return {
                 "chartType": chart_type,
                 "encodings": encodings,
