@@ -1,6 +1,6 @@
 # GenBI Platform — Build Progress
 
-> **Last updated:** 2026-07-04 | **Stack tier:** Enterprise | **30/30 tasks complete**
+> **Last updated:** 2026-08-07 | **Stack tier:** Enterprise | **30/30 tasks complete**
 
 ---
 
@@ -691,7 +691,7 @@ after each.
 | 1 | Run the backend test suite for real; fix what fails | 🔴 High | ✅ |
 | 2 | Build the stack via `make setup`; fix the AGE image + any boot failures | 🔴 High | ✅ |
 | 3 | Run `make verify` green end-to-end on a clean provision | 🟠 Medium | ✅ |
-| 4 | Add a CI job that builds the custom Postgres image | 🟠 Medium | ☐ |
+| 4 | Add a CI job that builds the custom Postgres image | 🟠 Medium | ✅ |
 | 5 | Closeout: flip Phase 5b + Phase 6 from UNVERIFIED → verified | 🟠 Medium | ✅ |
 
 ---
