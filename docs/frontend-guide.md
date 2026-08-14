@@ -23,10 +23,15 @@ frontend/src/
 ├── app/
 │   ├── globals.css          ← Tailwind directives + brand palette
 │   ├── layout.tsx           ← RootLayout (metadata, AuthProvider)
-│   └── page.tsx             ← HomePage (AuthGuard → ChatView)
+│   ├── page.tsx             ← Landing page (hero + auth-aware CTA)
+│   ├── login/
+│   │   └── page.tsx         ← Login page (LoginForm → redirects to /chat)
+│   └── chat/
+│       └── page.tsx         ← Chat page (AuthGuard → ChatView)
 ├── components/
 │   ├── auth/
-│   │   └── auth-provider.tsx    ← AuthProvider + AuthGuard + LoginPage
+│   │   ├── auth-provider.tsx    ← AuthProvider + AuthGuard (redirects to /login)
+│   │   └── login-form.tsx       ← Email/password sign-in form
 │   ├── charts/
 │   │   └── chart-card.tsx       ← ChartCard + ChartGrid
 │   ├── chat/
@@ -34,6 +39,7 @@ frontend/src/
 │   └── ui/                  ← 11 shadcn/ui primitives
 ├── lib/
 │   ├── api-client.ts        ← Centralized API client with JWT + SSE
+│   ├── auth-storage.ts      ← Session keys + localStorage helpers (genbi_token/genbi_user)
 │   ├── shadcn.ts            ← cn() utility (clsx + twMerge)
 │   └── validators.ts        ← Zod schemas with inferred types
 └── types/
@@ -56,7 +62,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T>
 ```
 
 - Sets `Content-Type: application/json`
-- Attaches JWT from `localStorage.getItem("token")`
+- Attaches JWT from `auth-storage` (`genbi_token` key)
 - Throws `ApiError(status, code, message)` on non-OK responses
 - Default base URL: `http://localhost:8000/api/v1`
 
@@ -181,16 +187,20 @@ interface AuthState {
 }
 ```
 
-- **Login:** POST to `/auth/login`, stores `genbi_token` + `genbi_user` in `localStorage`
+- **Login:** POST to `/auth/login`, stores `genbi_token` + `genbi_user` in `localStorage` (via `lib/auth-storage.ts`)
 - **Session restoration:** On mount, reads from `localStorage`. If parsing fails, clears both.
 - **Loading guard:** While `loading` is true, renders nothing (or bouncing dots in `AuthGuard`).
 
 ### `AuthGuard` Component
 
-Wraps the application. Shows:
+Wraps protected pages. Shows:
 - Loading: bouncing dots animation
-- Unauthenticated: `LoginPage` (inline email/password form with `brand-600` accent)
+- Unauthenticated: `router.replace("/login")` redirect
 - Authenticated: children
+
+### `LoginForm` Component
+
+**File:** `src/components/auth/login-form.tsx` — extracted, reusable email/password form with `onSuccess` callback. Used by the `/login` page, which navigates to `/chat` after a successful sign-in.
 
 ---
 
@@ -251,17 +261,17 @@ export type ChartOutputFormat = "png" | "svg";
 - Applies `globals.css`, wraps children in `AuthProvider`
 - Body: `min-h-screen bg-gray-50 text-gray-900 antialiased`
 
-### `page.tsx` — Home Page
+### `page.tsx` — Landing Page
 
-```tsx
-export default function HomePage() {
-  return (
-    <AuthGuard>
-      <ChatView />
-    </AuthGuard>
-  );
-}
-```
+Minimal hero (logo, tagline, CTA). The CTA routes to `/login` when signed out and `/chat` when signed in.
+
+### `login/page.tsx` — Login Page
+
+Redirects to `/chat` if already authenticated; otherwise renders `LoginForm`, which navigates to `/chat` on success.
+
+### `chat/page.tsx` — Chat Page
+
+Wraps `ChatView` in `AuthGuard` (redirects to `/login` when signed out).
 
 ### Configuration
 

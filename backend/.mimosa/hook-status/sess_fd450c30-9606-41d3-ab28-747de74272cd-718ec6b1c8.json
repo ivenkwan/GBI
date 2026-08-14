@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "mimosa-hook-status/v1",
+  "recordedAt": "2026-08-14T16:36:38.060Z",
+  "sessionId": "sess_fd450c30-9606-41d3-ab28-747de74272cd",
+  "event": "PostToolUse",
+  "toolName": "Write",
+  "file": "Z:\\GITHUB\\GBI\\docs\\adr\\006-enforced-rls-roles.md",
+  "outcome": "clear",
+  "coverage": "complete",
+  "findingCount": 0,
+  "durationMs": 3,
+  "hostState": "hook_complete",
+  "reportHint": ".mimosa/reports/"
+}

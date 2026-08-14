@@ -3,6 +3,10 @@
 Generates embeddings for all table/column metadata and stores them in the
 schema_embeddings table for semantic search by NL2SQLAgent.
 
+Connects as the OWNER role (scripts/db_admin.owner_connect): schema_embeddings
+is RLS-enrolled, so the tenant GUC is set on the connection before any write
+(FORCE RLS binds the owner too).
+
 Usage:
     uv run python scripts/embed_schema.py                # full sync
     uv run python scripts/embed_schema.py --domain sales  # single domain
@@ -14,26 +18,22 @@ import asyncio
 import json
 import sys
 from datetime import datetime, timezone
-from typing import Any
 from uuid import uuid4
 
 from app.core.config import settings
 from app.core.logging import logger
-from app.connectors.postgresql_connector import PostgreSQLConnector
+from db_admin import owner_connect, set_tenant_guc
+
+DEFAULT_TENANT_ID = "00000000-0000-0000-0000-000000000001"
 
 
-async def get_schema_metadata(
-    connector: PostgreSQLConnector,
-    schema: str = "public",
-) -> list[dict[str, Any]]:
+async def get_schema_metadata(conn, schema: str = "public") -> list[dict]:
     """Retrieve all table and column metadata from information_schema.
 
-    Returns a list of dicts with:
-        - table_name, table_schema
-        - column_name, data_type, is_nullable, ordinal_position
-        - column_description (from pg_catalog.pg_description or dbt schema.yml)
+    Returns a list of dicts with table/column metadata grouped per table.
     """
-    query = """
+    rows = await conn.fetch(
+        """
         SELECT
             t.table_schema,
             t.table_name,
@@ -56,34 +56,34 @@ async def get_schema_metadata(
         LEFT JOIN pg_catalog.pg_description pgd
             ON pgd.objoid = pgc.oid
             AND pgd.objsubid = c.ordinal_position
-        WHERE t.table_schema = :schema
+        WHERE t.table_schema = $1
             AND t.table_type = 'BASE TABLE'
         ORDER BY t.table_name, c.ordinal_position
-    """
-
-    async with connector:
-        rows = await connector.execute(query, params={"schema": schema})
+        """,
+        schema,
+    )
 
     # Group columns by table
-    tables: dict[str, dict[str, Any]] = {}
+    tables: dict[str, dict] = {}
     for row in rows:
-        key = f"{row['table_schema']}.{row['table_name']}"
+        record = dict(row)
+        key = f"{record['table_schema']}.{record['table_name']}"
         if key not in tables:
             tables[key] = {
-                "table_schema": row["table_schema"],
-                "table_name": row["table_name"],
+                "table_schema": record["table_schema"],
+                "table_name": record["table_name"],
                 "full_name": key,
-                "table_description": row.get("table_description") or "",
+                "table_description": record["table_description"] or "",
                 "columns": [],
             }
 
         tables[key]["columns"].append({
-            "column_name": row["column_name"],
-            "data_type": row["data_type"],
-            "udt_name": row["udt_name"],
-            "is_nullable": row["is_nullable"],
-            "ordinal_position": row["ordinal_position"],
-            "description": row.get("column_description") or "",
+            "column_name": record["column_name"],
+            "data_type": record["data_type"],
+            "udt_name": record["udt_name"],
+            "is_nullable": record["is_nullable"],
+            "ordinal_position": record["ordinal_position"],
+            "description": record["column_description"] or "",
         })
 
     return list(tables.values())
@@ -134,7 +134,7 @@ async def generate_embedding(text: str) -> list[float]:
 
 
 async def sync_schema(
-    connector: PostgreSQLConnector,
+    conn,
     schema: str = "public",
     dry_run: bool = False,
 ) -> dict[str, int]:
@@ -148,7 +148,7 @@ async def sync_schema(
     Returns:
         Dict with counts: tables_processed, embeddings_generated, errors.
     """
-    tables = await get_schema_metadata(connector, schema)
+    tables = await get_schema_metadata(conn, schema)
 
     if not tables:
         logger.warning(f"No tables found in schema '{schema}'")
@@ -156,10 +156,13 @@ async def sync_schema(
 
     logger.info(f"Found {len(tables)} tables in schema '{schema}'")
 
+    # schema_embeddings is RLS-enrolled and FORCEd — even the owner needs the
+    # tenant GUC set before writing.
+    await set_tenant_guc(conn, DEFAULT_TENANT_ID)
+
     processed = 0
     embeddings = 0
     errors = 0
-    now = datetime.now(timezone.utc)
 
     for table in tables:
         processed += 1
@@ -172,43 +175,39 @@ async def sync_schema(
                 embedding_vector = await generate_embedding(embedding_text)
                 embeddings += 1
 
-                # Upsert into schema_embeddings. Uses named :param placeholders
-                # (PostgreSQLConnector routes through SQLAlchemy text(), which
-                # requires named params — NOT $1 positional).
-                upsert_sql = """
-                    INSERT INTO schema_embeddings (
-                        id, tenant_id, table_schema, table_name,
-                        full_name, table_description, columns_json,
-                        embedding_text, embedding, created_at, updated_at
-                    ) VALUES (
-                        :id, :tenant_id, :table_schema, :table_name,
-                        :full_name, :table_description, :columns_json,
-                        :embedding_text, :embedding::vector(1536), :now, :now
+                # Upsert (single transaction per table; embedding API call
+                # must not hold a transaction open).
+                async with conn.transaction():
+                    await conn.execute(
+                        """
+                        INSERT INTO schema_embeddings (
+                            id, tenant_id, table_schema, table_name,
+                            full_name, table_description, columns_json,
+                            embedding_text, embedding, created_at, updated_at
+                        ) VALUES (
+                            $1, $2, $3, $4,
+                            $5, $6, $7,
+                            $8, $9::vector(1536), $10, $10
+                        )
+                        ON CONFLICT (tenant_id, table_schema, table_name)
+                        DO UPDATE SET
+                            columns_json = EXCLUDED.columns_json,
+                            table_description = EXCLUDED.table_description,
+                            embedding_text = EXCLUDED.embedding_text,
+                            embedding = EXCLUDED.embedding,
+                            updated_at = EXCLUDED.updated_at
+                        """,
+                        str(uuid4()),
+                        DEFAULT_TENANT_ID,
+                        table["table_schema"],
+                        table["table_name"],
+                        table["full_name"],
+                        table.get("table_description", ""),
+                        columns_json,
+                        embedding_text,
+                        str(embedding_vector),
+                        datetime.now(timezone.utc),
                     )
-                    ON CONFLICT (tenant_id, table_schema, table_name)
-                    DO UPDATE SET
-                        columns_json = EXCLUDED.columns_json,
-                        table_description = EXCLUDED.table_description,
-                        embedding_text = EXCLUDED.embedding_text,
-                        embedding = EXCLUDED.embedding,
-                        updated_at = EXCLUDED.updated_at
-                """
-
-                await connector.execute(
-                    upsert_sql,
-                    params={
-                        "id": str(uuid4()),
-                        "tenant_id": "00000000-0000-0000-0000-000000000001",  # default tenant
-                        "table_schema": table["table_schema"],
-                        "table_name": table["table_name"],
-                        "full_name": table["full_name"],
-                        "table_description": table.get("table_description", ""),
-                        "columns_json": columns_json,
-                        "embedding_text": embedding_text,
-                        "embedding": embedding_vector,
-                        "now": now,
-                    },
-                )
 
                 logger.info(
                     f"Embedded table {table['full_name']} "
@@ -245,25 +244,27 @@ async def main():
     )
     parser.add_argument(
         "--connection-url",
-        default=settings.DATABASE_URL,
-        help="PostgreSQL connection URL",
+        default=None,
+        help="Owner PostgreSQL connection URL (default: DATABASE_URL_SYNC)",
     )
     args = parser.parse_args()
 
-    connector = PostgreSQLConnector(connection_url=args.connection_url)
+    conn = await owner_connect(args.connection_url)
+    try:
+        logger.info(
+            "Starting schema embedding sync",
+            schema=args.schema,
+            domain=args.domain,
+            dry_run=args.dry_run,
+        )
 
-    logger.info(
-        "Starting schema embedding sync",
-        schema=args.schema,
-        domain=args.domain,
-        dry_run=args.dry_run,
-    )
-
-    result = await sync_schema(
-        connector=connector,
-        schema=args.schema,
-        dry_run=args.dry_run,
-    )
+        result = await sync_schema(
+            conn=conn,
+            schema=args.schema,
+            dry_run=args.dry_run,
+        )
+    finally:
+        await conn.close()
 
     logger.info(
         "Schema embedding sync complete",

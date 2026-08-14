@@ -52,6 +52,21 @@ GRANT USAGE ON SCHEMA public TO cube_reader;
 -- Default privilege so future tables in public are readable by Cube:
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO cube_reader;
 
+-- Application runtime roles (see docs/adr/006-enforced-rls-roles.md and
+-- Alembic revision 0002_app_roles — the authoritative mirror of this block).
+--   genbi_app  — backend runtime (ORM + query connector); bound by RLS.
+--   genbi_auth — login endpoint only; reads `users` across tenants.
+-- Passwords are fixed dev defaults — rotate in production.
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'genbi_app') THEN
+        CREATE ROLE genbi_app LOGIN PASSWORD 'genbi_app';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'genbi_auth') THEN
+        CREATE ROLE genbi_auth LOGIN PASSWORD 'genbi_auth';
+    END IF;
+END $$;
+
 -- AGE: grant the application role access to the graph catalog (dev only).
 -- In prod, prefer a dedicated age_admin role.
 DO $$
@@ -89,6 +104,13 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE(tenant_id, email)
 );
+
+-- Dev bootstrap user (DEV-ONLY — remove before production): admin@genbi.local / admin123
+INSERT INTO users (id, tenant_id, email, hashed_password, roles) VALUES
+    ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000001',
+     'admin@genbi.local', '$2b$12$DMNWR/XfEsbJ2InS2iNLa.pXvy.NsZetS.Im0XppBpTOBwY6Brnyi',
+     '["admin","user"]')
+ON CONFLICT (tenant_id, email) DO NOTHING;
 
 CREATE TABLE IF NOT EXISTS audit_log (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -200,3 +222,24 @@ CREATE POLICY tenant_isolation ON schema_embeddings
     USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
 CREATE POLICY tenant_isolation ON agent_examples
     USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+
+-- ---------------------------------------------------------------------------
+-- Application Role Grants + Login-Lookup Policy
+-- ---------------------------------------------------------------------------
+-- Mirrors Alembic revision 0002_app_roles (the authoritative copy). The
+-- migration re-applies this block idempotently, so fresh containers (this
+-- file) and existing volumes (alembic) converge on the same state.
+
+GRANT USAGE ON SCHEMA public TO genbi_app, genbi_auth;
+GRANT SELECT ON tenants TO genbi_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON
+    users, audit_log, conversations, schema_embeddings, agent_examples
+    TO genbi_app;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO genbi_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO genbi_app;
+
+-- genbi_auth: SELECT on users ONLY — the single RLS carve-out a credential
+-- lookup requires. Scoped TO the role so it widens nothing else.
+GRANT SELECT ON users TO genbi_auth;
+CREATE POLICY users_login_lookup ON users
+    FOR SELECT TO genbi_auth USING (true);

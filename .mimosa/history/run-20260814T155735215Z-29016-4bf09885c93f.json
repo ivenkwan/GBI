@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "mimosa-finding-history/v1",
+  "runId": "20260814T155735215Z-29016-4bf09885c93f",
+  "runStatus": "inconclusive",
+  "errors": [
+    "candidate-select:backend/tests/evals/test_nl2sql_eval.py: candidate_limit_exceeded: 33 changed reviewable file(s) were not scanned because the limit is 20",
+    "baseline-read:frontend/next-env.d.ts: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:frontend/pnpm-lock.yaml: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:frontend/src/lib/auth-storage.ts: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:frontend/src/components/auth/login-form.tsx: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:frontend/src/app/login/page.tsx: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:frontend/src/app/chat/page.tsx: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:backend/tests/test_security.py: baseline_snapshot_unreadable: file is missing from task baseline"
+  ],
+  "target": ".",
+  "revision": "f57c85405096f9ab574575ee62f89423dd53076c",
+  "diffHash": "41d057e45574b3e3391cb560d23929c4cb2d50dbc289ff80604123468982a9dd",
+  "rulesVersion": "unavailable",
+  "recordedAt": "2026-08-14T15:57:35.215Z",
+  "timing": {
+    "startedAt": "2026-08-14T15:57:32.626Z",
+    "completedAt": "2026-08-14T15:57:35.215Z",
+    "durationMs": 2589
+  },
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "modelCalls": 0,
+    "measurement": "known-zero"
+  },
+  "findings": {
+    "total": 0,
+    "bySeverity": {},
+    "byStatus": {}
+  },
+  "coverage": {
+    "status": "partial",
+    "reasonCounts": {
+      "candidate_limit_exceeded": 1,
+      "baseline_snapshot_unreadable": 7,
+      "project_check_failed": 8
+    }
+  },
+  "evidenceBoundary": "static_only",
+  "immutableReport": ".mimosa/reports/task-review-sess_fd450c30-9606-41d3-ab28-747de74272cd-20260814T155735215Z-29016-4bf09885c93f.json"
+}

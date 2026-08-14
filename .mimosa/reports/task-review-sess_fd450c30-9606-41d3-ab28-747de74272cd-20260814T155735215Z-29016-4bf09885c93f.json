@@ -1,0 +1,608 @@
+{
+  "schema_version": "mimosa-task-review/v2",
+  "run_id": "20260814T155735215Z-29016-4bf09885c93f",
+  "run_status": "inconclusive",
+  "errors": [
+    {
+      "stage": "candidate-select",
+      "target": "backend/tests/evals/test_nl2sql_eval.py",
+      "reason": "candidate_limit_exceeded: 33 changed reviewable file(s) were not scanned because the limit is 20"
+    },
+    {
+      "stage": "baseline-read",
+      "target": "frontend/next-env.d.ts",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "baseline-read",
+      "target": "frontend/pnpm-lock.yaml",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "baseline-read",
+      "target": "frontend/src/lib/auth-storage.ts",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "baseline-read",
+      "target": "frontend/src/components/auth/login-form.tsx",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "baseline-read",
+      "target": "frontend/src/app/login/page.tsx",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "baseline-read",
+      "target": "frontend/src/app/chat/page.tsx",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "baseline-read",
+      "target": "backend/tests/test_security.py",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    }
+  ],
+  "coverage": {
+    "schema_version": "mimosa-hook-coverage/v1",
+    "status": "partial",
+    "scope": "hook_observed_diff",
+    "baseline": {
+      "complete": true,
+      "captured_files": 442,
+      "candidate_limit": 5000,
+      "truncated": false,
+      "enumeration_error_count": 0,
+      "snapshot_error_count": 0,
+      "compensated_target_count": 44
+    },
+    "change_tracking": {
+      "touched_observed": 2,
+      "touched_retained": 2,
+      "truncated": false,
+      "bash_mutation": true,
+      "bash_discovered": 53,
+      "bash_discovery_limit": 80,
+      "bash_discovery_truncated": false
+    },
+    "candidates": {
+      "eligible_files": 53,
+      "selected_files": 20,
+      "limit": 20,
+      "truncated": true
+    },
+    "scanning": {
+      "required_files": 18,
+      "scanned_files": 18,
+      "skipped_files": 0,
+      "failed_files": 0,
+      "project_checks_required": 1,
+      "project_checks_completed": 1
+    },
+    "notification": {
+      "eligible_findings": 0,
+      "detailed_findings": 0,
+      "detail_limit": 3,
+      "truncated": false
+    },
+    "reason_counts": {
+      "candidate_limit_exceeded": 1,
+      "baseline_snapshot_unreadable": 7,
+      "project_check_failed": 8
+    },
+    "reasons": [
+      {
+        "code": "candidate_limit_exceeded",
+        "stage": "candidate-select",
+        "target": "backend/tests/evals/test_nl2sql_eval.py",
+        "detail": "33 changed reviewable file(s) were not scanned because the limit is 20",
+        "affects_completion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "frontend/next-env.d.ts",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "frontend/pnpm-lock.yaml",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "frontend/src/lib/auth-storage.ts",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "frontend/src/components/auth/login-form.tsx",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "frontend/src/app/login/page.tsx",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "frontend/src/app/chat/page.tsx",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "backend/tests/test_security.py",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "candidate-select",
+        "target": "backend/tests/evals/test_nl2sql_eval.py",
+        "detail": "candidate_limit_exceeded: 33 changed reviewable file(s) were not scanned because the limit is 20",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "frontend/next-env.d.ts",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "frontend/pnpm-lock.yaml",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "frontend/src/lib/auth-storage.ts",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "frontend/src/components/auth/login-form.tsx",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "frontend/src/app/login/page.tsx",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "frontend/src/app/chat/page.tsx",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "backend/tests/test_security.py",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      }
+    ],
+    "reasons_truncated": false
+  },
+  "generated_at": "2026-08-14T15:57:35.215Z",
+  "session_id": "sess_fd450c30-9606-41d3-ab28-747de74272cd",
+  "target": ".",
+  "revision": "f57c85405096f9ab574575ee62f89423dd53076c",
+  "rules_version": "unavailable",
+  "diff_hash": "41d057e45574b3e3391cb560d23929c4cb2d50dbc289ff80604123468982a9dd",
+  "diff": {
+    "algorithm": "sha256",
+    "changed_file_count": 20,
+    "changed_files": [
+      {
+        "file": "backend/app/core/security.py",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 20
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "006f3cc32c38cb4b96a379866c3ee63b805cf6e54772da128ab56415f89ec34f"
+      },
+      {
+        "file": "backend/tests/conftest.py",
+        "ranges": [
+          {
+            "start": 4,
+            "end": 5
+          }
+        ],
+        "before_hash": "802f24e92ee145a5cd4d40390f2fdfc0af145f12c1f651c57a5b4efeff3b4b3c",
+        "after_hash": "f65a035c1451e33ea48ab49531676248c8e20165a2676d59140c687fe1e69a94"
+      },
+      {
+        "file": "backend/tests/fixtures/llm_mock.py",
+        "ranges": [
+          {
+            "start": 18,
+            "end": 18
+          },
+          {
+            "start": 68,
+            "end": 68
+          },
+          {
+            "start": 72,
+            "end": 72
+          },
+          {
+            "start": 99,
+            "end": 107
+          },
+          {
+            "start": 121,
+            "end": 129
+          },
+          {
+            "start": 144,
+            "end": 152
+          },
+          {
+            "start": 167,
+            "end": 182
+          }
+        ],
+        "before_hash": "aa3dac739950f5f72bacc5bdbf19351e37722567292959c4ac41f24b41cba430",
+        "after_hash": "2b540314b9125ec8f187a0f451e4382fdf2bafa64145835e2869476d3738c60c"
+      },
+      {
+        "file": "backend/tests/semantic/test_cube_client.py",
+        "ranges": [
+          {
+            "start": 234,
+            "end": 239
+          },
+          {
+            "start": 242,
+            "end": 247
+          },
+          {
+            "start": 265,
+            "end": 270
+          },
+          {
+            "start": 273,
+            "end": 278
+          },
+          {
+            "start": 282,
+            "end": 282
+          },
+          {
+            "start": 332,
+            "end": 337
+          },
+          {
+            "start": 346,
+            "end": 351
+          },
+          {
+            "start": 354,
+            "end": 359
+          },
+          {
+            "start": 376,
+            "end": 377
+          },
+          {
+            "start": 387,
+            "end": 388
+          }
+        ],
+        "before_hash": "1059ea29c5a9e04c80701cae7c4fd5a127433d852f96ee2bc655fedd125e9766",
+        "after_hash": "2582cd6cb233ec472ba56223f8cd67ec455532c9c962a2577afb9e17e45f3008"
+      },
+      {
+        "file": "backend/tests/test_security.py",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 22
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "bdd6f7151f10d919e5e33e9571a68002a3e39ca7e5f201190bf359aabe4fb9c2"
+      },
+      {
+        "file": "frontend/next-env.d.ts",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 6
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "f4e8976c19fc926644d72610bf1058bd6bf52add97e46a02bc0b912a751625c0"
+      },
+      {
+        "file": "frontend/package.json",
+        "ranges": [
+          {
+            "start": 10,
+            "end": 10
+          }
+        ],
+        "before_hash": "26a5431d8d2b1ecafcff88ea5cc160b72f6a45e89a6f54cb876290ed4ee7fee6",
+        "after_hash": "6491c7fa1fd61c9b320b80206349064b7a162705ac312b79b0cf60419414265b"
+      },
+      {
+        "file": "frontend/pnpm-lock.yaml",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 5707
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "9596e6bcdeba0239fc2798f05eb0e90ee16f607c991a0bef383fd2de03dc70a3"
+      },
+      {
+        "file": "frontend/src/app/chat/page.tsx",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 12
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "e2a5d46cd37274df70990fb77dd0628260f7b5c6d28a7ec01f946f7bdf9e5022"
+      },
+      {
+        "file": "frontend/src/app/login/page.tsx",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 28
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "61fec324d21af04e0d159d976f230cad3f42f6fc79f7a6b6cddb805c20a515b6"
+      },
+      {
+        "file": "frontend/src/app/page.tsx",
+        "ranges": [
+          {
+            "start": 3,
+            "end": 4
+          },
+          {
+            "start": 7,
+            "end": 8
+          },
+          {
+            "start": 10,
+            "end": 42
+          }
+        ],
+        "before_hash": "71dcfbe12381ca4af604a9a3f061331b5fa6e81e6af1cfc65ea913ab8d161b2a",
+        "after_hash": "7143a69ffe4b3e890489e9c7e1d7ee693eae81a2f6d0758e5764770ddd050381"
+      },
+      {
+        "file": "frontend/src/components/auth/auth-provider.tsx",
+        "ranges": [
+          {
+            "start": 4,
+            "end": 10
+          },
+          {
+            "start": 45,
+            "end": 46
+          },
+          {
+            "start": 49,
+            "end": 53
+          },
+          {
+            "start": 80,
+            "end": 80
+          },
+          {
+            "start": 89,
+            "end": 89
+          },
+          {
+            "start": 116,
+            "end": 116
+          },
+          {
+            "start": 119,
+            "end": 125
+          },
+          {
+            "start": 140,
+            "end": 140
+          }
+        ],
+        "before_hash": "9fcc9a58382f082705f6ba323621da44c995cd637ffc11c443335dbd12610f6f",
+        "after_hash": "9bca431cae3ddcead94563a7ca032d109b2f25129389b78ec319c347e418a249"
+      },
+      {
+        "file": "frontend/src/components/auth/login-form.tsx",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 86
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "dc0894fb7d12d3c453370debe7333b666d1178b7d857ff8838557fad185a9736"
+      },
+      {
+        "file": "frontend/src/components/charts/chart-card.tsx",
+        "ranges": [
+          {
+            "start": 5,
+            "end": 5
+          }
+        ],
+        "before_hash": "886dd6894f106c146fa0a0b146de4dcaae142b9ff861fcd86a07b5f8ae897162",
+        "after_hash": "23b51b2020f9595c4df17be8082cd904b2ef9b1301bcfc0a47f6d3c51130af4a"
+      },
+      {
+        "file": "frontend/src/components/chat/chat-view.tsx",
+        "ranges": [
+          {
+            "start": 7,
+            "end": 8
+          },
+          {
+            "start": 346,
+            "end": 346
+          }
+        ],
+        "before_hash": "c8a61ec2c2bf708526a44844bf06c799399e8f43bec3b1f2e35c783c1c36f280",
+        "after_hash": "fd8abc4b9280f932122a063ccf84865cc8df56d6c78ca8de73dd5289dc496981"
+      },
+      {
+        "file": "frontend/src/components/ui/input.tsx",
+        "ranges": [
+          {
+            "start": 4,
+            "end": 4
+          }
+        ],
+        "before_hash": "9c2f5486147a4bfa2dbe6ed0b5cfbabaff883197f97dd7d5f194647adb8090ba",
+        "after_hash": "048def8d49b98ab3634e8b57337b6a7ddcfd9c200594ee42a78fc4c59def52ae"
+      },
+      {
+        "file": "frontend/src/lib/api-client.ts",
+        "ranges": [
+          {
+            "start": 8,
+            "end": 8
+          },
+          {
+            "start": 22,
+            "end": 22
+          },
+          {
+            "start": 81,
+            "end": 81
+          },
+          {
+            "start": 87,
+            "end": 87
+          }
+        ],
+        "before_hash": "c3bd22ee765de3eca7928cdadb3c63c36305b97ea92cbf4789873661bc805d79",
+        "after_hash": "7d9d8782ee775fb45073d609323272e30317e425d1567ee6707fccb7d6ab58db"
+      },
+      {
+        "file": "frontend/src/lib/auth-storage.ts",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 35
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "306b8011438fe2efcd752c1430f4eda26c3fa0f019be07af0a06cc413f26be17"
+      },
+      {
+        "file": "frontend/src/lib/shadcn.ts",
+        "ranges": [
+          {
+            "start": 55,
+            "end": 86
+          }
+        ],
+        "before_hash": "50806d224a66ac399bac438b01b84d6e4895758bdf3387068706ec18474c7eb1",
+        "after_hash": "8958ad544a029b811f2583a25fa08854aba944f56ffb88a3ca9ae310d63e484d"
+      },
+      {
+        "file": "scripts/verify.sh",
+        "ranges": [
+          {
+            "start": 75,
+            "end": 85
+          },
+          {
+            "start": 93,
+            "end": 93
+          }
+        ],
+        "before_hash": "231655912623aa821312bc2caec1ef5f89ecb700b1238b06a9f5fd448ebc32f8",
+        "after_hash": "a4024035b4343bef05dc87bd122a53476af05d8ea7889840b9801102b56d7ce2"
+      }
+    ]
+  },
+  "timing": {
+    "started_at": "2026-08-14T15:57:32.626Z",
+    "completed_at": "2026-08-14T15:57:35.215Z",
+    "duration_ms": 2589,
+    "measurement": "hook_wall_clock"
+  },
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "model_calls": 0,
+    "measurement": "known-zero"
+  },
+  "telemetry": {
+    "schemaVersion": "mimosa-gate-telemetry/v1",
+    "profile": "gate",
+    "operation": "Stop",
+    "outcome": "partial/INCONCLUSIVE",
+    "latencyMs": 2589,
+    "peakMemoryBytes": 135897088,
+    "memoryMeasurement": "max-observed-process-rss",
+    "scannedFiles": 18,
+    "cache": {
+      "hits": 0,
+      "misses": 0,
+      "measurement": "not-applicable"
+    },
+    "denyCount": 0,
+    "tokens": {
+      "input": 0,
+      "output": 0,
+      "total": 0,
+      "modelCalls": 0,
+      "measurement": "known-zero"
+    }
+  },
+  "finding_count": 0,
+  "rewake_finding_count": 0,
+  "evidence_boundary": {
+    "scan": "candidate",
+    "static_fix_verification": "observed_static_only",
+    "runtime_verification": "not_performed"
+  },
+  "finding_events": [],
+  "findings": [],
+  "artifacts": {
+    "immutable_report": ".mimosa/reports/task-review-sess_fd450c30-9606-41d3-ab28-747de74272cd-20260814T155735215Z-29016-4bf09885c93f.json",
+    "latest_report": ".mimosa/reports/task-review-sess_fd450c30-9606-41d3-ab28-747de74272cd.json",
+    "history_summary": ".mimosa/history/run-20260814T155735215Z-29016-4bf09885c93f.json"
+  }
+}

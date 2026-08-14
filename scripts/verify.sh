@@ -22,6 +22,11 @@ psql_exec() {
   docker exec genbi-postgres psql -U genbi -d genbi -tA -c "$1" 2>/dev/null
 }
 
+# Same, but stderr kept — expected-failure checks need the error text.
+psql_full() {
+  docker exec genbi-postgres psql -U genbi -d genbi -tA -c "$1" 2>&1
+}
+
 # --- 1. Backend liveness -----------------------------------------------------
 if curl -sf http://localhost:8000/api/v1/health >/dev/null 2>&1; then
   ok "backend liveness (GET /api/v1/health → 200)"
@@ -72,7 +77,39 @@ else
   bad "postgres — AGE present but 'genbi_graph' missing (run init_age_graph)"
 fi
 
-# --- 6. Frontend (optional — requires Node/pnpm toolchain to build) ----------
+# --- 6. RLS enforcement (Phase 8b: runtime roles are actually bound) --------
+APP_USERS="$(psql_exec "SET ROLE genbi_app; SELECT count(*) FROM users;" || true)"
+if [[ "${APP_USERS:-x}" == "0" ]]; then
+  ok "RLS enforced — genbi_app sees 0 users without tenant GUC"
+else
+  bad "RLS NOT enforced — genbi_app saw ${APP_USERS:-<error>} users without GUC (roles migrated?)"
+fi
+
+AUTH_USERS="$(psql_exec "SET ROLE genbi_auth; SELECT count(*) FROM users;" || true)"
+if [[ "${AUTH_USERS:-x}" =~ ^[0-9]+$ ]] && [[ "${AUTH_USERS}" -ge 1 ]]; then
+  ok "auth role can look up users ($AUTH_USERS row(s), cross-tenant by design)"
+else
+  bad "auth role cannot read users (login path broken — Alembic 0002 applied?)"
+fi
+
+AUTH_AUDIT="$(psql_full "SET ROLE genbi_auth; SELECT count(*) FROM audit_log;" || true)"
+if echo "$AUTH_AUDIT" | grep -q "permission denied"; then
+  ok "auth role is denied on non-users tables (audit_log)"
+else
+  bad "auth role could read audit_log — its grants are too broad"
+fi
+
+# --- 7. Auth: login issues a JWT ---------------------------------------------
+LOGIN_RESP="$(curl -sf -X POST http://localhost:8000/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"admin@genbi.local","password":"admin123"}' 2>/dev/null || true)"
+if echo "$LOGIN_RESP" | grep -q '"access_token"'; then
+  ok "auth — login issues a JWT for the seeded dev user"
+else
+  bad "auth — /auth/login failed (seed user only exists on fresh volumes; try make reset)"
+fi
+
+# --- 8. Frontend (optional — requires Node/pnpm toolchain to build) ----------
 HTTP_CODE="$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000 2>/dev/null || echo '000')"
 if [[ "${HTTP_CODE}" =~ ^([23][0-9][0-9])$ ]]; then
   ok "frontend served on :3000 (HTTP $HTTP_CODE)"
@@ -80,7 +117,7 @@ else
   echo "  ℹ️  frontend not reachable on :3000 (requires Node/pnpm to build; optional)"
 fi
 
-# --- 7. Prometheus (optional) ------------------------------------------------
+# --- 9. Prometheus (optional) ------------------------------------------------
 if curl -sf http://localhost:9090/-/healthy >/dev/null 2>&1; then
   ok "prometheus healthy on :9090"
 else

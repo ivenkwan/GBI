@@ -53,6 +53,40 @@ make setup
 installs dependencies, builds Docker images, starts the stack, runs migrations,
 and verifies every service is healthy. On success it prints the access URLs.
 
+### Demo credentials
+
+A dev-only user is seeded into a fresh database (via `infra/postgres/init.sql`):
+
+| Email | Password | Roles |
+|---|---|---|
+| `admin@genbi.local` | `admin123` | `admin`, `user` |
+
+> Dev-only — remove or rotate before any production deployment. Existing
+> databases created before this seed need `make reset` (init.sql only runs on
+> fresh volumes).
+
+### Database roles (enforced tenant isolation)
+
+The backend never connects as a superuser (see
+[ADR 006](docs/adr/006-enforced-rls-roles.md)). Roles are created by
+`init.sql` on fresh volumes and by Alembic `0002_app_roles` everywhere else:
+
+| Role | Password (dev) | Used by | Can do |
+|---|---|---|---|
+| `genbi` (owner) | `genbi` | Alembic, admin scripts (`DATABASE_URL_SYNC`) | Everything |
+| `genbi_app` | `genbi_app` | Backend runtime + query connector (`DATABASE_URL`) | RLS-bound DML/SELECT; sees only rows matching `app.current_tenant_id` |
+| `genbi_auth` | `genbi_auth` | Login endpoint (`DATABASE_URL_AUTH`) | Read `users` across tenants; nothing else |
+
+All dev passwords are fixed defaults — **rotate in production**. Analytics
+tables (`sales`, `orders`, …, `web_users`) are FORCE-RLS tenant-scoped like
+the metadata tables (Alembic `0003_analytics`).
+
+> **Upgrading an existing stack:** `make migrate` creates the roles and
+> analytics tables, then regenerate env files so the runtime uses the new
+> role URLs: `scripts/gen-env.sh --force && make restart`. Old seed data with
+> an analytics `users` table conflicts with `web_users` — the cleanest path
+> is `make reset` (fresh volume + init.sql) and re-seed.
+
 <details>
 <summary><b>Manual setup (if you prefer not to use the Makefile)</b></summary>
 
@@ -228,6 +262,7 @@ genbi/
 - [ADR 003 — vis-flint protocol](docs/adr/003-vis-flint-protocol.md) — chart embedding protocol
 - [ADR 004 — Flint bridge fallback](docs/adr/004-flint-bridge-fallback.md) — render fallback path
 - [ADR 005 — AGE + pgvector image](docs/adr/005-age-and-pgvector-image.md) — custom Postgres image for both extensions
+- [ADR 006 — Enforced RLS roles](docs/adr/006-enforced-rls-roles.md) — non-superuser runtime roles, RLS actually enforced
 
 ### AI assistant context
 - [CLAUDE.md](CLAUDE.md) — full project context, hard rules, and conventions for AI coding tools
@@ -327,18 +362,21 @@ parsing, and destructive-pattern detection all run for real. See
 | Agent pipeline (NL→SQL→Chart→Narrative) | ✅ Implemented | Sync + SSE streaming |
 | Validation safety gate | ✅ Implemented | Destructive-pattern + read-only enforcement |
 | Semantic layer (dbt + Cube) | ✅ Scaffold | One toy metric; expand for production |
-| Multi-tenant RLS + JWT | ✅ Implemented | FORCE RLS on all tenant tables |
+| Multi-tenant RLS + JWT | ✅ Enforced | Non-superuser runtime roles + FORCE RLS on all tenant tables, incl. analytics (ADR 006) |
 | PII masking | ✅ Wired | Applied at the execution chokepoint |
 | Chart hallucination detection | ✅ Implemented | 6 validation categories + auto-correct |
 | Dual-tier cache (L1 LRU + L2 Redis) | ✅ Implemented | Schema, metrics, results, charts |
 | Observability (OTel + Langfuse + Prometheus) | ✅ Wired | `/metrics` endpoint on backend |
 | Frontend chat UI | ✅ Implemented | SSE streaming, stage rendering |
 | Environment provisioning (`make setup`) | ✅ Implemented | One-command bootstrap |
-| **End-to-end verification** | ⚠️ **Unverified** | Code parses; build + test run pending (see [`todo.md`](todo.md) Phase 7) |
+| End-to-end verification | ✅ Verified | 61+ tests pass, `make verify` green, CI builds (Phases 7–8) |
 
-> The platform is feature-complete as a scaffold but has not yet been
-> build-and-test verified end-to-end. See [`todo.md`](todo.md) (Phases 5b–7)
-> for the implementation and verification backlog.
+> Phase 7 (build & test verification) closed out Phases 5b/6 as VERIFIED; the
+> platform builds, boots, and passes its full test suite. Phase 8 added the
+> auth + chat vertical slice (login, /chat route, landing page).
+
+> See [`todo.md`](todo.md) for the phase tracker (Phases 1–8) and the
+> implementation/verification history.
 
 ---
 

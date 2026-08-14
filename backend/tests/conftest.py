@@ -1,10 +1,72 @@
 """Conftest — shared test fixtures and configuration."""
 
+import os
 import uuid
 from collections.abc import AsyncGenerator
 
+import asyncpg
 import pytest
 import pytest_asyncio
+from sqlalchemy.engine import make_url
+
+
+def role_dsn(username: str, password: str) -> str:
+    """DSN for a DB role, preserving the host/database of DATABASE_URL.
+
+    CI points DATABASE_URL at its service container (genbi_test DB); dev
+    points at localhost — deriving keeps the tests correct in both.
+    """
+    from app.core.config import settings
+
+    url = make_url(settings.DATABASE_URL).set(username=username, password=password)
+    if url.drivername != "postgresql":
+        url = url.set(drivername="postgresql")
+    return url.render_as_string(hide_password=False)
+
+
+def app_role_dsn() -> str:
+    """DSN for the RLS-bound runtime role (created by Alembic 0002)."""
+    return role_dsn(
+        os.environ.get("GENBI_APP_DB_USER", "genbi_app"),
+        os.environ.get("GENBI_APP_DB_PASSWORD", "genbi_app"),
+    )
+
+
+def auth_role_dsn() -> str:
+    """DSN for the login-only role (created by Alembic 0002)."""
+    return role_dsn(
+        os.environ.get("GENBI_AUTH_DB_USER", "genbi_auth"),
+        os.environ.get("GENBI_AUTH_DB_PASSWORD", "genbi_auth"),
+    )
+
+
+def owner_dsn() -> str:
+    """DSN for the owner role (DATABASE_URL_SYNC), asyncpg driver."""
+    from app.core.config import settings
+
+    url = make_url(settings.DATABASE_URL_SYNC)
+    if url.drivername != "postgresql":
+        url = url.set(drivername="postgresql")
+    return url.render_as_string(hide_password=False)
+
+
+async def db_reachable(dsn: str) -> bool:
+    try:
+        conn = await asyncpg.connect(dsn)
+        await conn.close()
+        return True
+    except Exception:
+        return False
+
+
+@pytest_asyncio.fixture
+async def owner_conn() -> AsyncGenerator[asyncpg.Connection]:
+    """Owner-role connection for test data setup/teardown."""
+    conn = await asyncpg.connect(owner_dsn())
+    try:
+        yield conn
+    finally:
+        await conn.close()
 
 
 @pytest.fixture

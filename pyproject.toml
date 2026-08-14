@@ -39,6 +39,16 @@ select = [
 ]
 ignore = ["E501"]  # line-too-long handled by formatter
 
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends"]
+
+[tool.ruff.lint.per-file-ignores]
+# N815: chartType/baseSize are the Flint chart-spec JSON keys — must keep casing.
+"backend/app/models/chart.py" = ["N815"]
+# F841: ingest_table's cypher execute is side-effect-only (result intentionally
+# unread). Parameterizing the AGE cypher queries is a tracked follow-up.
+"backend/app/db/graph_schema.py" = ["F841"]
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"

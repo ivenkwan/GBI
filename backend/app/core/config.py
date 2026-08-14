@@ -4,19 +4,20 @@ All settings load from environment variables with sensible defaults.
 Secrets are NEVER hardcoded — always use env vars or .env file.
 """
 
-from pydantic import field_validator, model_validator
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
 
 # Secret values that must not ship to non-development environments. Any match
 # here in production/staging fails fast at Settings() construction time rather
 # than silently signing JWTs with a publicly known key.
-_INSECURE_SECRET_VALUES = frozenset({
-    "change-me",
-    "change-me-in-production",
-    "change-me-in-production-use-openssl-rand-64",
-    "",
-})
+_INSECURE_SECRET_VALUES = frozenset(
+    {
+        "change-me",
+        "change-me-in-production",
+        "change-me-in-production-use-openssl-rand-64",
+        "",
+    }
+)
 
 
 class Settings(BaseSettings):
@@ -43,6 +44,7 @@ class Settings(BaseSettings):
         v = self.CORS_ORIGINS.strip()
         if v.startswith("["):
             import json
+
             try:
                 return json.loads(v)
             except json.JSONDecodeError:
@@ -55,8 +57,23 @@ class Settings(BaseSettings):
     LLM_FAST_MODEL: str = "claude-haiku-4"
 
     # --- Database ---
-    DATABASE_URL: str = "postgresql+asyncpg://genbi:genbi@localhost:5432/genbi"
+    # Runtime role (non-superuser; RLS-bound). Owner credentials stay in
+    # DATABASE_URL_SYNC for Alembic and admin scripts only.
+    DATABASE_URL: str = "postgresql+asyncpg://genbi_app:genbi_app@localhost:5432/genbi"
     DATABASE_URL_SYNC: str = "postgresql://genbi:genbi@localhost:5432/genbi"
+    # Login endpoint role (reads `users` across tenants). Blank = derive from
+    # DATABASE_URL by swapping credentials, so host/database follow the main
+    # URL in every environment.
+    DATABASE_URL_AUTH: str = ""
+
+    @property
+    def database_url_auth(self) -> str:
+        """Auth-engine URL: explicit override, or DATABASE_URL with genbi_auth creds."""
+        if self.DATABASE_URL_AUTH:
+            return self.DATABASE_URL_AUTH
+        from sqlalchemy.engine import make_url
+
+        return str(make_url(self.DATABASE_URL).set(username="genbi_auth", password="genbi_auth"))
 
     # --- Redis ---
     REDIS_URL: str = "redis://localhost:6379/0"
@@ -96,7 +113,10 @@ class Settings(BaseSettings):
         would let anyone forge tokens. Better to refuse to boot than to run
         with a publicly-known signing key.
         """
-        if self.APP_ENV not in ("development", "test") and self.JWT_SECRET_KEY in _INSECURE_SECRET_VALUES:
+        if (
+            self.APP_ENV not in ("development", "test")
+            and self.JWT_SECRET_KEY in _INSECURE_SECRET_VALUES
+        ):
             raise ValueError(
                 "JWT_SECRET_KEY must be set to a strong random value in "
                 f"APP_ENV={self.APP_ENV} (generate one with `openssl rand -hex 32`). "

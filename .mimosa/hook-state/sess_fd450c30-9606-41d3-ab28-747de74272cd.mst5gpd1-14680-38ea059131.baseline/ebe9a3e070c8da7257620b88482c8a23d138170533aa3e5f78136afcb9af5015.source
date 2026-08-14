@@ -1,0 +1,61 @@
+"""Conftest — shared test fixtures and configuration."""
+
+import uuid
+from collections.abc import AsyncGenerator
+
+import pytest
+import pytest_asyncio
+
+
+@pytest.fixture
+def tenant_id() -> str:
+    return "00000000-0000-0000-0000-000000000001"
+
+
+@pytest.fixture
+def user_id() -> str:
+    return str(uuid.uuid4())
+
+
+@pytest.fixture
+def session_id() -> str:
+    return str(uuid.uuid4())
+
+
+@pytest.fixture
+def sample_sales_data() -> list[dict]:
+    """Sample query result: sales by region."""
+    return [
+        {"region": "North", "total_revenue": 120000},
+        {"region": "South", "total_revenue": 95000},
+        {"region": "East", "total_revenue": 140000},
+        {"region": "West", "total_revenue": 110000},
+    ]
+
+
+@pytest.fixture
+def sample_time_series_data() -> list[dict]:
+    """Sample query result: monthly revenue."""
+    return [
+        {"month": "2026-01", "revenue": 50000},
+        {"month": "2026-02", "revenue": 55000},
+        {"month": "2026-03", "revenue": 62000},
+        {"month": "2026-04", "revenue": 58000},
+    ]
+
+
+# ---------------------------------------------------------------------------
+# Agent fixtures
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def agent_config():
+    """Default AgentConfig for tests — uses mocked LLM, not real API."""
+    from app.agents.base import AgentConfig
+
+    return AgentConfig(
+        model_name="claude-haiku-4",
+        temperature=0,
+        max_tokens=1024,
+    )

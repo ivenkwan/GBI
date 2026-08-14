@@ -1,6 +1,6 @@
 # GenBI Platform — Build Progress
 
-> **Last updated:** 2026-08-07 | **Stack tier:** Enterprise | **30/30 tasks complete**
+> **Last updated:** 2026-08-14 | **Stack tier:** Enterprise | **37/37 tasks complete**
 
 ---
 
@@ -933,3 +933,75 @@ citation, and Task 5 is ✅.
 These five tasks convert "implemented and statically checked" into "verified
 working." Until Task 5 is ✅, treat Phases 5b/6 as **unverified** — the code
 is written carefully but has never executed.
+
+---
+
+## Phase 8 — Auth & Chat Completion (Tasks 31–37)
+
+> **Status: VERIFIED 2026-08-14** — closes the product's missing login path
+> end-to-end and repairs the never-green lint gates.
+
+| # | Task | Status |
+|---|---|---|
+| 31 | Password hashing (bcrypt) + `POST /auth/login` (JWT minting, tenant disambiguation) | ✅ |
+| 32 | Dev bootstrap user seed (`init.sql`: `admin@genbi.local`) + README demo credentials | ✅ |
+| 33 | Auth tests: `security.py` unit tests + DB-backed login integration tests (skip when Postgres down) | ✅ |
+| 34 | Frontend auth slice: `/login` page, `/chat` route, `AuthGuard` redirect, landing page, `LoginForm` extraction | ✅ |
+| 35 | Fix token storage key mismatch (`auth-storage.ts`; api-client previously read the wrong localStorage key) | ✅ |
+| 36 | Repair never-green frontend gates: commit `pnpm-lock.yaml`, ESLint flat config (`eslint .`), shadcn dangling re-export cleanup | ✅ |
+| 37 | Repair backend lint gate (ruff `extend` path + 136 pre-existing violations) + docs refresh + `verify.sh` login check | ✅ |
+
+### Verified by
+
+- `ruff check .` + `ruff format --check .` — clean (backend)
+- `pytest -m "not e2e"` — 61 passed, 6 skipped (DB-backed auth tests skip without Postgres; run in CI)
+- `pnpm typecheck` / `pnpm lint` / `pnpm build` — clean (standalone trace fails only on local non-symlink filesystems)
+- `make verify` now includes an auth login smoke check
+
+### Follow-ups (out of scope, flagged)
+
+- **RLS tenant isolation is not enforced**: the app connects as `POSTGRES_USER`
+  (a superuser in the official image), so `FORCE ROW LEVEL SECURITY` policies
+  never constrain it. Fix: dedicated non-superuser `genbi_app` role + grants +
+  connector auth swap. The login request already supports optional `tenant_id`
+  for that migration.
+- `graph_schema.py` builds AGE Cypher with f-string interpolation — parameterize
+  (AGE `$params` jsonb arg) as part of the RLS work.
+
+---
+
+## Phase 8b — Enforced Tenant Isolation (Tasks 38–44)
+
+> **Status: code complete 2026-08-15; runtime verification pending a Docker
+> session (`make reset && make setup && make verify`).** Closes the gap where
+> RLS was configured but never enforced (the app connected as a superuser).
+
+| # | Task | Status |
+|---|---|---|
+| 38 | Alembic 0002: `genbi_app` + `genbi_auth` roles, grants, `users_login_lookup` policy (mirrored in init.sql) | ✅ |
+| 39 | Alembic 0003: analytics tables under FORCE RLS; seed `users` → `web_users` rename (collision fix) | ✅ |
+| 40 | Runtime switch: `DATABASE_URL` → genbi_app, new `DATABASE_URL_AUTH` engine for login (`get_auth_db`) | ✅ |
+| 41 | Admin scripts repair: `db_admin.py` owner connections + tenant GUC; seed/embed rewrite (both were broken through the read-only connector) | ✅ |
+| 42 | Isolation tests: cross-tenant invisibility, forged-tenant INSERT rejection, no-GUC blindness, genbi_auth carve-out bounds (8 tests) | ✅ |
+| 43 | `verify.sh`: RLS enforcement checks (genbi_app sees 0 users w/o GUC; genbi_auth users-only) | ✅ |
+| 44 | Docs: ADR 006, README roles table + upgrade path | ✅ |
+
+### Verified by
+
+- ruff + full pytest locally (DB-backed tests skip without Postgres; they run
+  in CI where the migration step creates the roles)
+- CI exercises: migrations (0002+0003) → auth + isolation suites against the
+  real roles
+- Pending (needs Docker): `make reset && make setup && make verify`,
+  login smoke via the genbi_auth path
+
+### Notes / follow-ups
+
+- The AGE lineage module (`graph_schema.py`) remains dead code with
+  f-string-interpolated Cypher — parameterize before wiring it to the
+  runtime role.
+- Login rate limiting (protects the genbi_auth cross-tenant read oracle) is
+  an app-layer follow-up.
+- Writing to tenant tables through the ORM requires setting the GUC on the
+  session — copy the `set_tenant_guc` pattern when the first ORM writer
+  (audit_log) lands.

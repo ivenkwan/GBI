@@ -1,8 +1,10 @@
-"""Test data infrastructure — seed SQL and synthetic test data.
+"""Test data infrastructure — synthetic analytics data for development.
 
-Generates realistic synthetic data for development and testing.
-Tables: sales, customers, orders, transactions, users, products,
-regions, sales_representatives, deals, activity.
+Tables (created by Alembic migration 0003_analytics, all FORCE-RLS tenant-
+scoped): sales, customers, orders, transactions, web_users, products,
+regions, sales_representatives, deals, activity. This script only INSERTs
+data, connecting as the OWNER role (scripts/db_admin.owner_connect) and
+setting the tenant GUC per tenant pass (FORCE RLS binds the owner too).
 
 Usage:
     uv run python scripts/seed_test_data.py              # seed all tables
@@ -13,10 +15,10 @@ import argparse
 import asyncio
 import random
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
-from app.core.config import settings
 from app.core.logging import logger
+from db_admin import owner_connect, set_tenant_guc
 
 
 # ---------------------------------------------------------------------------
@@ -132,14 +134,14 @@ def generate_transactions(tenant_id: str, num_rows: int = 2000) -> list[dict]:
             "amount": round(random.uniform(-10000, 100000), 2),
             "transaction_date": random_date(start, end),
             "type": random.choice(["deposit", "withdrawal", "transfer", "payment"]),
-            "status": random.choice(["completed", "completed", "completed", "pending", "failed"]),
+            "status": random.choice(["completed", "completed", "pending", "failed"]),
         })
 
     return rows
 
 
 def generate_users(tenant_id: str, num_rows: int = 200) -> list[dict]:
-    """Generate synthetic user records."""
+    """Generate synthetic web-user records (analytics data, NOT app logins)."""
     rows = []
     start = datetime(2023, 1, 1)
     end = datetime(2026, 6, 30)
@@ -155,7 +157,7 @@ def generate_users(tenant_id: str, num_rows: int = 200) -> list[dict]:
             "country": random.choice(COUNTRIES),
             "signup_date": signup,
             "last_login": last_login,
-            "status": random.choice(["active", "active", "active", "inactive"]),
+            "status": random.choice(["active", "active", "inactive"]),
         })
 
     return rows
@@ -217,6 +219,7 @@ def generate_deals(tenant_id: str, reps: list[dict], regions: list[dict], num_ro
             "close_date": random_date(start, end),
             "stage": random.choice(["prospecting", "negotiation", "closed_won", "closed_lost"]),
         })
+
     return rows
 
 
@@ -235,227 +238,172 @@ def generate_activity(tenant_id: str, users: list[dict], num_rows: int = 5000) -
             "activity_date": random_date(start, end),
             "event_type": random.choice(["login", "query", "export", "dashboard_view", "report_create"]),
         })
+
     return rows
-
-
-# ---------------------------------------------------------------------------
-# Table definitions
-# ---------------------------------------------------------------------------
-
-
-TABLE_SCHEMAS = {
-    "sales": """
-        CREATE TABLE IF NOT EXISTS public.sales (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            tenant_id UUID NOT NULL,
-            region VARCHAR(50) NOT NULL,
-            product_id UUID NOT NULL,
-            product_name VARCHAR(200) NOT NULL,
-            revenue NUMERIC(15, 2) NOT NULL DEFAULT 0,
-            units INTEGER NOT NULL DEFAULT 0,
-            transaction_date DATE NOT NULL,
-            rep_id UUID NOT NULL,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-    """,
-    "customers": """
-        CREATE TABLE IF NOT EXISTS public.customers (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            tenant_id UUID NOT NULL,
-            name VARCHAR(200) NOT NULL,
-            email VARCHAR(200),
-            country VARCHAR(100),
-            signup_date DATE NOT NULL,
-            status VARCHAR(20) NOT NULL DEFAULT 'active',
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-    """,
-    "orders": """
-        CREATE TABLE IF NOT EXISTS public.orders (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            tenant_id UUID NOT NULL,
-            customer_id UUID NOT NULL,
-            product_id UUID NOT NULL,
-            amount NUMERIC(15, 2) NOT NULL,
-            order_date DATE NOT NULL,
-            status VARCHAR(20) NOT NULL DEFAULT 'completed',
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-    """,
-    "transactions": """
-        CREATE TABLE IF NOT EXISTS public.transactions (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            tenant_id UUID NOT NULL,
-            amount NUMERIC(15, 2) NOT NULL,
-            transaction_date DATE NOT NULL,
-            type VARCHAR(30) NOT NULL,
-            status VARCHAR(20) NOT NULL DEFAULT 'completed',
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-    """,
-    "users": """
-        CREATE TABLE IF NOT EXISTS public.users (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            tenant_id UUID NOT NULL,
-            name VARCHAR(200) NOT NULL,
-            email VARCHAR(200),
-            country VARCHAR(100),
-            signup_date DATE NOT NULL,
-            last_login DATE,
-            status VARCHAR(20) NOT NULL DEFAULT 'active',
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-    """,
-    "products": """
-        CREATE TABLE IF NOT EXISTS public.products (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            tenant_id UUID NOT NULL,
-            product_name VARCHAR(200) NOT NULL,
-            category VARCHAR(100) NOT NULL,
-            price NUMERIC(15, 2) NOT NULL DEFAULT 0,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-    """,
-    "regions": """
-        CREATE TABLE IF NOT EXISTS public.regions (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            tenant_id UUID NOT NULL,
-            region_name VARCHAR(100) NOT NULL,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-    """,
-    "sales_representatives": """
-        CREATE TABLE IF NOT EXISTS public.sales_representatives (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            tenant_id UUID NOT NULL,
-            name VARCHAR(200) NOT NULL,
-            email VARCHAR(200),
-            region_id UUID NOT NULL REFERENCES regions(id),
-            hire_date DATE NOT NULL,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-    """,
-    "deals": """
-        CREATE TABLE IF NOT EXISTS public.deals (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            tenant_id UUID NOT NULL,
-            amount NUMERIC(15, 2) NOT NULL,
-            rep_id UUID NOT NULL REFERENCES sales_representatives(id),
-            region_id UUID NOT NULL REFERENCES regions(id),
-            close_date DATE NOT NULL,
-            stage VARCHAR(30) NOT NULL,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-    """,
-    "activity": """
-        CREATE TABLE IF NOT EXISTS public.activity (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            tenant_id UUID NOT NULL,
-            user_id UUID NOT NULL,
-            activity_date DATE NOT NULL,
-            event_type VARCHAR(50) NOT NULL,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-    """,
-}
 
 
 # ---------------------------------------------------------------------------
 # Seed runner
 # ---------------------------------------------------------------------------
+# Column-order constants mirror the generator dicts 1:1; inserts go through
+# asyncpg executemany with $n positional parameters.
+
+REGION_COLS = ("id", "tenant_id", "region_name")
+PRODUCT_COLS = ("id", "tenant_id", "product_name", "category", "price")
+CUSTOMER_COLS = ("id", "tenant_id", "name", "email", "country", "signup_date", "status")
+WEB_USER_COLS = (
+    "id", "tenant_id", "name", "email", "country", "signup_date", "last_login", "status",
+)
+REP_COLS = ("id", "tenant_id", "name", "region_id", "email", "hire_date")
+DEAL_COLS = ("id", "tenant_id", "amount", "rep_id", "region_id", "close_date", "stage")
+SALES_COLS = (
+    "id", "tenant_id", "region", "product_id", "product_name", "revenue",
+    "units", "transaction_date", "rep_id",
+)
+ORDER_COLS = ("id", "tenant_id", "customer_id", "product_id", "amount", "order_date", "status")
+TRANSACTION_COLS = ("id", "tenant_id", "amount", "transaction_date", "type", "status")
+ACTIVITY_COLS = ("id", "tenant_id", "user_id", "activity_date", "event_type")
+
+
+def _tuples(rows: list[dict], cols: tuple[str, ...]) -> list[tuple]:
+    """Project generated dicts to value tuples in column order."""
+    return [tuple(row[c] for c in cols) for row in rows]
+
+
+async def _clear_data(conn) -> None:
+    """Truncate all analytics tables (RLS does not filter TRUNCATE)."""
+    await conn.execute("TRUNCATE TABLE public.activity")
+    await conn.execute("TRUNCATE TABLE public.transactions")
+    await conn.execute("TRUNCATE TABLE public.orders")
+    await conn.execute("TRUNCATE TABLE public.sales")
+    await conn.execute("TRUNCATE TABLE public.deals")
+    await conn.execute("TRUNCATE TABLE public.sales_representatives")
+    await conn.execute("TRUNCATE TABLE public.web_users")
+    await conn.execute("TRUNCATE TABLE public.customers")
+    await conn.execute("TRUNCATE TABLE public.products")
+    await conn.execute("TRUNCATE TABLE public.regions")
+    logger.info("Cleared all seed data")
+
+
+async def _seed_tenant(conn, t_id: str) -> int:
+    """Generate and insert one tenant's data. Returns rows inserted."""
+    regions = generate_regions(t_id)
+    products = generate_products(t_id)
+    customers = generate_customers(t_id)
+    users = generate_users(t_id)
+    reps = generate_sales_reps(t_id, regions)
+    deals = generate_deals(t_id, reps, regions)
+    sales = generate_sales(t_id)
+    orders = generate_orders(t_id, customers)
+    transactions = generate_transactions(t_id)
+    activity = generate_activity(t_id, users)
+
+    inserted = 0
+
+    # FORCE RLS binds the owner too — the tenant GUC must be set on this
+    # connection before any tenant-scoped DML.
+    await set_tenant_guc(conn, t_id)
+
+    async with conn.transaction():
+        await conn.executemany(
+            "INSERT INTO public.regions (id, tenant_id, region_name) "
+            "VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING",
+            _tuples(regions, REGION_COLS),
+        )
+        inserted += len(regions)
+        await conn.executemany(
+            "INSERT INTO public.products (id, tenant_id, product_name, category, price) "
+            "VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING",
+            _tuples(products, PRODUCT_COLS),
+        )
+        inserted += len(products)
+        await conn.executemany(
+            "INSERT INTO public.customers "
+            "(id, tenant_id, name, email, country, signup_date, status) "
+            "VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING",
+            _tuples(customers, CUSTOMER_COLS),
+        )
+        inserted += len(customers)
+        await conn.executemany(
+            "INSERT INTO public.web_users "
+            "(id, tenant_id, name, email, country, signup_date, last_login, status) "
+            "VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (id) DO NOTHING",
+            _tuples(users, WEB_USER_COLS),
+        )
+        inserted += len(users)
+        await conn.executemany(
+            "INSERT INTO public.sales_representatives "
+            "(id, tenant_id, name, region_id, email, hire_date) "
+            "VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (id) DO NOTHING",
+            _tuples(reps, REP_COLS),
+        )
+        inserted += len(reps)
+        await conn.executemany(
+            "INSERT INTO public.deals "
+            "(id, tenant_id, amount, rep_id, region_id, close_date, stage) "
+            "VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING",
+            _tuples(deals, DEAL_COLS),
+        )
+        inserted += len(deals)
+
+        for i in range(0, len(sales), 500):
+            chunk = _tuples(sales[i:i + 500], SALES_COLS)
+            await conn.executemany(
+                "INSERT INTO public.sales "
+                "(id, tenant_id, region, product_id, product_name, revenue, units, "
+                "transaction_date, rep_id) "
+                "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT (id) DO NOTHING",
+                chunk,
+            )
+            inserted += len(chunk)
+        for i in range(0, len(orders), 500):
+            chunk = _tuples(orders[i:i + 500], ORDER_COLS)
+            await conn.executemany(
+                "INSERT INTO public.orders "
+                "(id, tenant_id, customer_id, product_id, amount, order_date, status) "
+                "VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING",
+                chunk,
+            )
+            inserted += len(chunk)
+        for i in range(0, len(transactions), 500):
+            chunk = _tuples(transactions[i:i + 500], TRANSACTION_COLS)
+            await conn.executemany(
+                "INSERT INTO public.transactions "
+                "(id, tenant_id, amount, transaction_date, type, status) "
+                "VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (id) DO NOTHING",
+                chunk,
+            )
+            inserted += len(chunk)
+        for i in range(0, len(activity), 500):
+            chunk = _tuples(activity[i:i + 500], ACTIVITY_COLS)
+            await conn.executemany(
+                "INSERT INTO public.activity "
+                "(id, tenant_id, user_id, activity_date, event_type) "
+                "VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING",
+                chunk,
+            )
+            inserted += len(chunk)
+
+    return inserted
 
 
 async def seed_database(
-    connection_url: str,
+    connection_url: str | None,
     tenant_id: str = "00000000-0000-0000-0000-000000000001",
     num_tenants: int = 1,
 ) -> dict:
-    """Create tables and seed them with synthetic data."""
-    from app.connectors.postgresql_connector import PostgreSQLConnector
+    """Insert synthetic data into the (migration-created) analytics tables."""
+    stats = {"rows_inserted": 0, "tenants_seeded": 0}
 
-    connector = PostgreSQLConnector(connection_url=connection_url)
-    stats = {"tables_created": 0, "rows_inserted": 0, "tenants_seeded": 0}
-
-    async with connector:
-        # Create tables
-        for table_name, ddl in TABLE_SCHEMAS.items():
-            try:
-                await connector.execute(ddl)
-                stats["tables_created"] += 1
-                logger.info(f"Created table: {table_name}")
-            except Exception as e:
-                logger.warning(f"Table {table_name} may already exist: {e}")
-
-        # Seed tenants
+    conn = await owner_connect(connection_url)
+    try:
         for t in range(num_tenants):
             t_id = tenant_id if t == 0 else str(uuid.uuid4())
-
-            # Generate data
-            sales = generate_sales(t_id)
-            customers = generate_customers(t_id)
-            orders = generate_orders(t_id, customers)
-            transactions = generate_transactions(t_id)
-            users = generate_users(t_id)
-            products = generate_products(t_id)
-            regions = generate_regions(t_id)
-            reps = generate_sales_reps(t_id, regions)
-            deals = generate_deals(t_id, reps, regions)
-            activity = generate_activity(t_id, users)
-
-            # Insert in dependency order
-            inserts = [
-                ("regions", regions),
-                ("products", products),
-                ("customers", customers),
-                ("users", users),
-                ("sales_representatives", reps),
-                ("deals", deals),
-                ("sales", sales),
-                ("orders", orders),
-                ("transactions", transactions),
-                ("activity", activity),
-            ]
-
-            for table_name, rows in inserts:
-                if not rows:
-                    continue
-
-                # Batch insert in chunks of 100
-                chunk_size = 100
-                for i in range(0, len(rows), chunk_size):
-                    chunk = rows[i : i + chunk_size]
-                    columns = chunk[0].keys()
-                    values_placeholder = ", ".join(
-                        f"({', '.join(f'${j + 1}' for j in range(len(columns)))})"
-                    )
-
-                    # Build parameterized insert
-                    sql = f"""
-                        INSERT INTO public.{table_name} ({', '.join(columns)})
-                        VALUES {values_placeholder}
-                        ON CONFLICT (id) DO NOTHING
-                    """
-
-                    params = []
-                    for row in chunk:
-                        params.extend(row.values())
-
-                    await connector.execute(sql, params=params)
-                    stats["rows_inserted"] += len(chunk)
-
-                logger.info(f"  Seeded {len(rows)} rows into {table_name}")
-
+            stats["rows_inserted"] += await _seed_tenant(conn, t_id)
             stats["tenants_seeded"] += 1
-            logger.info(f"Seeded tenant {t_id}")
+            logger.info("Seeded tenant %s", t_id)
+    finally:
+        await conn.close()
 
     return stats
 
@@ -466,8 +414,8 @@ async def main():
     )
     parser.add_argument(
         "--connection-url",
-        default=settings.DATABASE_URL,
-        help="PostgreSQL connection URL",
+        default=None,
+        help="Owner PostgreSQL connection URL (default: DATABASE_URL_SYNC)",
     )
     parser.add_argument(
         "--tenants", type=int, default=1,
@@ -475,32 +423,28 @@ async def main():
     )
     parser.add_argument(
         "--clear", action="store_true",
-        help="Drop all tables before seeding",
+        help="Truncate all seed tables before seeding",
     )
     args = parser.parse_args()
 
-    if args.clear:
-        from app.connectors.postgresql_connector import PostgreSQLConnector
-        connector = PostgreSQLConnector(connection_url=args.connection_url)
-        async with connector:
-            for table_name in TABLE_SCHEMAS:
-                try:
-                    await connector.execute(f"DROP TABLE IF EXISTS public.{table_name} CASCADE")
-                except Exception:
-                    pass
-            logger.info("Cleared all seed tables")
+    conn = await owner_connect(args.connection_url)
+    try:
+        if args.clear:
+            await _clear_data(conn)
+    finally:
+        await conn.close()
 
     stats = await seed_database(
         connection_url=args.connection_url,
         num_tenants=args.tenants,
     )
 
-    print(f"\n{'='*50}")
+    print()
+    print("=" * 50)
     print("Test Data Seed Complete")
-    print(f"{'='*50}")
-    print(f"Tables created:  {stats['tables_created']}")
-    print(f"Tenants seeded:  {stats['tenants_seeded']}")
-    print(f"Rows inserted:   {stats['rows_inserted']}")
+    print("=" * 50)
+    print("Tenants seeded:  " + str(stats["tenants_seeded"]))
+    print("Rows inserted:   " + str(stats["rows_inserted"]))
     print()
 
 

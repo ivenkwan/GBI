@@ -10,7 +10,7 @@ All endpoints except health checks require a JWT Bearer token in the `Authorizat
 Authorization: Bearer <token>
 ```
 
-The token is obtained via `/auth/login` (not yet implemented in v1 API; see [Core Services](core-services.md#5-authentication) for JWT creation flow).
+The token is obtained via `POST /auth/login` (below).
 
 **Token payload:**
 ```json
@@ -32,6 +32,49 @@ On failure (missing, expired, or invalid token): HTTP 401 with:
 
 ---
 
+## Auth
+
+### `POST /auth/login`
+✅ **Authenticate a user by email + password and receive a JWT access token.**
+
+**Request:** `LoginRequest`
+```json
+{
+  "email": "admin@genbi.local",
+  "password": "admin123"
+}
+```
+
+| Field | Type | Constraints |
+|---|---|---|
+| `email` | `string` | Required, 3–255 chars (normalized to lowercase) |
+| `password` | `string` | Required, 6–128 chars |
+| `tenant_id` | `string \| null` | Optional UUID — required only when the same email exists in multiple tenants |
+
+**Response:** `LoginResponse`
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIs...",
+  "token_type": "bearer",
+  "user": {
+    "id": "00000000-0000-0000-0000-000000000101",
+    "email": "admin@genbi.local",
+    "name": "admin",
+    "tenant_id": "00000000-0000-0000-0000-000000000001",
+    "roles": ["admin", "user"]
+  }
+}
+```
+
+| Field | Type | Notes |
+|---|---|---|
+| `access_token` | `string` | JWT, signed with `JWT_SECRET_KEY`; accepted by every protected endpoint |
+| `user.name` | `string` | Derived from the email local-part (the `users` table has no name column) |
+
+**Errors:** `401` with `{"code": "INVALID_CREDENTIALS", "message": "Invalid email or password"}` for wrong credentials, unknown email, ambiguous multi-tenant email, or an invalid `tenant_id`.
+
+---
+
 ## Health
 
 > No auth required.
@@ -45,11 +88,11 @@ On failure (missing, expired, or invalid token): HTTP 401 with:
 ```
 
 ### `GET /health/ready`
-⚠️ **Readiness probe.** Returns DB, Redis, and MCP status. Currently stubbed — actual DB/Redis pings marked as TODO.
+✅ **Readiness probe.** Pings Postgres and Redis for real; returns 200 only when both are reachable, 503 otherwise (the probe used by Docker healthchecks and `make verify`).
 
-**Response (stub):**
+**Response:**
 ```json
-{"status": "ready", "checks": {"database": "healthy", "redis": "healthy", "mcp": "healthy"}}
+{"status": "ready", "database": "connected", "redis": "connected", "mcp_flint": "configured"}
 ```
 
 ---

@@ -1,0 +1,233 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "stop-20260814T155735215Z-29016-4bf09885c93f",
+  "runId": "20260814T155735215Z-29016-4bf09885c93f",
+  "runStatus": "inconclusive",
+  "coverage": {
+    "status": "partial",
+    "reasons": [
+      {
+        "code": "candidate_limit_exceeded",
+        "stage": "candidate-select",
+        "target": "backend/tests/evals/test_nl2sql_eval.py",
+        "detail": "33 changed reviewable file(s) were not scanned because the limit is 20",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "frontend/next-env.d.ts",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "frontend/pnpm-lock.yaml",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "frontend/src/lib/auth-storage.ts",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "frontend/src/components/auth/login-form.tsx",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "frontend/src/app/login/page.tsx",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "frontend/src/app/chat/page.tsx",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "backend/tests/test_security.py",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "candidate-select",
+        "target": "backend/tests/evals/test_nl2sql_eval.py",
+        "detail": "candidate_limit_exceeded: 33 changed reviewable file(s) were not scanned because the limit is 20",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "frontend/next-env.d.ts",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "frontend/pnpm-lock.yaml",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "frontend/src/lib/auth-storage.ts",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "frontend/src/components/auth/login-form.tsx",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "frontend/src/app/login/page.tsx",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "frontend/src/app/chat/page.tsx",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "backend/tests/test_security.py",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      }
+    ]
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "Stop"
+  },
+  "revision": "f57c85405096f9ab574575ee62f89423dd53076c",
+  "diffHash": "41d057e45574b3e3391cb560d23929c4cb2d50dbc289ff80604123468982a9dd",
+  "rulesVersion": "unavailable",
+  "sessionHash": "718ec6b1c8c4411ac21a6dc7d92920c9d8595e956e30550dbace6d9f67496527",
+  "reportRef": ".mimosa/reports/task-review-sess_fd450c30-9606-41d3-ab28-747de74272cd-20260814T155735215Z-29016-4bf09885c93f.json",
+  "events": [],
+  "observedFindingIds": [
+    "mimosa-5027212c2e39b704d2a18975",
+    "mimosa-5de75347405d519858eec8fc",
+    "mimosa-b48f4acdcd51017307c63ffb",
+    "mimosa-2e45f13866b671ffb5a2120d",
+    "mimosa-375dceca230fc11e77c8ced7"
+  ],
+  "verifiedFiles": [
+    {
+      "file": "backend/app/core/security.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "scripts/verify.sh",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "frontend/next-env.d.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "frontend/src/lib/api-client.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "frontend/src/lib/auth-storage.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "frontend/src/lib/shadcn.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "frontend/src/components/ui/input.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "frontend/src/components/chat/chat-view.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "frontend/src/components/charts/chart-card.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "frontend/src/components/auth/auth-provider.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "frontend/src/components/auth/login-form.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "frontend/src/app/page.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "frontend/src/app/login/page.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "frontend/src/app/chat/page.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "backend/tests/conftest.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "backend/tests/test_security.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "backend/tests/semantic/test_cube_client.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "backend/tests/fixtures/llm_mock.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    }
+  ],
+  "recordedAt": "2026-08-14T15:57:35.714Z"
+}

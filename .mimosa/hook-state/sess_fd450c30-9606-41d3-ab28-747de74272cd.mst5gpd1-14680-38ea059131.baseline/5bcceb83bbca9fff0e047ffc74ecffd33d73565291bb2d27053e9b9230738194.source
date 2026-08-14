@@ -1,0 +1,9 @@
+"""Pydantic models — request/response schemas for the GenBI API."""
+
+from pydantic import BaseModel, Field
+
+
+class ErrorDetail(BaseModel):
+    """Standard error detail returned in all error responses."""
+    code: str
+    message: str

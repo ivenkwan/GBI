@@ -1,0 +1,72 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "posttooluse-0469b7c82c876d68b30e6baa969c5c80",
+  "runId": null,
+  "runStatus": "completed",
+  "coverage": {
+    "status": "complete",
+    "reasons": []
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "PostToolUse"
+  },
+  "revision": null,
+  "diffHash": null,
+  "rulesVersion": null,
+  "sessionHash": "718ec6b1c8c4411ac21a6dc7d92920c9d8595e956e30550dbace6d9f67496527",
+  "reportRef": null,
+  "events": [
+    {
+      "eventId": "hook-c85aba0e238864b808182248702ee681",
+      "findingId": "mimosa-86e342a94ea1d192af034dc4",
+      "type": "static_fix_verified",
+      "at": "2026-08-14T15:12:16.090Z",
+      "identity": {
+        "projectRelativeFile": "app/api/v1/auth.py",
+        "ruleId": "security",
+        "codeEvidenceHash": "79f645f3a9cb9bd42812483dca29143cb93d9240a91001002a40ffc3550dacc1",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 55,
+      "endLine": 55,
+      "reasonCode": "static_rescan_passed",
+      "reportedToAgent": false,
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "observed",
+        "producer": "deterministic",
+        "evidenceHash": "79f645f3a9cb9bd42812483dca29143cb93d9240a91001002a40ffc3550dacc1"
+      },
+      "sequence": 0
+    },
+    {
+      "eventId": "hook-ed56f12f487f4b523abd9b79ab817a02",
+      "findingId": "mimosa-c3a143687fec6ec67f9831bf",
+      "type": "static_fix_verified",
+      "at": "2026-08-14T15:12:16.090Z",
+      "identity": {
+        "projectRelativeFile": "app/api/v1/auth.py",
+        "ruleId": "security",
+        "codeEvidenceHash": "59fb705d79365dca901332f7d7a962d0180f0ba5034db05b7fe7833f94b57943",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 57,
+      "endLine": 57,
+      "reasonCode": "static_rescan_passed",
+      "reportedToAgent": false,
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "observed",
+        "producer": "deterministic",
+        "evidenceHash": "59fb705d79365dca901332f7d7a962d0180f0ba5034db05b7fe7833f94b57943"
+      },
+      "sequence": 1
+    }
+  ],
+  "observedFindingIds": [],
+  "verifiedFiles": [],
+  "recordedAt": "2026-08-14T15:12:16.570Z"
+}

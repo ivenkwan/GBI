@@ -18,7 +18,7 @@ dependencies = [
     "redis>=5.2",
     "httpx>=0.28",
     "python-jose[cryptography]>=3.3",
-    "passlib[bcrypt]>=1.7",
+    "bcrypt>=5.0",
     "python-multipart>=0.0.17",
     "loguru>=0.7",
     "langgraph>=0.2",
@@ -51,7 +51,7 @@ dev = [
 [tool.ruff]
 target-version = "py312"
 line-length = 100
-extend = "../../pyproject.toml"
+extend = "../pyproject.toml"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

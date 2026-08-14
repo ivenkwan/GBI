@@ -59,6 +59,10 @@ if should_write "$BACKEND_ENV"; then
   JWT_SECRET="$(rand_hex 32)"
   CUBE_SECRET="$(rand_hex 32)"
   TENANT_KEY="$(gen_fernet)"
+  # Owner credentials (migrations/admin only). The runtime DATABASE_URL uses
+  # the RLS-bound genbi_app role, and the login path genbi_auth — fixed dev
+  # defaults matching infra/postgres/init.sql + Alembic 0002_app_roles.
+  # Rotate in production.
   PG_USER="genbi"
   PG_PASS="genbi"
   PG_DB="genbi"
@@ -69,7 +73,8 @@ if should_write "$BACKEND_ENV"; then
   # Host-based (non-Docker) dev should override these via a local .env override.
   sed \
     -e "s|^ANTHROPIC_API_KEY=.*|ANTHROPIC_API_KEY=sk-ant-REPLACE-ME|" \
-    -e "s|^DATABASE_URL=.*|DATABASE_URL=postgresql+asyncpg://${PG_USER}:${PG_PASS}@postgres:5432/${PG_DB}|" \
+    -e "s|^DATABASE_URL=.*|DATABASE_URL=postgresql+asyncpg://genbi_app:genbi_app@postgres:5432/${PG_DB}|" \
+    -e "s|^DATABASE_URL_AUTH=.*|DATABASE_URL_AUTH=postgresql+asyncpg://genbi_auth:genbi_auth@postgres:5432/${PG_DB}|" \
     -e "s|^DATABASE_URL_SYNC=.*|DATABASE_URL_SYNC=postgresql://${PG_USER}:${PG_PASS}@postgres:5432/${PG_DB}|" \
     -e "s|^REDIS_URL=.*|REDIS_URL=redis://redis:6379/0|" \
     -e "s|^JWT_SECRET_KEY=.*|JWT_SECRET_KEY=${JWT_SECRET}|" \

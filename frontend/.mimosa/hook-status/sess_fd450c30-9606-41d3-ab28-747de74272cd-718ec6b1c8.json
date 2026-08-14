@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "mimosa-hook-status/v1",
+  "recordedAt": "2026-08-14T15:55:43.296Z",
+  "sessionId": "sess_fd450c30-9606-41d3-ab28-747de74272cd",
+  "event": "PostToolUse",
+  "toolName": "Edit",
+  "file": "Z:\\GITHUB\\GBI\\docs\\frontend-guide.md",
+  "outcome": "clear",
+  "coverage": "complete",
+  "findingCount": 0,
+  "durationMs": 4,
+  "hostState": "hook_complete",
+  "reportHint": ".mimosa/reports/"
+}

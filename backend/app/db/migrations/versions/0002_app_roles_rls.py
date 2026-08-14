@@ -1,0 +1,138 @@
+"""app roles + enforced RLS — runtime no longer connects as superuser.
+
+Revision ID: 0002_app_roles
+Revises: 0001_baseline
+Create Date: 2026-08-15
+
+Before this migration the backend connected as POSTGRES_USER (a superuser),
+so every FORCE ROW LEVEL SECURITY policy was silently bypassed — tenant
+isolation was configured but never enforced. This migration introduces two
+non-superuser LOGIN roles and the grants/policies they need:
+
+  - genbi_app  — runtime role (ORM engine + query connector). Bound by the
+    tenant_isolation policies via the `app.current_tenant_id` GUC the
+    connector already sets per transaction.
+  - genbi_auth — login-only role. Reads the `users` table across tenants
+    (credential lookup requires it); a permissive policy is scoped TO this
+    role and nothing else is granted to it.
+
+It also enrolls the seeded analytics tables in RLS (guarded — CI and fresh
+volumes have none; seed_test_data.py applies the same DDL when it creates
+them). See docs/adr/006-enforced-rls-roles.md.
+
+Passwords are fixed dev defaults, consistent with infra/postgres/init.sql
+and scripts/gen-env.sh. Rotate in production (see README security section).
+"""
+
+from collections.abc import Sequence
+
+from alembic import op
+
+# revision identifiers, used by Alembic.
+revision: str = "0002_app_roles"
+down_revision: str | None = "0001_baseline"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
+
+RLS_TABLES = ("users", "audit_log", "conversations", "schema_embeddings", "agent_examples")
+
+# Analytics tables created by scripts/seed_test_data.py (all carry tenant_id).
+ANALYTICS_TABLES = (
+    "sales",
+    "customers",
+    "orders",
+    "transactions",
+    "web_users",
+    "products",
+    "regions",
+    "sales_representatives",
+    "deals",
+    "activity",
+)
+
+
+def _rls_ddl(table: str) -> str:
+    return (
+        f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY; "
+        f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY; "
+        f"DROP POLICY IF EXISTS tenant_isolation ON {table}; "
+        f"CREATE POLICY tenant_isolation ON {table} "
+        f"USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);"
+    )
+
+
+def upgrade() -> None:
+    # --- Roles (cluster-level; CREATE ROLE has no IF NOT EXISTS) ------------
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'genbi_app') THEN
+                CREATE ROLE genbi_app LOGIN PASSWORD 'genbi_app';
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'genbi_auth') THEN
+                CREATE ROLE genbi_auth LOGIN PASSWORD 'genbi_auth';
+            END IF;
+        END $$;
+        """
+    )
+
+    # --- Grants --------------------------------------------------------------
+    # genbi_app: everything the runtime needs, nothing more. No superuser, no
+    # BYPASSRLS, no CREATE — RLS policies always apply to it.
+    op.execute("GRANT USAGE ON SCHEMA public TO genbi_app, genbi_auth")
+    op.execute("GRANT SELECT ON tenants TO genbi_app")
+    op.execute(
+        f"GRANT SELECT, INSERT, UPDATE, DELETE ON {', '.join(RLS_TABLES)} TO genbi_app"
+    )
+    # Analytics tables that already exist (fresh dev volumes have none yet —
+    # seed_test_data.py creates them later and they are covered by the
+    # default-privilege grant below; the explicit GRANT covers pre-existing
+    # installs).
+    op.execute("GRANT SELECT ON ALL TABLES IN SCHEMA public TO genbi_app")
+    op.execute(
+        "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO genbi_app"
+    )
+
+    # genbi_auth: SELECT on users ONLY (login credential lookup).
+    op.execute("GRANT SELECT ON users TO genbi_auth")
+
+    # --- Login-lookup policy -------------------------------------------------
+    # The only RLS carve-out: genbi_auth may read every users row. Scoped TO
+    # the role so no other role gains cross-tenant visibility. Permissive
+    # policies OR with tenant_isolation, so this widens only genbi_auth.
+    op.execute("DROP POLICY IF EXISTS users_login_lookup ON users")
+    op.execute(
+        "CREATE POLICY users_login_lookup ON users "
+        "FOR SELECT TO genbi_auth USING (true)"
+    )
+
+    # --- Analytics RLS (guarded: tables exist only after seeding) ------------
+    for table in ANALYTICS_TABLES:
+        op.execute(
+            f"""
+            DO $$
+            BEGIN
+                IF to_regclass('public.{table}') IS NOT NULL THEN
+                    {_rls_ddl(table)}
+                END IF;
+            END $$;
+            """
+        )
+
+
+def downgrade() -> None:
+    op.execute("DROP POLICY IF EXISTS users_login_lookup ON users")
+    op.execute("REVOKE SELECT ON users FROM genbi_auth")
+    op.execute("REVOKE SELECT ON ALL TABLES IN SCHEMA public FROM genbi_app")
+    op.execute(
+        "ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE SELECT ON TABLES FROM genbi_app"
+    )
+    op.execute(
+        f"REVOKE SELECT, INSERT, UPDATE, DELETE ON {', '.join(RLS_TABLES)} FROM genbi_app"
+    )
+    op.execute("REVOKE SELECT ON tenants FROM genbi_app")
+    op.execute("REVOKE USAGE ON SCHEMA public FROM genbi_app, genbi_auth")
+    # Roles only after their grants are gone.
+    op.execute("DROP ROLE IF EXISTS genbi_auth")
+    op.execute("DROP ROLE IF EXISTS genbi_app")

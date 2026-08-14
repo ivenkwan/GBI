@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "Bash(git ls-remote *)",
+      "Bash(git clone *)",
+      "Bash([ -d \"$target_dir\" ])"
+    ]
+  }
+}

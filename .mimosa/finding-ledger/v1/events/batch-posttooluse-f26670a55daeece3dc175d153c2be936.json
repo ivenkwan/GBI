@@ -1,0 +1,120 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "posttooluse-f26670a55daeece3dc175d153c2be936",
+  "runId": null,
+  "runStatus": "completed",
+  "coverage": {
+    "status": "complete",
+    "reasons": []
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "PostToolUse"
+  },
+  "revision": null,
+  "diffHash": null,
+  "rulesVersion": null,
+  "sessionHash": "718ec6b1c8c4411ac21a6dc7d92920c9d8595e956e30550dbace6d9f67496527",
+  "reportRef": null,
+  "events": [
+    {
+      "eventId": "hook-53a82086505a06512e54b46f6b86973e",
+      "findingId": "mimosa-909ffcf0ccb08a117de89ad3",
+      "type": "static_fix_verified",
+      "at": "2026-08-14T16:31:27.558Z",
+      "identity": {
+        "projectRelativeFile": "backend/app/db/migrations/versions/0003_analytics_tables.py",
+        "ruleId": "security",
+        "codeEvidenceHash": "64d53072b94682221f84d2379c20445815ffd5ce716d7efc09326da9ba46a062",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 191,
+      "endLine": 191,
+      "reasonCode": "static_rescan_passed",
+      "reportedToAgent": false,
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "observed",
+        "producer": "deterministic",
+        "evidenceHash": "64d53072b94682221f84d2379c20445815ffd5ce716d7efc09326da9ba46a062"
+      },
+      "sequence": 0
+    },
+    {
+      "eventId": "hook-431b8b4dbe71f0e95923918f0173c566",
+      "findingId": "mimosa-ef1df8d8b76051f4eba0b6f8",
+      "type": "static_fix_verified",
+      "at": "2026-08-14T16:31:27.558Z",
+      "identity": {
+        "projectRelativeFile": "backend/app/db/migrations/versions/0003_analytics_tables.py",
+        "ruleId": "security",
+        "codeEvidenceHash": "da72d981e2294cf2681186ceae792fb0755ce05c82834d935298527048ac7cfe",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 192,
+      "endLine": 192,
+      "reasonCode": "static_rescan_passed",
+      "reportedToAgent": false,
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "observed",
+        "producer": "deterministic",
+        "evidenceHash": "da72d981e2294cf2681186ceae792fb0755ce05c82834d935298527048ac7cfe"
+      },
+      "sequence": 1
+    },
+    {
+      "eventId": "hook-d9cb08bff46731705abfccaf07ede825",
+      "findingId": "mimosa-740e12d6bdd69a849a539217",
+      "type": "static_fix_verified",
+      "at": "2026-08-14T16:31:27.558Z",
+      "identity": {
+        "projectRelativeFile": "backend/app/db/migrations/versions/0003_analytics_tables.py",
+        "ruleId": "security",
+        "codeEvidenceHash": "f449335e275df326801e5fff6ea3793641e00c4db255282f7d815009f95592ab",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 193,
+      "endLine": 193,
+      "reasonCode": "static_rescan_passed",
+      "reportedToAgent": false,
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "observed",
+        "producer": "deterministic",
+        "evidenceHash": "f449335e275df326801e5fff6ea3793641e00c4db255282f7d815009f95592ab"
+      },
+      "sequence": 2
+    },
+    {
+      "eventId": "hook-ad4ceee7920beb132cf41e845d5bcbcb",
+      "findingId": "mimosa-88dd763b2da8d54ab8babb70",
+      "type": "static_fix_verified",
+      "at": "2026-08-14T16:31:27.558Z",
+      "identity": {
+        "projectRelativeFile": "backend/app/db/migrations/versions/0003_analytics_tables.py",
+        "ruleId": "security",
+        "codeEvidenceHash": "661acbdcff35fd22fb15b70708e12811705af8a9ec128535b25385af080f3f40",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 202,
+      "endLine": 202,
+      "reasonCode": "static_rescan_passed",
+      "reportedToAgent": false,
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "observed",
+        "producer": "deterministic",
+        "evidenceHash": "661acbdcff35fd22fb15b70708e12811705af8a9ec128535b25385af080f3f40"
+      },
+      "sequence": 3
+    }
+  ],
+  "observedFindingIds": [],
+  "verifiedFiles": [],
+  "recordedAt": "2026-08-14T16:31:28.069Z"
+}

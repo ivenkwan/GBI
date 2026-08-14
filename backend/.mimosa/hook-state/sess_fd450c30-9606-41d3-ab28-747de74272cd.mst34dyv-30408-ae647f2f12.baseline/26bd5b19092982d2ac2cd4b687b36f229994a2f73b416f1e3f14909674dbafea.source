@@ -1,0 +1,222 @@
+"""Chart generation agent — produces ChartAssemblyInput specs for Flint MCP.
+
+This is the upgraded ChartGenAgent that replaces the old G2-only approach.
+It produces Flint-first ChartAssemblyInput specs but can fall back to the
+GPT-Vis protocol for interactive dashboard charts.
+"""
+
+from app.agents.base import AgentResult, BaseAgent
+from app.agents.chart.flint_bridge import FlintChartBridge
+from app.agents.registry import register_agent
+
+
+@register_agent("chart_gen")
+class ChartGenAgent(BaseAgent):
+    """Generates chart specifications from data using Flint MCP.
+
+    Input: SQL result set + optional chart type hint
+    Output: ChartAssemblyInput spec + rendered PNG/SVG
+    """
+
+    name = "chart_gen"
+    description = "Chart specification generator and renderer (Flint MCP)"
+
+    async def execute(
+        self,
+        data: list[dict] | None = None,
+        query: str | None = None,
+        intent: str | None = None,
+        preferred_chart_type: str | None = None,
+        tenant_id: str = "default",
+        user_id: str = "",
+        **kwargs,
+    ) -> AgentResult:
+        """Generate a chart spec from data or description."""
+        import time
+        start = time.time()
+
+        # If no data provided, this is a standalone chart request
+        if data is None and query:
+            return await self._handle_standalone_chart_request(query, start)
+
+        if data is None:
+            return AgentResult(
+                agent_name=self.name,
+                success=False,
+                output={},
+                errors=["No data or query provided to ChartGenAgent"],
+            )
+
+        # Generate chart spec from data
+        spec = await self._generate_chart_spec(
+            data, preferred_chart_type, tenant_id=tenant_id, user_id=user_id
+        )
+
+        # Render via Flint MCP
+        bridge = FlintChartBridge(tenant_id=tenant_id)
+        render_result = await bridge.render(spec)
+
+        return self._timed_result(
+            AgentResult(
+                agent_name=self.name,
+                success=render_result.get("success", False),
+                output={
+                    "chart_spec": spec,
+                    "image_base64": render_result.get("image_base64"),
+                    "svg": render_result.get("svg"),
+                    "backend": render_result.get("backend"),
+                },
+                warnings=render_result.get("warnings", []),
+                errors=render_result.get("errors", []),
+            ),
+            start,
+        )
+
+    async def _generate_chart_spec(
+        self,
+        data: list[dict],
+        preferred_chart_type: str | None = None,
+        tenant_id: str = "default",
+        user_id: str = "",
+    ) -> dict:
+        """Generate a ChartAssemblyInput spec using the centralized LLM client.
+
+        Routes through llm_client (not a direct ChatAnthropic instance) so the
+        call gets retry, token-budget enforcement, JSON extraction, and audit
+        logging — required by CLAUDE.md §6 for every LLM call.
+        """
+        import json
+
+        from app.core.llm_client import LLMCallOptions, get_llm_client
+
+        # Infer semantic types from data
+        semantic_types = self._infer_semantic_types(data)
+        chart_type = preferred_chart_type or self._suggest_chart_type(data, semantic_types)
+        encodings = self._suggest_encodings(data, semantic_types, chart_type)
+
+        prompt = f"""Generate a Flint ChartAssemblyInput specification for this data.
+
+DATA (first 10 rows):
+{json.dumps(data[:10], ensure_ascii=False, default=str)}
+
+SEMANTIC TYPES INFERRED:
+{json.dumps(semantic_types)}
+
+SUGGESTED CHART TYPE: {chart_type}
+SUGGESTED ENCODINGS: {json.dumps(encodings)}
+
+Return ONLY a valid JSON object with these keys: chartType, encodings, baseSize, data.
+The data key should contain the full data as inline values.
+Do NOT include any explanatory text — only the JSON object."""
+
+        result = await get_llm_client().invoke(
+            messages=prompt,
+            use_reasoning=False,  # fast model for spec generation
+            options=LLMCallOptions(
+                temperature=0,
+                max_tokens=2048,
+                response_format="json",
+            ),
+            tenant_id=tenant_id,
+            user_id=user_id,
+        )
+
+        # The client already extracts JSON via _extract_json; fall back only if
+        # the model returned nothing parseable.
+        if result.parsed:
+            return result.parsed
+        try:
+            return json.loads(result.content)
+        except (json.JSONDecodeError, TypeError):
+            return {
+                "chartType": chart_type,
+                "encodings": encodings,
+                "baseSize": {"width": 600, "height": 400},
+                "data": {"values": data},
+            }
+
+    def _infer_semantic_types(self, data: list[dict]) -> dict[str, str]:
+        """Infer Flint semantic types (Category, Quantity, Temporal) from column data."""
+        if not data:
+            return {}
+
+        types = {}
+        for col in data[0].keys():
+            sample_values = [row.get(col) for row in data[:20] if row.get(col) is not None]
+            if not sample_values:
+                types[col] = "Category"
+                continue
+
+            if all(isinstance(v, (int, float)) for v in sample_values):
+                # Check if it could be a year/timestamp
+                if all(1000 <= v <= 2100 for v in sample_values):
+                    types[col] = "Temporal"
+                else:
+                    types[col] = "Quantity"
+            elif all(isinstance(v, str) for v in sample_values):
+                # Check for date-like strings
+                import re
+                date_pattern = re.compile(r"\d{4}-\d{2}-\d{2}")
+                if all(date_pattern.match(str(v)) for v in sample_values):
+                    types[col] = "Temporal"
+                else:
+                    types[col] = "Category"
+            else:
+                types[col] = "Category"
+
+        return types
+
+    def _suggest_chart_type(self, data: list[dict], semantic_types: dict[str, str]) -> str:
+        """Suggest a chart type based on data characteristics."""
+        categories = [k for k, v in semantic_types.items() if v == "Category"]
+        quantities = [k for k, v in semantic_types.items() if v == "Quantity"]
+        temporals = [k for k, v in semantic_types.items() if v == "Temporal"]
+
+        if temporals and quantities:
+            return "Line Chart"
+        if len(categories) == 1 and len(quantities) == 1:
+            return "Bar Chart"
+        if len(quantities) >= 2:
+            return "Scatter Chart"
+        if len(categories) == 1 and len(quantities) == 1 and len(data) <= 8:
+            return "Pie Chart"
+        return "Bar Chart"
+
+    def _suggest_encodings(self, data: list[dict], semantic_types: dict[str, str], chart_type: str) -> dict:
+        """Suggest visual encodings based on semantic types and chart type."""
+        categories = [k for k, v in semantic_types.items() if v == "Category"]
+        quantities = [k for k, v in semantic_types.items() if v == "Quantity"]
+        temporals = [k for k, v in semantic_types.items() if v == "Temporal"]
+
+        encodings = {}
+        # x-axis: temporal > category
+        x_field = temporals[0] if temporals else (categories[0] if categories else None)
+        if x_field:
+            encodings["x"] = {"field": x_field}
+
+        # y-axis: first quantity
+        if quantities:
+            encodings["y"] = {"field": quantities[0]}
+
+        # color: second category or second quantity for multi-series
+        if len(categories) > 1:
+            encodings["color"] = {"field": categories[1]}
+        elif len(quantities) > 1 and chart_type == "Scatter Chart":
+            encodings["color"] = {"field": quantities[1]}
+
+        return encodings
+
+    async def _handle_standalone_chart_request(self, query: str, start: float) -> AgentResult:
+        """Handle a chart request without pre-existing data — the agent needs to generate
+        a chart spec directly from the user's description (e.g., inline data in the prompt)."""
+        # This path is for when the user provides data inline or describes a chart
+        # without needing SQL first
+        return self._timed_result(
+            AgentResult(
+                agent_name=self.name,
+                success=False,
+                output={},
+                errors=["Standalone chart generation without data not yet implemented"],
+            ),
+            start,
+        )
