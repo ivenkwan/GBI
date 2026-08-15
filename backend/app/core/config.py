@@ -97,6 +97,10 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str = "change-me"
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 60
+    # Login throttling: failed-attempt counter per normalized email,
+    # Redis-backed, fails open (no lockout) when Redis is unavailable.
+    LOGIN_MAX_FAILURES: int = 5
+    LOGIN_LOCKOUT_SECONDS: int = 900
 
     # --- Tenant ---
     TENANT_ENCRYPTION_KEY: str = ""

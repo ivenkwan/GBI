@@ -99,7 +99,17 @@ else
   bad "auth role could read audit_log — its grants are too broad"
 fi
 
-# --- 6b. Tenant-scoped metric query (Phase 10: JWT → Cube → GUC → RLS) ------
+# --- 6b. Auth: login issues a JWT (needed by the checks below) ---------------
+LOGIN_RESP="$(curl -sf -X POST http://localhost:8000/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"admin@genbi.local","password":"admin123"}' 2>/dev/null || true)"
+if echo "$LOGIN_RESP" | grep -q '"access_token"'; then
+  ok "auth — login issues a JWT for the seeded dev user"
+else
+  bad "auth — /auth/login failed (seed user only exists on fresh volumes; try make reset)"
+fi
+
+# --- 6c. Tenant-scoped metric query (Phase 10: JWT → Cube → GUC → RLS) --------
 TOKEN="$(echo "$LOGIN_RESP" | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')"
 if [[ -n "$TOKEN" ]]; then
   METRIC_RESP="$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:8000/api/v1/metrics/query \
@@ -119,7 +129,7 @@ else
   echo "  ℹ️  skipping metric query check (no token — login failed above)"
 fi
 
-# --- 6c. NL2SQL schema grounding (Phase 11) ----------------------------------
+# --- 6d. NL2SQL schema grounding (Phase 11) ------------------------------------
 EMBED_COUNT="$(psql_exec 'SELECT count(*) FROM schema_embeddings;' || echo 0)"
 if [[ "${EMBED_COUNT:-0}" =~ ^[0-9]+$ ]] && [[ "${EMBED_COUNT}" -ge 1 ]]; then
   ok "schema embeddings present ($EMBED_COUNT tables) — NL2SQL schema grounding armed"
@@ -127,14 +137,12 @@ else
   echo "  ℹ️  schema_embeddings empty — run scripts/embed_schema.py to arm schema grounding"
 fi
 
-# --- 7. Auth: login issues a JWT ---------------------------------------------
-LOGIN_RESP="$(curl -sf -X POST http://localhost:8000/api/v1/auth/login \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"admin@genbi.local","password":"admin123"}' 2>/dev/null || true)"
-if echo "$LOGIN_RESP" | grep -q '"access_token"'; then
-  ok "auth — login issues a JWT for the seeded dev user"
+# --- 6e. Audit trail (Phase 12) -------------------------------------------------
+AUDIT_ROWS="$(psql_exec 'SELECT count(*) FROM audit_log;' || echo 0)"
+if [[ "${AUDIT_ROWS:-0}" =~ ^[0-9]+$ ]] && [[ "${AUDIT_ROWS}" -ge 1 ]]; then
+  ok "audit trail active ($AUDIT_ROWS LLM-call entries recorded)"
 else
-  bad "auth — /auth/login failed (seed user only exists on fresh volumes; try make reset)"
+  echo "  ℹ️  audit_log empty — rows appear after the first LLM-backed chat query"
 fi
 
 # --- 8. Frontend (optional — requires Node/pnpm toolchain to build) ----------

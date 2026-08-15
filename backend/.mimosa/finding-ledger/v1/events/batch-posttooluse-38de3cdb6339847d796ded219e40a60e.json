@@ -1,0 +1,96 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "posttooluse-38de3cdb6339847d796ded219e40a60e",
+  "runId": null,
+  "runStatus": "completed",
+  "coverage": {
+    "status": "complete",
+    "reasons": []
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "PostToolUse"
+  },
+  "revision": null,
+  "diffHash": null,
+  "rulesVersion": null,
+  "sessionHash": "718ec6b1c8c4411ac21a6dc7d92920c9d8595e956e30550dbace6d9f67496527",
+  "reportRef": null,
+  "events": [
+    {
+      "eventId": "hook-906d5bc33447e9133512eb5ffc42fc69",
+      "findingId": "mimosa-6842bffd0664e7a0bc672c82",
+      "type": "static_fix_verified",
+      "at": "2026-08-15T01:21:12.408Z",
+      "identity": {
+        "projectRelativeFile": "tests/services/test_login_rate_limit.py",
+        "ruleId": "security",
+        "codeEvidenceHash": "9cb65381b0fad5005d8398f6fde0ae86e643e64195e2dd84c4ebc7b0ad45b6e2",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 105,
+      "endLine": 105,
+      "reasonCode": "static_rescan_passed",
+      "reportedToAgent": false,
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "observed",
+        "producer": "deterministic",
+        "evidenceHash": "9cb65381b0fad5005d8398f6fde0ae86e643e64195e2dd84c4ebc7b0ad45b6e2"
+      },
+      "sequence": 0
+    },
+    {
+      "eventId": "hook-55012d7e476d433b7775884606b726db",
+      "findingId": "mimosa-781d34f704213e555858c70e",
+      "type": "static_fix_verified",
+      "at": "2026-08-15T01:21:12.408Z",
+      "identity": {
+        "projectRelativeFile": "tests/services/test_login_rate_limit.py",
+        "ruleId": "security",
+        "codeEvidenceHash": "41798b71593cb244ab450453a703af31939c556661a905f3d160eb77974d6f02",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 121,
+      "endLine": 121,
+      "reasonCode": "static_rescan_passed",
+      "reportedToAgent": false,
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "observed",
+        "producer": "deterministic",
+        "evidenceHash": "41798b71593cb244ab450453a703af31939c556661a905f3d160eb77974d6f02"
+      },
+      "sequence": 1
+    },
+    {
+      "eventId": "hook-936a06abc17b46cf41973115232b3083",
+      "findingId": "mimosa-afcc931cb7d08208d2dac60d",
+      "type": "static_fix_verified",
+      "at": "2026-08-15T01:21:12.408Z",
+      "identity": {
+        "projectRelativeFile": "tests/services/test_login_rate_limit.py",
+        "ruleId": "security",
+        "codeEvidenceHash": "5845c8869cf92c7d18f9a3f7fa19ea981be0864c5f3a400bf35b1a34f7c79c07",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 138,
+      "endLine": 138,
+      "reasonCode": "static_rescan_passed",
+      "reportedToAgent": false,
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "observed",
+        "producer": "deterministic",
+        "evidenceHash": "5845c8869cf92c7d18f9a3f7fa19ea981be0864c5f3a400bf35b1a34f7c79c07"
+      },
+      "sequence": 2
+    }
+  ],
+  "observedFindingIds": [],
+  "verifiedFiles": [],
+  "recordedAt": "2026-08-15T01:21:12.931Z"
+}

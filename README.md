@@ -364,6 +364,7 @@ parsing, and destructive-pattern detection all run for real. See
 | Agent pipeline (NL→SQL→Chart→Narrative) | ✅ Implemented | Sync + SSE streaming |
 | Validation safety gate | ✅ Implemented | Destructive-pattern + read-only enforcement |
 | Semantic layer (Cube-native catalog) | ✅ Implemented | 10 cubes / 23 measures; tenant-scoped /metrics/query + Explore page (ADR 007/008) |
+| Governance: audit trail + login throttling | ✅ Implemented | Every LLM call audited (tenant-scoped, fail-open); 5 failed logins → 429 (Phase 12) |
 | NL2SQL schema grounding (pgvector retrieval) | ✅ Implemented | Schema context + few-shot into every prompt (Phase 11); needs `embed_schema.py --examples` + OPENAI_API_KEY |
 | Multi-tenant RLS + JWT | ✅ Enforced | Non-superuser runtime roles + FORCE RLS on all tenant tables, incl. analytics (ADR 006) |
 | PII masking | ✅ Wired | Applied at the execution chokepoint |

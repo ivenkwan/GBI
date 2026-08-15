@@ -1,6 +1,6 @@
 # GenBI Platform — Build Progress
 
-> **Last updated:** 2026-08-15 | **Stack tier:** Enterprise | **61/61 tasks complete**
+> **Last updated:** 2026-08-15 | **Stack tier:** Enterprise | **66/66 tasks complete**
 
 ---
 
@@ -1105,3 +1105,31 @@ is written carefully but has never executed.
 - Governance completion (audit_log writer + login rate limiting)
 - Validation hardening (EXPLAIN-backed gate, >1M-row confirm, pipeline tests)
 - ivfflat index on agent_examples if the example set grows
+
+---
+
+## Phase 12 — Governance Completion (Tasks 62–66)
+
+> **Status: code complete 2026-08-15.** Closes the README's "audit tracing"
+> headline claim (the audit_log table existed but nothing wrote to it) and
+> throttles the genbi_auth login oracle.
+
+| # | Task | Status |
+|---|---|---|
+| 62 | Audit writer via the LLMClient callback hook (the documented "every LLM call" contract): `app/services/audit.py` — asyncpg on genbi_app + tenant GUC, parameterized INSERT, non-UUID rows skipped, fail-open; wired in `create_app()` | ✅ |
+| 63 | `_audit()` fix: input_prompt_hash now SHA-256 of the actual prompt (was model+tokens) | ✅ |
+| 64 | Login rate limiting: Redis INCR counter per normalized email (5 failures / 900s → 429 TOO_MANY_ATTEMPTS, reset on success, fail-open without Redis); every 401 path registers | ✅ |
+| 65 | verify.sh: fixed Phase 10 ordering bug (login check ran AFTER the metric check consuming its token — the check always silently skipped); audit-trail info check | ✅ |
+| 66 | Tests: 19 across audit writer (GUC+insert contract, UUID skip, fail-open), prompt-hash fix, limiter (threshold/TTL/reset/fail-open), 429 endpoint paths | ✅ |
+
+### Verified by
+
+- 19 new service tests; ruff clean; full suite green
+- CI safety: test_auth accumulates only 3 failed logins on its shared email
+  (verified) — under the 5-failure threshold
+- Pending live (Docker): audit rows after one chat query; 429 after 5 bad logins
+
+### Remaining roadmap (Phase 13 candidate)
+
+- Validation hardening: EXPLAIN-backed SQL gate (connector's explain() is
+  implemented but unused), >1M-row confirmation, chat-pipeline tests

@@ -175,6 +175,7 @@ class LLMClient:
                 # Audit
                 await self._audit(
                     result=result,
+                    messages=messages,
                     user_id=user_id,
                     tenant_id=tenant_id,
                     session_id=session_id,
@@ -276,6 +277,7 @@ class LLMClient:
     async def _audit(
         self,
         result: LLMCallResult,
+        messages: str | list[BaseMessage] | None = None,
         user_id: str | None = None,
         tenant_id: str | None = None,
         session_id: str | None = None,
@@ -289,13 +291,9 @@ class LLMClient:
                         "session_id": session_id or str(uuid.uuid4()),
                         "user_id": user_id or "unknown",
                         "tenant_id": tenant_id or "default",
+                        # SHA-256 of the prompt itself (never store raw text)
                         "input_prompt_hash": hashlib.sha256(
-                            json.dumps(
-                                {
-                                    "model": result.model_name,
-                                    "tokens": result.input_tokens,
-                                }
-                            ).encode()
+                            str(messages or "").encode()
                         ).hexdigest(),
                         "generated_sql": generated_sql or "",
                         "model_name": result.model_name,

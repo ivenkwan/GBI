@@ -68,6 +68,12 @@ def create_app() -> FastAPI:
     # Routes
     app.include_router(api_router, prefix="/api/v1")
 
+    # Governance: every pipeline LLM call lands an audit_log row (fail-open).
+    from app.core.llm_client import get_llm_client
+    from app.services.audit import write_audit_entry
+
+    get_llm_client().set_audit_callback(write_audit_entry)
+
     # Prometheus /metrics endpoint. Served on the same port as the app so
     # infra/prometheus/prometheus.yml (which scrapes backend:8000) works without
     # a separate metrics port. OTel's PrometheusMetricReader is also active when

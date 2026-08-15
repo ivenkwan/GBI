@@ -71,7 +71,7 @@ On failure (missing, expired, or invalid token): HTTP 401 with:
 | `access_token` | `string` | JWT, signed with `JWT_SECRET_KEY`; accepted by every protected endpoint |
 | `user.name` | `string` | Derived from the email local-part (the `users` table has no name column) |
 
-**Errors:** `401` with `{"code": "INVALID_CREDENTIALS", "message": "Invalid email or password"}` for wrong credentials, unknown email, ambiguous multi-tenant email, or an invalid `tenant_id`.
+**Errors:** `401` with `{"code": "INVALID_CREDENTIALS", "message": "Invalid email or password"}` for wrong credentials, unknown email, ambiguous multi-tenant email, or an invalid `tenant_id`. `429` with `{"code": "TOO_MANY_ATTEMPTS", ...}` after 5 failed attempts for the same email within 15 minutes (counter resets on success).
 
 ---
 

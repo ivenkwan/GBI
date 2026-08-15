@@ -82,7 +82,7 @@ async def invoke(
 - **Retry:** up to 3 attempts, exponential backoff with jitter (`min(2^attempt + random, 30)` seconds)
 - **JSON extraction:** three strategies — pure JSON, `` ```json `` code block, first `{...}` pair
 - **Token budget:** warns via logger if `input+output > token_budget` (default 100K)
-- **Audit logging:** calls audit callback after each successful invocation (hashed prompt, user/tenant/session context, token counts, latency, generated SQL)
+- **Audit logging:** calls audit callback after each successful invocation (SHA-256 of the prompt text — never raw — user/tenant/session context, token counts, latency, generated SQL). Since Phase 12 the callback is wired at app startup to `app/services/audit.py::write_audit_entry`, which persists one `audit_log` row per LLM call (asyncpg on `genbi_app`, tenant GUC set per row, fail-open).
 
 ### `LLMCallOptions`
 ```python

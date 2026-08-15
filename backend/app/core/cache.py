@@ -606,6 +606,45 @@ class CacheService:
             return True, max_requests
 
     # ------------------------------------------------------------------
+
+    async def register_failed_login(self, email: str) -> int:
+        """Count a failed login attempt for an email (Redis INCR + TTL).
+
+        Returns the failure count in the current lockout window. Fails open
+        (returns 0) when Redis is unavailable — availability over lockout.
+        """
+        from app.core.config import settings
+
+        if not await self._l2._ensure():
+            return 0
+
+        key = f"genbi:loginfail:{email.strip().lower()}"
+        with contextlib.suppress(Exception):
+            current = await self._l2._redis.incr(key)
+            if current == 1:
+                await self._l2._redis.expire(key, settings.LOGIN_LOCKOUT_SECONDS)
+            return int(current)
+        return 0
+
+    async def login_failures(self, email: str) -> int:
+        """Current failed-login count for an email (0 when Redis is down)."""
+        if not await self._l2._ensure():
+            return 0
+
+        with contextlib.suppress(Exception):
+            value = await self._l2._redis.get(f"genbi:loginfail:{email.strip().lower()}")
+            return int(value or 0)
+        return 0
+
+    async def clear_failed_logins(self, email: str) -> None:
+        """Reset the failure counter after a successful login."""
+        if not await self._l2._ensure():
+            return
+
+        with contextlib.suppress(Exception):
+            await self._l2._redis.delete(f"genbi:loginfail:{email.strip().lower()}")
+
+    # ------------------------------------------------------------------
     # Invalidation
     # ------------------------------------------------------------------
 

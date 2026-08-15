@@ -21,7 +21,11 @@
 
 ### `AuditLog` (table: `audit_log`)
 
-Every LLM call writes an entry. Schema:
+Every LLM call writes an entry — since Phase 12 via `app/services/audit.py`
+(the LLMClient audit callback, wired at app startup): asyncpg on the
+RLS-bound `genbi_app` role with the tenant GUC set per row, one
+parameterized INSERT per call, fail-open (an audit outage never breaks the
+pipeline). Schema:
 
 | Column | Type | Notes |
 |---|---|---|
