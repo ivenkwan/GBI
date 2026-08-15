@@ -1,0 +1,1380 @@
+{
+  "schema_version": "mimosa-task-review/v2",
+  "run_id": "20260814T164207653Z-36668-b3ccd36e3c82",
+  "run_status": "inconclusive",
+  "errors": [
+    {
+      "stage": "baseline",
+      "target": ".",
+      "reason": "baseline_partial: baseline capture had enumeration or snapshot errors"
+    }
+  ],
+  "coverage": {
+    "schema_version": "mimosa-hook-coverage/v1",
+    "status": "partial",
+    "scope": "hook_observed_diff",
+    "baseline": {
+      "complete": false,
+      "captured_files": 18,
+      "candidate_limit": 5000,
+      "truncated": false,
+      "enumeration_error_count": 0,
+      "snapshot_error_count": 14,
+      "compensated_target_count": 18
+    },
+    "change_tracking": {
+      "touched_observed": 18,
+      "touched_retained": 18,
+      "truncated": false,
+      "bash_mutation": true,
+      "bash_discovered": 18,
+      "bash_discovery_limit": 80,
+      "bash_discovery_truncated": false
+    },
+    "candidates": {
+      "eligible_files": 18,
+      "selected_files": 18,
+      "limit": 20,
+      "truncated": false
+    },
+    "scanning": {
+      "required_files": 18,
+      "scanned_files": 18,
+      "skipped_files": 0,
+      "failed_files": 0,
+      "project_checks_required": 0,
+      "project_checks_completed": 0
+    },
+    "notification": {
+      "eligible_findings": 0,
+      "detailed_findings": 0,
+      "detail_limit": 3,
+      "truncated": false
+    },
+    "reason_counts": {
+      "baseline_partial": 1,
+      "project_check_failed": 1
+    },
+    "reasons": [
+      {
+        "code": "baseline_partial",
+        "stage": "baseline",
+        "target": ".",
+        "detail": "baseline capture had enumeration or snapshot errors",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline",
+        "target": ".",
+        "detail": "baseline_partial: baseline capture had enumeration or snapshot errors",
+        "affects_completion": true
+      }
+    ],
+    "reasons_truncated": false
+  },
+  "generated_at": "2026-08-14T16:42:07.653Z",
+  "session_id": "sess_fd450c30-9606-41d3-ab28-747de74272cd",
+  "target": ".",
+  "revision": "f09cf44a528022d59b4561fa62d095433d9dac92",
+  "rules_version": "unavailable",
+  "diff_hash": "a2988b0af91214e7134d5f55c3456233c1928f2665dff66f0051457d3aae0696",
+  "diff": {
+    "algorithm": "sha256",
+    "changed_file_count": 18,
+    "changed_files": [
+      {
+        "file": "app/agents/chart_gen_agent.py",
+        "ranges": [
+          {
+            "start": 36,
+            "end": 36
+          },
+          {
+            "start": 145,
+            "end": 145
+          },
+          {
+            "start": 160,
+            "end": 160
+          },
+          {
+            "start": 187,
+            "end": 189
+          }
+        ],
+        "before_hash": "86d9362eb2de35539662824b29dbc17dc13e560ad94209b1992192bf25a58e75",
+        "after_hash": "f1ba33247c9a19afbead3e62f2a69e66c018ae5eec7a4d5173ccbc9c968a7202"
+      },
+      {
+        "file": "app/agents/chart/flint_bridge.py",
+        "ranges": [
+          {
+            "start": 96,
+            "end": 96
+          },
+          {
+            "start": 145,
+            "end": 147
+          },
+          {
+            "start": 156,
+            "end": 158
+          },
+          {
+            "start": 164,
+            "end": 164
+          },
+          {
+            "start": 169,
+            "end": 169
+          },
+          {
+            "start": 171,
+            "end": 171
+          },
+          {
+            "start": 193,
+            "end": 193
+          },
+          {
+            "start": 245,
+            "end": 245
+          },
+          {
+            "start": 263,
+            "end": 265
+          },
+          {
+            "start": 272,
+            "end": 275
+          },
+          {
+            "start": 293,
+            "end": 296
+          },
+          {
+            "start": 315,
+            "end": 328
+          }
+        ],
+        "before_hash": "2efe2bb1f0f75c46b93e50f91f80002e25de220c35c24b0529faaeb954a2f513",
+        "after_hash": "b3e8f45a256aad64c91c1c5681fac2c75fa3bfa5b52bfc50e597e3e03203a1b0"
+      },
+      {
+        "file": "app/agents/validation/chart_validator.py",
+        "ranges": [
+          {
+            "start": 29,
+            "end": 29
+          },
+          {
+            "start": 38,
+            "end": 38
+          },
+          {
+            "start": 56,
+            "end": 56
+          },
+          {
+            "start": 66,
+            "end": 66
+          },
+          {
+            "start": 124,
+            "end": 124
+          },
+          {
+            "start": 141,
+            "end": 141
+          },
+          {
+            "start": 164,
+            "end": 164
+          },
+          {
+            "start": 207,
+            "end": 207
+          },
+          {
+            "start": 210,
+            "end": 216
+          },
+          {
+            "start": 222,
+            "end": 222
+          },
+          {
+            "start": 229,
+            "end": 237
+          },
+          {
+            "start": 266,
+            "end": 276
+          },
+          {
+            "start": 282,
+            "end": 292
+          },
+          {
+            "start": 299,
+            "end": 309
+          },
+          {
+            "start": 314,
+            "end": 314
+          },
+          {
+            "start": 316,
+            "end": 325
+          },
+          {
+            "start": 331,
+            "end": 341
+          },
+          {
+            "start": 372,
+            "end": 380
+          },
+          {
+            "start": 385,
+            "end": 386
+          },
+          {
+            "start": 394,
+            "end": 402
+          },
+          {
+            "start": 406,
+            "end": 413
+          },
+          {
+            "start": 425,
+            "end": 432
+          },
+          {
+            "start": 437,
+            "end": 443
+          },
+          {
+            "start": 448,
+            "end": 454
+          },
+          {
+            "start": 459,
+            "end": 459
+          },
+          {
+            "start": 467,
+            "end": 467
+          },
+          {
+            "start": 478,
+            "end": 488
+          },
+          {
+            "start": 501,
+            "end": 510
+          },
+          {
+            "start": 513,
+            "end": 519
+          },
+          {
+            "start": 530,
+            "end": 533
+          },
+          {
+            "start": 553,
+            "end": 554
+          },
+          {
+            "start": 593,
+            "end": 599
+          },
+          {
+            "start": 608,
+            "end": 615
+          },
+          {
+            "start": 651,
+            "end": 654
+          },
+          {
+            "start": 659,
+            "end": 667
+          },
+          {
+            "start": 671,
+            "end": 671
+          },
+          {
+            "start": 732,
+            "end": 732
+          }
+        ],
+        "before_hash": "9173ef7212cac86e3ab88bbe8712640003442ed12e8e34f847f30207aee3eb5a",
+        "after_hash": "49e6730bed9a5c8e32fcd9024619a63031aa4eb2fb779c5f71cc7140eacf6f51"
+      },
+      {
+        "file": "app/api/v1/auth.py",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 82
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "d2b8c9fcf115343712fc913357cdcfbb1928f86733a2abf837ccd17c05b7dfcc"
+      },
+      {
+        "file": "app/api/v1/router.py",
+        "ranges": [
+          {
+            "start": 5,
+            "end": 5
+          },
+          {
+            "start": 9,
+            "end": 9
+          }
+        ],
+        "before_hash": "e4e9c6500d1e39e43d43fd7fd527cd1f878042975f4f4c4e72f804b3f8839216",
+        "after_hash": "e834f67789cfbb0ebf7b7a70dc86ce5cc780064035f6d553325819c42e30cd84"
+      },
+      {
+        "file": "app/core/auth.py",
+        "ranges": [
+          {
+            "start": 55,
+            "end": 55
+          }
+        ],
+        "before_hash": "1bea321ae51b9980d928053461fa11511feeee26044a0d57db70b5420a46c79e",
+        "after_hash": "b291081ab4117d57e7fa6b5c46af2d33a32ecd702ff6094cdb8fb08b240ec0c0"
+      },
+      {
+        "file": "app/core/cache.py",
+        "ranges": [
+          {
+            "start": 40,
+            "end": 40
+          },
+          {
+            "start": 59,
+            "end": 65
+          },
+          {
+            "start": 260,
+            "end": 260
+          },
+          {
+            "start": 272,
+            "end": 272
+          },
+          {
+            "start": 295,
+            "end": 295
+          },
+          {
+            "start": 349,
+            "end": 349
+          },
+          {
+            "start": 370,
+            "end": 370
+          },
+          {
+            "start": 383,
+            "end": 383
+          },
+          {
+            "start": 403,
+            "end": 403
+          },
+          {
+            "start": 414,
+            "end": 414
+          },
+          {
+            "start": 437,
+            "end": 437
+          },
+          {
+            "start": 450,
+            "end": 450
+          },
+          {
+            "start": 467,
+            "end": 467
+          },
+          {
+            "start": 477,
+            "end": 477
+          },
+          {
+            "start": 495,
+            "end": 495
+          }
+        ],
+        "before_hash": "b0d644a81fbde6005e7dc749d4894f51b8ec69a5e21e21b5f03e6759de0780e7",
+        "after_hash": "0f29f5ab5cab46d0997ffe6aaf6e4cca7f02bff88668be5f47e4ce79debfb25e"
+      },
+      {
+        "file": "app/core/masking.py",
+        "ranges": [
+          {
+            "start": 23,
+            "end": 23
+          },
+          {
+            "start": 29,
+            "end": 29
+          },
+          {
+            "start": 87,
+            "end": 87
+          },
+          {
+            "start": 112,
+            "end": 112
+          },
+          {
+            "start": 148,
+            "end": 148
+          }
+        ],
+        "before_hash": "815c818ab8f67349b5128b5a4a116b2ad6b49e28d1a46507751dbf5f96629de1",
+        "after_hash": "5e91d85a8b71bd952817777493a54c82620e1bc88eb6c9f26d1137e82f2e5186"
+      },
+      {
+        "file": "app/core/observability.py",
+        "ranges": [
+          {
+            "start": 17,
+            "end": 17
+          },
+          {
+            "start": 40,
+            "end": 40
+          },
+          {
+            "start": 43,
+            "end": 50
+          },
+          {
+            "start": 85,
+            "end": 86
+          },
+          {
+            "start": 150,
+            "end": 150
+          },
+          {
+            "start": 155,
+            "end": 155
+          },
+          {
+            "start": 162,
+            "end": 162
+          },
+          {
+            "start": 167,
+            "end": 167
+          },
+          {
+            "start": 174,
+            "end": 174
+          },
+          {
+            "start": 179,
+            "end": 179
+          },
+          {
+            "start": 186,
+            "end": 186
+          },
+          {
+            "start": 191,
+            "end": 191
+          },
+          {
+            "start": 312,
+            "end": 312
+          }
+        ],
+        "before_hash": "5fa038825d1baed215fbda097d2ac8511510b696f14b313e8b37dc37aa8dd23e",
+        "after_hash": "52c1beacfd8e7a72160a46d09e243d06cc6f7a9c29ea6284d05555234d408fe5"
+      },
+      {
+        "file": "app/db/graph_schema.py",
+        "ranges": [
+          {
+            "start": 20,
+            "end": 20
+          },
+          {
+            "start": 49,
+            "end": 49
+          },
+          {
+            "start": 57,
+            "end": 57
+          },
+          {
+            "start": 306,
+            "end": 315
+          },
+          {
+            "start": 343,
+            "end": 352
+          },
+          {
+            "start": 377,
+            "end": 383
+          },
+          {
+            "start": 415,
+            "end": 421
+          }
+        ],
+        "before_hash": "855059b9372f33214ba8f6c506c79d8f22fa490ec60f3c336b00a8d7a43a3787",
+        "after_hash": "6ccc057ebc513b873f681bedecb63928828baed959eb0beddae5828d56c6016f"
+      },
+      {
+        "file": "app/main.py",
+        "ranges": [
+          {
+            "start": 3,
+            "end": 3
+          },
+          {
+            "start": 25,
+            "end": 25
+          },
+          {
+            "start": 38,
+            "end": 38
+          },
+          {
+            "start": 43,
+            "end": 43
+          },
+          {
+            "start": 46,
+            "end": 46
+          }
+        ],
+        "before_hash": "2878e1eafe6dcaa8d1d631852e351b7921fed49c52ec6bcbf7362b23080498ea",
+        "after_hash": "18766b3976bf0af26d9b296be0f8e692b57d23e897636324dc6aeb48e4ca22c0"
+      },
+      {
+        "file": "app/models/__init__.py",
+        "ranges": [
+          {
+            "start": 3,
+            "end": 3
+          },
+          {
+            "start": 8,
+            "end": 8
+          }
+        ],
+        "before_hash": "851b449514d0ecd3570ad65ec8b4ff919af1f0e92f5ad5e5c24c9188c8e64f39",
+        "after_hash": "b17cccd3b8ef85516ce4ba25dd9a60093abe38fdcaf95c56bd9e513ba4f97e5d"
+      },
+      {
+        "file": "app/semantic/cube_client.py",
+        "ranges": [
+          {
+            "start": 28,
+            "end": 28
+          },
+          {
+            "start": 32,
+            "end": 32
+          },
+          {
+            "start": 45,
+            "end": 45
+          },
+          {
+            "start": 59,
+            "end": 59
+          },
+          {
+            "start": 180,
+            "end": 180
+          },
+          {
+            "start": 198,
+            "end": 198
+          },
+          {
+            "start": 428,
+            "end": 428
+          },
+          {
+            "start": 484,
+            "end": 484
+          },
+          {
+            "start": 533,
+            "end": 533
+          },
+          {
+            "start": 547,
+            "end": 547
+          },
+          {
+            "start": 701,
+            "end": 701
+          }
+        ],
+        "before_hash": "a898934a5cf9c035670a0c12272b30aade3d4ceb6b696ea9388f2f2d61746624",
+        "after_hash": "d8800d6b970cf129010ae3f58ec9be1eb08f5e34fda7b27f52441b0dbf3361c9"
+      },
+      {
+        "file": "tests/api/test_auth.py",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 178
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "bb6dff3ba1f76e82197bcdcd05a16b2335c47eed35e8cba000f42cf699fc4e08"
+      },
+      {
+        "file": "tests/api/test_tenant_isolation.py",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 209
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "4986e6b50fc2dcc9d250f140f8d6e204724dfbe94b2a8b62701a42595f16b2c8"
+      },
+      {
+        "file": "tests/evals/test_nl2sql_eval.py",
+        "ranges": [
+          {
+            "start": 19,
+            "end": 19
+          },
+          {
+            "start": 33,
+            "end": 33
+          },
+          {
+            "start": 91,
+            "end": 102
+          },
+          {
+            "start": 241,
+            "end": 250
+          },
+          {
+            "start": 280,
+            "end": 285
+          },
+          {
+            "start": 333,
+            "end": 341
+          },
+          {
+            "start": 388,
+            "end": 396
+          },
+          {
+            "start": 399,
+            "end": 399
+          },
+          {
+            "start": 493,
+            "end": 497
+          },
+          {
+            "start": 499,
+            "end": 500
+          },
+          {
+            "start": 512,
+            "end": 513
+          },
+          {
+            "start": 515,
+            "end": 516
+          },
+          {
+            "start": 532,
+            "end": 536
+          },
+          {
+            "start": 538,
+            "end": 539
+          },
+          {
+            "start": 609,
+            "end": 609
+          },
+          {
+            "start": 672,
+            "end": 672
+          },
+          {
+            "start": 683,
+            "end": 683
+          },
+          {
+            "start": 695,
+            "end": 696
+          },
+          {
+            "start": 709,
+            "end": 710
+          },
+          {
+            "start": 720,
+            "end": 720
+          },
+          {
+            "start": 722,
+            "end": 722
+          }
+        ],
+        "before_hash": "6172346d63f3ab366915ac0bfef937624710f221a5c825470eb20d6cc6d6b6f5",
+        "after_hash": "90c71342e7e19db1c4c6844a9e1a0adec34d8a8604e83be6eafeae05c349a7b6"
+      },
+      {
+        "file": "tests/fixtures/llm_mock.py",
+        "ranges": [
+          {
+            "start": 18,
+            "end": 18
+          },
+          {
+            "start": 72,
+            "end": 72
+          },
+          {
+            "start": 99,
+            "end": 107
+          },
+          {
+            "start": 121,
+            "end": 129
+          },
+          {
+            "start": 144,
+            "end": 152
+          },
+          {
+            "start": 167,
+            "end": 182
+          }
+        ],
+        "before_hash": "4afcc4e3d8a5a7bb91c0660fee4dae6b849875d8383ee5947f4a53308ba116bc",
+        "after_hash": "2b540314b9125ec8f187a0f451e4382fdf2bafa64145835e2869476d3738c60c"
+      },
+      {
+        "file": "tests/test_security.py",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 22
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "bdd6f7151f10d919e5e33e9571a68002a3e39ca7e5f201190bf359aabe4fb9c2"
+      }
+    ]
+  },
+  "timing": {
+    "started_at": "2026-08-14T16:42:05.780Z",
+    "completed_at": "2026-08-14T16:42:07.653Z",
+    "duration_ms": 1873,
+    "measurement": "hook_wall_clock"
+  },
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "model_calls": 0,
+    "measurement": "known-zero"
+  },
+  "telemetry": {
+    "schemaVersion": "mimosa-gate-telemetry/v1",
+    "profile": "gate",
+    "operation": "Stop",
+    "outcome": "partial/INCONCLUSIVE",
+    "latencyMs": 1873,
+    "peakMemoryBytes": 139214848,
+    "memoryMeasurement": "max-observed-process-rss",
+    "scannedFiles": 18,
+    "cache": {
+      "hits": 0,
+      "misses": 0,
+      "measurement": "not-applicable"
+    },
+    "denyCount": 0,
+    "tokens": {
+      "input": 0,
+      "output": 0,
+      "total": 0,
+      "modelCalls": 0,
+      "measurement": "known-zero"
+    }
+  },
+  "finding_count": 0,
+  "rewake_finding_count": 0,
+  "evidence_boundary": {
+    "scan": "candidate",
+    "static_fix_verification": "observed_static_only",
+    "runtime_verification": "not_performed"
+  },
+  "finding_events": [
+    {
+      "finding_id": "mimosa-86e342a94ea1d192af034dc4",
+      "file": "app/api/v1/auth.py",
+      "line": 55,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "SQL 注入",
+      "status": "blocked",
+      "decision": "deny",
+      "at": "2026-08-14T15:11:18.782Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "79f645f3a9cb9bd42812483dca29143cb93d9240a91001002a40ffc3550dacc1",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-c3a143687fec6ec67f9831bf",
+      "file": "app/api/v1/auth.py",
+      "line": 57,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "SQL 注入",
+      "status": "blocked",
+      "decision": "deny",
+      "at": "2026-08-14T15:11:52.725Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "59fb705d79365dca901332f7d7a962d0180f0ba5034db05b7fe7833f94b57943",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-86e342a94ea1d192af034dc4",
+      "file": "app/api/v1/auth.py",
+      "line": 55,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "SQL 注入",
+      "status": "fixed_candidate",
+      "decision": "repair_observed",
+      "at": "2026-08-14T15:12:16.090Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "79f645f3a9cb9bd42812483dca29143cb93d9240a91001002a40ffc3550dacc1",
+        "candidate_before_evidence_hash": "79f645f3a9cb9bd42812483dca29143cb93d9240a91001002a40ffc3550dacc1",
+        "post_change_evidence_hash_at_previous_location": "84d0e6baacfac66eb64c2415ad9ccaf74af4de00dab877698e8a483a333dbf24",
+        "runtime_oracle": false,
+        "verification": {
+          "method": "mimosa-posttool-static-rescan",
+          "finding_absent": true,
+          "runtime_oracle": false
+        }
+      }
+    },
+    {
+      "finding_id": "mimosa-86e342a94ea1d192af034dc4",
+      "file": "app/api/v1/auth.py",
+      "line": 55,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "SQL 注入",
+      "status": "static_verified",
+      "decision": "static_rescan_passed",
+      "at": "2026-08-14T15:12:16.090Z",
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "observed",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "79f645f3a9cb9bd42812483dca29143cb93d9240a91001002a40ffc3550dacc1",
+        "candidate_before_evidence_hash": "79f645f3a9cb9bd42812483dca29143cb93d9240a91001002a40ffc3550dacc1",
+        "post_change_evidence_hash_at_previous_location": "84d0e6baacfac66eb64c2415ad9ccaf74af4de00dab877698e8a483a333dbf24",
+        "runtime_oracle": false,
+        "verification": {
+          "method": "mimosa-posttool-static-rescan",
+          "finding_absent": true,
+          "runtime_oracle": false
+        }
+      }
+    },
+    {
+      "finding_id": "mimosa-c3a143687fec6ec67f9831bf",
+      "file": "app/api/v1/auth.py",
+      "line": 57,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "SQL 注入",
+      "status": "fixed_candidate",
+      "decision": "repair_observed",
+      "at": "2026-08-14T15:12:16.090Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "59fb705d79365dca901332f7d7a962d0180f0ba5034db05b7fe7833f94b57943",
+        "candidate_before_evidence_hash": "59fb705d79365dca901332f7d7a962d0180f0ba5034db05b7fe7833f94b57943",
+        "post_change_evidence_hash_at_previous_location": "aacfa90d4f834544ac85245be9b1b36a62be90d2800ff86247aab3c386a4504f",
+        "runtime_oracle": false,
+        "verification": {
+          "method": "mimosa-posttool-static-rescan",
+          "finding_absent": true,
+          "runtime_oracle": false
+        }
+      }
+    },
+    {
+      "finding_id": "mimosa-c3a143687fec6ec67f9831bf",
+      "file": "app/api/v1/auth.py",
+      "line": 57,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "SQL 注入",
+      "status": "static_verified",
+      "decision": "static_rescan_passed",
+      "at": "2026-08-14T15:12:16.090Z",
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "observed",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "59fb705d79365dca901332f7d7a962d0180f0ba5034db05b7fe7833f94b57943",
+        "candidate_before_evidence_hash": "59fb705d79365dca901332f7d7a962d0180f0ba5034db05b7fe7833f94b57943",
+        "post_change_evidence_hash_at_previous_location": "aacfa90d4f834544ac85245be9b1b36a62be90d2800ff86247aab3c386a4504f",
+        "runtime_oracle": false,
+        "verification": {
+          "method": "mimosa-posttool-static-rescan",
+          "finding_absent": true,
+          "runtime_oracle": false
+        }
+      }
+    },
+    {
+      "finding_id": "mimosa-44121d4a2a88c947989251ce",
+      "file": "tests/api/test_auth.py",
+      "line": 22,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "硬编码凭据",
+      "status": "blocked",
+      "decision": "deny",
+      "at": "2026-08-14T15:12:51.245Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "7617ba4d20f64937d0ec16a0c9948d8f7ab1fe488937f2e8e3d706a6c17969fb",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-5e1b50f209ddd3a3044bba21",
+      "file": "tests/api/test_auth.py",
+      "line": 31,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "SQL 注入",
+      "status": "blocked",
+      "decision": "deny",
+      "at": "2026-08-14T15:12:51.245Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "1149a233c8bd7b5ec9861cdaca8ed6339aa1149e56367a7b7556a8b4c6b9edcc",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-8cc3ce327aca16787a2195b6",
+      "file": "tests/api/test_auth.py",
+      "line": 108,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "硬编码凭据",
+      "status": "blocked",
+      "decision": "deny",
+      "at": "2026-08-14T15:12:51.245Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "8b1d9866126433ee0ca364a387a6eb751f6513fdfb0990fe1f7b822b8845599c",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-20cea1ac195c6b8943fe2d71",
+      "file": "tests/api/test_auth.py",
+      "line": 34,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "SQL 注入",
+      "status": "blocked",
+      "decision": "deny",
+      "at": "2026-08-14T15:13:28.143Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "9b31c658225262c9a1ed60c793ac0fa5d3a253854fb517bf8d35dafe7a7f7a58",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-8cc3ce327aca16787a2195b6",
+      "file": "tests/api/test_auth.py",
+      "line": 111,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "硬编码凭据",
+      "status": "blocked",
+      "decision": "deny",
+      "at": "2026-08-14T15:13:28.143Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "8b1d9866126433ee0ca364a387a6eb751f6513fdfb0990fe1f7b822b8845599c",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-6205a5485e058a508773e9d1",
+      "file": "tests/api/test_auth.py",
+      "line": 109,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "硬编码凭据",
+      "status": "blocked",
+      "decision": "deny",
+      "at": "2026-08-14T15:14:14.676Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "f2820c9b0b02cdb018d65e6f6d8db73a511a604c898497aa2b34cd9aa27e00d4",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-44121d4a2a88c947989251ce",
+      "file": "tests/api/test_auth.py",
+      "line": 22,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "硬编码凭据",
+      "status": "fixed_candidate",
+      "decision": "repair_observed",
+      "at": "2026-08-14T15:42:18.794Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "7617ba4d20f64937d0ec16a0c9948d8f7ab1fe488937f2e8e3d706a6c17969fb",
+        "candidate_before_evidence_hash": "7617ba4d20f64937d0ec16a0c9948d8f7ab1fe488937f2e8e3d706a6c17969fb",
+        "post_change_evidence_hash_at_previous_location": "849da6b82ed532a0d0334418b72b9428f140ba852daae9a3fdc644cc2c393d45",
+        "runtime_oracle": false,
+        "verification": {
+          "method": "mimosa-posttool-static-rescan",
+          "finding_absent": true,
+          "runtime_oracle": false
+        }
+      }
+    },
+    {
+      "finding_id": "mimosa-44121d4a2a88c947989251ce",
+      "file": "tests/api/test_auth.py",
+      "line": 22,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "硬编码凭据",
+      "status": "static_verified",
+      "decision": "static_rescan_passed",
+      "at": "2026-08-14T15:42:18.794Z",
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "observed",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "7617ba4d20f64937d0ec16a0c9948d8f7ab1fe488937f2e8e3d706a6c17969fb",
+        "candidate_before_evidence_hash": "7617ba4d20f64937d0ec16a0c9948d8f7ab1fe488937f2e8e3d706a6c17969fb",
+        "post_change_evidence_hash_at_previous_location": "849da6b82ed532a0d0334418b72b9428f140ba852daae9a3fdc644cc2c393d45",
+        "runtime_oracle": false,
+        "verification": {
+          "method": "mimosa-posttool-static-rescan",
+          "finding_absent": true,
+          "runtime_oracle": false
+        }
+      }
+    },
+    {
+      "finding_id": "mimosa-5e1b50f209ddd3a3044bba21",
+      "file": "tests/api/test_auth.py",
+      "line": 31,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "SQL 注入",
+      "status": "fixed_candidate",
+      "decision": "repair_observed",
+      "at": "2026-08-14T15:42:18.794Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "1149a233c8bd7b5ec9861cdaca8ed6339aa1149e56367a7b7556a8b4c6b9edcc",
+        "candidate_before_evidence_hash": "1149a233c8bd7b5ec9861cdaca8ed6339aa1149e56367a7b7556a8b4c6b9edcc",
+        "post_change_evidence_hash_at_previous_location": "8761c2f50a05555a9fa1d49305b92b83c2e0ce8ab14ba63c491eba8d0f52fb60",
+        "runtime_oracle": false,
+        "verification": {
+          "method": "mimosa-posttool-static-rescan",
+          "finding_absent": true,
+          "runtime_oracle": false
+        }
+      }
+    },
+    {
+      "finding_id": "mimosa-5e1b50f209ddd3a3044bba21",
+      "file": "tests/api/test_auth.py",
+      "line": 31,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "SQL 注入",
+      "status": "static_verified",
+      "decision": "static_rescan_passed",
+      "at": "2026-08-14T15:42:18.794Z",
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "observed",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "1149a233c8bd7b5ec9861cdaca8ed6339aa1149e56367a7b7556a8b4c6b9edcc",
+        "candidate_before_evidence_hash": "1149a233c8bd7b5ec9861cdaca8ed6339aa1149e56367a7b7556a8b4c6b9edcc",
+        "post_change_evidence_hash_at_previous_location": "8761c2f50a05555a9fa1d49305b92b83c2e0ce8ab14ba63c491eba8d0f52fb60",
+        "runtime_oracle": false,
+        "verification": {
+          "method": "mimosa-posttool-static-rescan",
+          "finding_absent": true,
+          "runtime_oracle": false
+        }
+      }
+    },
+    {
+      "finding_id": "mimosa-8cc3ce327aca16787a2195b6",
+      "file": "tests/api/test_auth.py",
+      "line": 111,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "硬编码凭据",
+      "status": "fixed_candidate",
+      "decision": "repair_observed",
+      "at": "2026-08-14T15:42:18.794Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "8b1d9866126433ee0ca364a387a6eb751f6513fdfb0990fe1f7b822b8845599c",
+        "candidate_before_evidence_hash": "8b1d9866126433ee0ca364a387a6eb751f6513fdfb0990fe1f7b822b8845599c",
+        "post_change_evidence_hash_at_previous_location": "ba5ec51d07a4ac0e951608704431d59a02b21a4e951acc10505a8dc407c501ee",
+        "runtime_oracle": false,
+        "verification": {
+          "method": "mimosa-posttool-static-rescan",
+          "finding_absent": true,
+          "runtime_oracle": false
+        }
+      }
+    },
+    {
+      "finding_id": "mimosa-8cc3ce327aca16787a2195b6",
+      "file": "tests/api/test_auth.py",
+      "line": 111,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "硬编码凭据",
+      "status": "static_verified",
+      "decision": "static_rescan_passed",
+      "at": "2026-08-14T15:42:18.794Z",
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "observed",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "8b1d9866126433ee0ca364a387a6eb751f6513fdfb0990fe1f7b822b8845599c",
+        "candidate_before_evidence_hash": "8b1d9866126433ee0ca364a387a6eb751f6513fdfb0990fe1f7b822b8845599c",
+        "post_change_evidence_hash_at_previous_location": "ba5ec51d07a4ac0e951608704431d59a02b21a4e951acc10505a8dc407c501ee",
+        "runtime_oracle": false,
+        "verification": {
+          "method": "mimosa-posttool-static-rescan",
+          "finding_absent": true,
+          "runtime_oracle": false
+        }
+      }
+    },
+    {
+      "finding_id": "mimosa-20cea1ac195c6b8943fe2d71",
+      "file": "tests/api/test_auth.py",
+      "line": 34,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "SQL 注入",
+      "status": "fixed_candidate",
+      "decision": "repair_observed",
+      "at": "2026-08-14T15:42:18.794Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "9b31c658225262c9a1ed60c793ac0fa5d3a253854fb517bf8d35dafe7a7f7a58",
+        "candidate_before_evidence_hash": "9b31c658225262c9a1ed60c793ac0fa5d3a253854fb517bf8d35dafe7a7f7a58",
+        "post_change_evidence_hash_at_previous_location": "e9dc52bf3963abece45b9567d74508b27fc0844ba1a939f0900885876f6115bf",
+        "runtime_oracle": false,
+        "verification": {
+          "method": "mimosa-posttool-static-rescan",
+          "finding_absent": true,
+          "runtime_oracle": false
+        }
+      }
+    },
+    {
+      "finding_id": "mimosa-20cea1ac195c6b8943fe2d71",
+      "file": "tests/api/test_auth.py",
+      "line": 34,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "SQL 注入",
+      "status": "static_verified",
+      "decision": "static_rescan_passed",
+      "at": "2026-08-14T15:42:18.794Z",
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "observed",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "9b31c658225262c9a1ed60c793ac0fa5d3a253854fb517bf8d35dafe7a7f7a58",
+        "candidate_before_evidence_hash": "9b31c658225262c9a1ed60c793ac0fa5d3a253854fb517bf8d35dafe7a7f7a58",
+        "post_change_evidence_hash_at_previous_location": "e9dc52bf3963abece45b9567d74508b27fc0844ba1a939f0900885876f6115bf",
+        "runtime_oracle": false,
+        "verification": {
+          "method": "mimosa-posttool-static-rescan",
+          "finding_absent": true,
+          "runtime_oracle": false
+        }
+      }
+    },
+    {
+      "finding_id": "mimosa-6205a5485e058a508773e9d1",
+      "file": "tests/api/test_auth.py",
+      "line": 109,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "硬编码凭据",
+      "status": "fixed_candidate",
+      "decision": "repair_observed",
+      "at": "2026-08-14T15:42:18.794Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "f2820c9b0b02cdb018d65e6f6d8db73a511a604c898497aa2b34cd9aa27e00d4",
+        "candidate_before_evidence_hash": "f2820c9b0b02cdb018d65e6f6d8db73a511a604c898497aa2b34cd9aa27e00d4",
+        "post_change_evidence_hash_at_previous_location": "a840bee01550c5557d4d71ddbae8556732ffb7fe2b763b7eeb3fa37bfcbd2f3d",
+        "runtime_oracle": false,
+        "verification": {
+          "method": "mimosa-posttool-static-rescan",
+          "finding_absent": true,
+          "runtime_oracle": false
+        }
+      }
+    },
+    {
+      "finding_id": "mimosa-6205a5485e058a508773e9d1",
+      "file": "tests/api/test_auth.py",
+      "line": 109,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "硬编码凭据",
+      "status": "static_verified",
+      "decision": "static_rescan_passed",
+      "at": "2026-08-14T15:42:18.794Z",
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "observed",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "f2820c9b0b02cdb018d65e6f6d8db73a511a604c898497aa2b34cd9aa27e00d4",
+        "candidate_before_evidence_hash": "f2820c9b0b02cdb018d65e6f6d8db73a511a604c898497aa2b34cd9aa27e00d4",
+        "post_change_evidence_hash_at_previous_location": "a840bee01550c5557d4d71ddbae8556732ffb7fe2b763b7eeb3fa37bfcbd2f3d",
+        "runtime_oracle": false,
+        "verification": {
+          "method": "mimosa-posttool-static-rescan",
+          "finding_absent": true,
+          "runtime_oracle": false
+        }
+      }
+    },
+    {
+      "finding_id": "mimosa-56b5d9886f17e1e22bc0ad34",
+      "file": "app/db/graph_schema.py",
+      "line": 1,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "SQL 注入",
+      "status": "blocked",
+      "decision": "deny",
+      "at": "2026-08-14T15:47:50.517Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "9be2357a156e0602ca0dc216331d34009febcb4ca4f01b90d0780c675578b0ba",
+        "runtime_oracle": false
+      }
+    }
+  ],
+  "findings": [],
+  "artifacts": {
+    "immutable_report": ".mimosa/reports/task-review-sess_fd450c30-9606-41d3-ab28-747de74272cd-20260814T164207653Z-36668-b3ccd36e3c82.json",
+    "latest_report": ".mimosa/reports/task-review-sess_fd450c30-9606-41d3-ab28-747de74272cd.json",
+    "history_summary": ".mimosa/history/run-20260814T164207653Z-36668-b3ccd36e3c82.json"
+  }
+}

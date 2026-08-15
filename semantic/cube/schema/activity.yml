@@ -1,0 +1,39 @@
+# Product engagement events (source: public.activity). Joins WebUsers.
+cubes:
+  - name: Activity
+    sql_table: public.activity
+    data_source: default
+
+    joins:
+      - name: WebUsers
+        relationship: many_to_one
+        sql: "{CUBE}.user_id = {WebUsers}.id"
+
+    measures:
+      - name: event_count
+        title: Event Count
+        description: Number of engagement events (logins, queries, exports, ...)
+        type: count
+        format: number
+      - name: unique_active_users
+        title: Unique Active Users
+        description: Distinct users with at least one event
+        type: count_distinct
+        sql: user_id
+        format: number
+
+    dimensions:
+      - name: event_type
+        title: Event Type
+        description: Engagement event type (login, query, export, dashboard_view, report_create)
+        sql: event_type
+        type: string
+      - name: activity_date
+        title: Activity Date
+        description: Date of the event
+        sql: activity_date
+        type: time
+      - name: tenant_id
+        sql: tenant_id
+        type: string
+        visible: false

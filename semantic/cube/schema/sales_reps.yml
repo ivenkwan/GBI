@@ -1,0 +1,37 @@
+# Sales representatives (source: public.sales_representatives).
+# Joined from Deals; joins Regions.
+cubes:
+  - name: SalesReps
+    sql_table: public.sales_representatives
+    data_source: default
+
+    joins:
+      - name: Deals
+        relationship: one_to_many
+        sql: "{CUBE}.id = {Deals}.rep_id"
+      - name: Regions
+        relationship: many_to_one
+        sql: "{CUBE}.region_id = {Regions}.id"
+
+    measures:
+      - name: rep_count
+        title: Sales Rep Count
+        description: Number of sales representatives
+        type: count
+        format: number
+
+    dimensions:
+      - name: name
+        title: Rep Name
+        description: Sales representative full name
+        sql: name
+        type: string
+      - name: hire_date
+        title: Hire Date
+        description: Date the representative was hired
+        sql: hire_date
+        type: time
+      - name: tenant_id
+        sql: tenant_id
+        type: string
+        visible: false

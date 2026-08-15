@@ -173,7 +173,7 @@ governance controls, and a Next.js frontend layered on top.
 │  Orchestration  LangGraph agents (NL2SQL, ChartGen, │
 │                 Narrative, Router, Validation)       │
 ├─────────────────────────────────────────────────────┤
-│  Semantic       dbt MetricFlow → Cube.dev metrics API│
+│  Semantic       Cube-native metric catalog → Cube API│
 ├─────────────────────────────────────────────────────┤
 │  Data           PostgreSQL · pgvector · Apache AGE   │
 │                 (connectors: read-only, tenant-scoped)│
@@ -194,7 +194,7 @@ For the full design rationale, see the
 |---|---|
 | **Backend** | Python 3.12 · FastAPI · Uvicorn / Gunicorn · Pydantic v2 · SQLAlchemy 2.0 (async) |
 | **LLM** | Anthropic Claude (Opus for SQL reasoning, Haiku for speed) · LangChain / LangGraph · LlamaIndex |
-| **Semantic layer** | dbt (MetricFlow) · Cube.dev (headless BI) |
+| **Semantic layer** | Cube.dev (headless BI, native data models) |
 | **Databases** | PostgreSQL 16 · pgvector (schema embeddings) · Apache AGE (lineage graph) · Redis (cache) |
 | **Frontend** | Next.js 15 (App Router) · TypeScript 5.9 · Tailwind CSS v4 · shadcn/ui · Zod |
 | **Charts** | Flint MCP → Vega-Lite / ECharts / Chart.js |
@@ -225,7 +225,7 @@ genbi/
 │   └── Dockerfile
 ├── frontend/              Next.js 15 + shadcn/ui
 │   └── src/{app,components,lib,types}/
-├── semantic/              dbt MetricFlow + Cube.dev schemas
+├── semantic/              Cube.dev project + metric catalog (schema/)
 ├── infra/                 Docker Compose (dev + prod), Postgres init, Prometheus
 │   └── postgres/Dockerfile   Custom image: pgvector + Apache AGE
 ├── scripts/               setup.sh, gen-env.sh, verify.sh, embed_schema.py
@@ -246,7 +246,7 @@ genbi/
 - [Agent System](docs/agent-system.md) — multi-agent LangGraph pipeline, agent roster, safety gate
 - [Core Services](docs/core-services.md) — config, LLM client, cache, auth, PII masking, observability
 - [Data Layer](docs/data-layer.md) — ORM models, read-only connectors, AGE graph schema, migrations
-- [Semantic Layer](docs/semantic-layer.md) — dbt MetricFlow → Cube.dev → Python client
+- [Semantic Layer](docs/semantic-layer.md) — Cube-native catalog → Cube.dev → Python client
 - [Frontend Guide](docs/frontend-guide.md) — Next.js App Router, shadcn/ui, SSE chat, Zod validators
 
 ### API
@@ -289,9 +289,9 @@ full list.
 
 ### Adding a new metric
 
-1. Define it in `semantic/dbt/models/metrics/{domain}.yml` (MetricFlow syntax).
-2. Run `dbt run --select +metrics.{domain}` + `dbt test`.
-3. Cube.dev picks it up on next sync (or `cd semantic/cube && cube build`).
+1. Define it in `semantic/cube/schema/{domain}.yml` (Cube data-model YAML).
+2. Run `uv run pytest backend/tests/semantic/test_catalog.py` — structural invariants.
+3. Restart Cube (`make restart`) — `/meta` reflects the change (5-min client cache).
 4. Re-embed the schema: `uv run python scripts/embed_schema.py`.
 
 See the [Semantic Layer docs](docs/semantic-layer.md) for details.
@@ -361,7 +361,7 @@ parsing, and destructive-pattern detection all run for real. See
 |---|---|---|
 | Agent pipeline (NL→SQL→Chart→Narrative) | ✅ Implemented | Sync + SSE streaming |
 | Validation safety gate | ✅ Implemented | Destructive-pattern + read-only enforcement |
-| Semantic layer (dbt + Cube) | ✅ Scaffold | One toy metric; expand for production |
+| Semantic layer (Cube-native catalog) | ✅ Implemented | 10 cubes / 23 measures, /metrics/list live; data queries Phase 10 (ADR 007) |
 | Multi-tenant RLS + JWT | ✅ Enforced | Non-superuser runtime roles + FORCE RLS on all tenant tables, incl. analytics (ADR 006) |
 | PII masking | ✅ Wired | Applied at the execution chokepoint |
 | Chart hallucination detection | ✅ Implemented | 6 validation categories + auto-correct |

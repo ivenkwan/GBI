@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/auth/auth-provider";
 import { ChatRequestSchema, SSEEventSchema } from "@/lib/validators";
 import type { SSEEvent } from "@/lib/validators";
@@ -11,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { Send, BarChart3, Database, Zap, Settings, LogOut, User } from "lucide-react";
+import { Send, BarChart3, Database, Settings, LogOut, User } from "lucide-react";
 
 interface StreamStage {
   stage: string;
@@ -39,7 +40,7 @@ export function ChatView() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [view, setView] = useState<"chat" | "metrics">("chat");
+  const router = useRouter();
   const chatEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -201,15 +202,13 @@ export function ChatView() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  onClick={() => setView(view === "chat" ? "metrics" : "chat")}
+                  onClick={() => router.push("/explore")}
                   className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
                 >
-                  {view === "chat" ? <Database className="w-5 h-5" /> : <Zap className="w-5 h-5" />}
+                  <Database className="w-5 h-5" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent>
-                {view === "chat" ? "View metrics" : "View chat"}
-              </TooltipContent>
+              <TooltipContent>Explore metrics</TooltipContent>
             </Tooltip>
           </TooltipProvider>
 

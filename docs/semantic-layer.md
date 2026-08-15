@@ -1,224 +1,126 @@
 # Semantic Layer
 
-> Single source of truth for business metric definitions. Three-tier pipeline: **dbt MetricFlow** → **Cube.dev** → **Python CubeClient**.
+> Single source of truth for business metric definitions:
+> **Cube-native data models** (`semantic/cube/schema/`) served by **Cube.dev**,
+> consumed by the Python **CubeClient**. See
+> [ADR 007](adr/007-cube-native-semantic-layer.md) for why the dbt tier was
+> dropped.
 
 ## Architecture
 
 ```
-dbt models (metrics/*.yml)
+semantic/cube/schema/*.yml   (10 cubes, 23 measures — the catalog)
     │
     v
-dbt MetricFlow manifest (target/manifest.json)
-    │
+Cube.dev (cube.js, CUBEJS_DB_* env, cube_reader role)
+    │  REST API: /meta (definitions), /load (data — Phase 10)
     v
-Cube.dev (cube.js → semantic_layer_sync)
-    │  REST API: /meta, /load
+CubeClient (backend/app/semantic/cube_client.py, JWT-authenticated)
+    │  /meta → MetricDefinition map → LLM context formatting
     v
-CubeClient (backend/app/semantic/cube_client.py)
-    │  Python ↔ LLM context formatting
-    v
-NL2SQLAgent, NarrativeAgent (agents)
+ChatService → NL2SQLAgent prompt ("## Available Metrics") + /api/v1/metrics/list
 ```
 
----
+## The Catalog
 
-## dbt Project
+**Location:** `semantic/cube/schema/` — one YAML per cube, over the ten
+seeded analytics tables. Highlights:
 
-**Location:** `semantic/dbt/` | **Project:** `genbi_semantic` v0.1.0
-
-### Materialization Strategy
-
-| Layer | Materialization | Schema |
+| Cube | Measures | Dimensions (non-time) |
 |---|---|---|
-| **staging** | Views | `staging` |
-| **metrics** | Tables | `metrics` |
-| **marts** | Tables | `marts` |
+| Sales | `revenue_total` (USD), `units_sold`, `avg_revenue_per_sale`, `sale_count` | region, product_name |
+| Orders | `order_count`, `order_value` (USD), `avg_order_value` | status |
+| Customers | `customer_count`, `active_customers` (status filter) | country, status |
+| Transactions | `transaction_volume` (USD), `transaction_count`, `avg_transaction` | type, status |
+| WebUsers | `user_count`, `active_users` | country, status |
+| Activity | `event_count`, `unique_active_users` (countDistinct) | event_type |
+| Deals | `pipeline_value` (USD), `deal_count`, `won_deals`, `win_rate` (calculated, %) | stage |
+| SalesReps | `rep_count` | name |
+| Products | `product_count`, `avg_price` | product_name, category |
+| Regions | `region_count` | region_name |
 
-### Staging Model — `stg_revenue`
+Rules enforced by `backend/tests/semantic/test_catalog.py`:
 
-**File:** `semantic/dbt/models/staging/stg_revenue.sql`
+- unique cube names and measure names across the catalog
+- joins reference existing cubes and are **symmetric** (both sides declared)
+- every cube carries a `tenant_id` dimension (hidden; Phase-10 queryRewrite hook)
+- every measure has a `type` or a `sql` expression
+- the core metrics (revenue, orders, active users, pipeline, win rate...) exist
 
-Transforms raw `transactions` table into business-friendly columns:
+**Joins follow real seed foreign keys only**: Orders↔Customers,
+Deals↔SalesReps↔Regions, Activity↔WebUsers. `sales.product_id`/`rep_id` are
+dangling in the seed data, so Sales declares no joins.
 
-```sql
-SELECT
-    id AS transaction_id,
-    customer_id,
-    revenue_amount,
-    region,
-    product_category,
-    DATE(created_at) AS transaction_date,
-    tenant_id
-FROM {{ source('raw', 'transactions') }}
-```
+## Cube Runtime
 
-### Metric Definitions
+- **Config:** `semantic/cube/cube.js` — API secret + dev mode from env.
+- **Database:** standard `CUBEJS_DB_HOST/PORT/NAME/USER/PASS` env; Cube
+  connects as the read-only `cube_reader` role (created by
+  `infra/postgres/init.sql`).
+- **Dev compose:** the `cube` service mounts `semantic/cube` at `/cube/conf`
+  and healthchecks via `node -e fetch(...)`.
+- **Secrets:** `scripts/gen-env.sh` writes `semantic/cube/.env`, keeping
+  `CUBEJS_API_SECRET` aligned with the backend's `CUBE_API_SECRET`.
 
-**File:** `semantic/dbt/models/metrics/revenue.yml`
+### RLS interaction (important)
 
-#### Revenue Semantic Model
+Analytics tables are FORCE-RLS tenant-scoped (Phase 8b / ADR 006).
+`cube_reader` sets no `app.current_tenant_id` GUC, so **data queries (/load)
+return zero rows today** — by design, not by accident. `/meta` (definitions)
+is unaffected. Per-tenant Cube data queries (driver-level GUC via
+`contextToOrchestratorId` + connection-init SQL) are Phase 10, delivered
+together with `/api/v1/metrics/query` and the Explore UI.
 
-| Entity | Type | Column |
-|---|---|---|
-| `transaction` | Primary | `transaction_id` |
-| `customer` | Foreign | `customer_id` |
+## CubeClient
 
-| Dimension | Type | Column |
-|---|---|---|
-| `transaction_date` | Time (daily) | `transaction_date` |
-| `region` | Categorical | `region` |
-| `product_category` | Categorical | `product_category` |
+**Location:** `backend/app/semantic/cube_client.py`
 
-| Measure | Aggregation | Column |
-|---|---|---|
-| `revenue_amount` | SUM | `revenue_amount` |
-| `transaction_count` | COUNT | — |
+- **Auth:** HS256 JWT signed with `CUBE_API_SECRET` (cached ~1h) — the raw
+  secret only works in Cube dev mode, the signed token works everywhere.
+- **`get_meta()`**: fetches/parse `/meta` → `CubeMetaResponse{cubes,
+  metrics, raw}`. The **raw payload** is what gets cached (Redis + in-memory,
+  TTL 5 min) and re-parsed on hit — serializing the parsed form loses the
+  metrics map.
+- **`list_metrics()` / `get_metric(name)`**: MetricDefinition lookup, indexed
+  both as `cube.measure` and bare `measure`.
+- **`query(...)`**: POST `/load` with measures/dimensions/timeDimensions/
+  filters — **tenant-incorrect until Phase 10** (see RLS note above).
+- **`get_agent_context(query=...)`**: the primary agent integration point.
+  With ≤20 metrics, formats the full catalog; above that, keyword-ranks
+  metrics against the query (name 3×, title/cube 2×, description 1×) and
+  injects the top 20; no keyword overlap falls back to the full list.
+- **`health_check()`**: returns bool, never raises.
+- Failure semantics: callers fail open — ChatService continues without
+  metric context when Cube is down.
 
-#### Metrics
-
-| Metric | Type | Formula |
-|---|---|---|
-| `revenue_total` | SUM | `SUM(revenue_amount)` |
-| `revenue_growth_pct` | DERIVED | `(revenue_total - revenue_prev_period) / revenue_prev_period * 100` |
-| `active_users` | COUNT_DISTINCT | `COUNT(DISTINCT user_id)` |
-| `conversion_rate` | RATIO | `conversions / total_users` |
-
-### Source Definitions
-
-**File:** `semantic/dbt/models/staging/sources.yml`
-
-Single source `raw` with `transactions` table. Columns: `id`, `customer_id`, `amount`, `region`, `product_category`, `created_at`. Tests: `unique` on `id`, `not_null` on `customer_id`, `amount`, `created_at`.
-
----
-
-## Cube.js Configuration
-
-**File:** `semantic/cube/cube.js`
-
-```js
-module.exports = {
-  data_source: process.env.CUBEJS_DB_URL || "postgresql://genbi:genbi@localhost:5432/genbi",
-  semantic_layer_sync: {
-    dbt: {
-      manifest_path: process.env.CUBEJS_DB_MANIFEST_PATH || "../dbt/target/manifest.json",
-    },
-  },
-};
-```
-
-**Environment:** `CUBE_API_SECRET` for auth, `CUBEJS_DEV_MODE=true` in development, `CUBEJS_WEB_SOCKETS=true` for live queries.
-
----
-
-## CubeClient (Python)
-
-**File:** `backend/app/semantic/cube_client.py` | **Singleton:** `get_cube_client()`
-
-### Initialization
+### MetricDefinition
 
 ```python
-client = CubeClient(
-    api_url="http://localhost:4000/cubejs-api/v1",
-    api_secret="...",
-    cache_ttl_seconds=300,
-)
+name            # "Sales.revenue_total"
+title           # "Total Revenue"
+description     # human + LLM readable
+metric_type     # MetricType (sum/count/count_distinct/avg/min/max/...)
+cube_name       # "Sales"
+measure_name    # "revenue_total"
+dimensions      # non-time dimension names
+time_dimensions # time dimension names
+format          # {"currency": "USD"} | {"percent": ...} | None
 ```
 
-In-memory caches (`_metric_cache`, `_meta_cache`) + optional Redis cache (lazy-initialized).
+## API Surface
 
-### Data Types
-
-```python
-class MetricType(enum.Enum):
-    SUM = "sum"
-    COUNT = "count"
-    COUNT_DISTINCT = "count_distinct"
-    AVG = "avg"
-    MIN = "min"
-    MAX = "max"
-    RATIO = "ratio"
-    DERIVED = "derived"
-    RUNNING_TOTAL = "running_total"
-
-class DimensionType(enum.Enum):
-    STRING = "string"
-    NUMBER = "number"
-    TIME = "time"
-    BOOLEAN = "boolean"
-    GEO = "geo"
-
-@dataclass
-class MetricDefinition:
-    name: str
-    title: str
-    description: str
-    metric_type: MetricType
-    cube_name: str
-    measure_name: str
-    dimensions: list[str]
-    time_dimensions: list[str]
-    format: str | None
-```
-
-### Key Methods
-
-| Method | Returns | Description |
-|---|---|---|
-| `get_meta(force_refresh=False)` | `CubeMetaResponse` | Fetches `/meta`, parses cubes into `MetricDefinition` objects |
-| `list_metrics(force_refresh=False)` | `dict[str, MetricDefinition]` | All metrics keyed by name |
-| `get_metric(name)` | `MetricDefinition \| None` | Lookup by name |
-| `query(metrics, dimensions, ...)` | `MetricQueryResult` | Executes a Cube `/load` query |
-| `format_metrics_for_llm(metrics, names)` | `str` | Markdown-formatted metric catalog for LLM context |
-| `format_metric_for_prompt(name, metric)` | `str` | Compact single-metric format |
-| `get_agent_context(query, metric_names)` | `str` | **Primary integration point** — returns metric context for NL2SQLAgent |
-| `health_check()` | `bool` | Pings `/meta` |
-
-### LLM Context Formatting
-
-`format_metrics_for_llm()` produces:
-
-```markdown
-## Available Metrics (from Semantic Layer)
-
-- **revenue_total** (sum)
-  Sum of all recognized revenue
-  Cube: revenue, Measure: revenue_amount
-  Dimensions: region, product_category
-  Time dimensions: transaction_date
-
-- **revenue_growth_pct** (derived)
-  Period-over-period growth percentage
-  ...
-```
-
-This is injected into the NL2SQLAgent's context so the LLM understands which metrics exist and how to query them.
-
-### Caching
-
-Dual-layer (Redis + in-memory). TTL: configurable (default 5 min). Keys: `genbi:cube:*`. Serialization handles `MetricDefinition` and `CubeMetaResponse` dataclasses for Redis.
-
----
-
-## Schema Embeddings
-
-**Script:** `scripts/embed_schema.py`
-
-**Purpose:** Nightly sync of `information_schema` metadata to pgvector for semantic NL2SQL search.
-
-**Process:**
-1. Queries `information_schema.tables` + `pg_catalog.pg_description` for table/column metadata with descriptions
-2. Groups columns by table, builds a rich text representation per table
-3. Generates 1536-dim embeddings via `claude-embeddings-20250219` Anthropic API
-4. Upserts into the `schema_embeddings` table (keyed by `tenant_id` + `table_schema` + `table_name`)
-
-**CLI:**
-```bash
-uv run python scripts/embed_schema.py --schema public --domain revenue --dry-run
-uv run python scripts/embed_schema.py --schema public  # full sync
-```
-
----
+- `GET /api/v1/metrics/list` — the catalog as JSON (JWT-authenticated;
+  `503 {"detail": {"code": "CUBE_UNAVAILABLE"}}` when Cube is down).
+- `POST /api/v1/metrics/query` — Phase 10 (needs per-tenant Cube data path).
 
 ## Key Principle
 
-> **Metrics are defined ONCE in dbt MetricFlow.** Cube.dev exposes them via REST + GraphQL. The Python `CubeClient` injects them into LLM context. **Never re-implement metric logic** in agent prompts or service code — always query via Cube API.
+Metrics are defined ONCE in `semantic/cube/schema/`. Never re-implement
+metric logic in agent prompts or service code — always consume via
+CubeClient.
+
+## Adding a Metric
+
+1. Edit the cube YAML (or add a cube file).
+2. `uv run pytest tests/semantic/test_catalog.py` — invariants must hold.
+3. `make restart` — `/meta` reflects the change (5-min client cache).

@@ -109,13 +109,16 @@ if should_write "$CUBE_ENV"; then
   fi
 
   PG_PASS="genbi"
+  # cube_reader: read-only role created by infra/postgres/init.sql. Dev
+  # default password — rotate in production.
   sed \
-    -e "s|^CUBEJS_DB_URL=.*|CUBEJS_DB_URL=postgresql://genbi:${PG_PASS}@postgres:5432/genbi|" \
+    -e "s|^CUBEJS_DB_HOST=.*|CUBEJS_DB_HOST=postgres|" \
+    -e "s|^CUBEJS_DB_PASS=.*|CUBEJS_DB_PASS=changeme_cube_reader|" \
     -e "s|^CUBEJS_API_SECRET=.*|CUBEJS_API_SECRET=${CUBE_SECRET}|" \
     "$CUBE_TEMPLATE" > "$CUBE_ENV"
 
   echo "  wrote:  $CUBE_ENV"
-  echo "           (CUBEJS_DB_URL → postgres host, CUBEJS_API_SECRET aligned with backend)"
+  echo "           (CUBEJS_DB_* → postgres host + cube_reader role, CUBEJS_API_SECRET aligned with backend)"
 fi
 
 echo ""

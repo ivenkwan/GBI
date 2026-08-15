@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "mimosa-finding-history/v1",
+  "runId": "20260814T225214135Z-35888-fe1fd3121da9",
+  "runStatus": "inconclusive",
+  "errors": [
+    "baseline-read:backend/tests/semantic/test_catalog.py: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:backend/tests/semantic/test_cube_client_phase9.py: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:backend/tests/api/test_metrics.py: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:backend/tests/api/test_tenant_isolation.py: baseline_snapshot_unreadable: file is missing from task baseline"
+  ],
+  "target": ".",
+  "revision": "f09cf44a528022d59b4561fa62d095433d9dac92",
+  "diffHash": "29b3bfedff56d26cb19098bc9f505e7967ec45a1992dfdf93b3f1e9e345cde46",
+  "rulesVersion": "unavailable",
+  "recordedAt": "2026-08-14T22:52:14.135Z",
+  "timing": {
+    "startedAt": "2026-08-14T22:52:12.180Z",
+    "completedAt": "2026-08-14T22:52:14.135Z",
+    "durationMs": 1955
+  },
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "modelCalls": 0,
+    "measurement": "known-zero"
+  },
+  "findings": {
+    "total": 40,
+    "bySeverity": {
+      "high": 13,
+      "low": 27
+    },
+    "byStatus": {
+      "static_verified": 13,
+      "candidate": 25,
+      "blocked": 2
+    }
+  },
+  "coverage": {
+    "status": "partial",
+    "reasonCounts": {
+      "baseline_snapshot_unreadable": 4,
+      "project_check_failed": 4
+    }
+  },
+  "evidenceBoundary": "static_only",
+  "immutableReport": ".mimosa/reports/task-review-sess_fd450c30-9606-41d3-ab28-747de74272cd-20260814T225214135Z-35888-fe1fd3121da9.json"
+}

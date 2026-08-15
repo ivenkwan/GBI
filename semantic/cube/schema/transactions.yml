@@ -1,0 +1,51 @@
+# Financial transactions (source: public.transactions).
+cubes:
+  - name: Transactions
+    sql_table: public.transactions
+    data_source: default
+
+    joins: []
+
+    measures:
+      - name: transaction_volume
+        title: Transaction Volume
+        description: Net sum of transaction amounts (withdrawals are negative in seed data)
+        type: sum
+        sql: amount
+        format: currency
+        meta:
+          currency: USD
+      - name: transaction_count
+        title: Transaction Count
+        description: Number of transactions
+        type: count
+        format: number
+      - name: avg_transaction
+        title: Average Transaction
+        description: Mean transaction amount
+        type: avg
+        sql: amount
+        format: currency
+        meta:
+          currency: USD
+
+    dimensions:
+      - name: type
+        title: Transaction Type
+        description: Transaction type (deposit, withdrawal, transfer, payment)
+        sql: type
+        type: string
+      - name: status
+        title: Transaction Status
+        description: Transaction status (completed, pending, failed)
+        sql: status
+        type: string
+      - name: transaction_date
+        title: Transaction Date
+        description: Date of the transaction
+        sql: transaction_date
+        type: time
+      - name: tenant_id
+        sql: tenant_id
+        type: string
+        visible: false

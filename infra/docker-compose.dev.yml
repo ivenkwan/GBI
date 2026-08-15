@@ -93,11 +93,13 @@ services:
       - ../semantic/cube/.env
     ports:
       - "4000:4000"
+    volumes:
+      - ../semantic/cube:/cube/conf
     depends_on:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/cubejs-api/v1/load >/dev/null 2>&1 || wget -qO- http://localhost:4000/ >/dev/null 2>&1 || exit 1"]
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:4000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
       interval: 15s
       timeout: 5s
       retries: 5

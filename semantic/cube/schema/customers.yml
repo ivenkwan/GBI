@@ -1,0 +1,45 @@
+# Customer records (source: public.customers). Joined from Orders.
+cubes:
+  - name: Customers
+    sql_table: public.customers
+    data_source: default
+
+    joins:
+      - name: Orders
+        relationship: one_to_many
+        sql: "{CUBE}.id = {Orders}.customer_id"
+
+    measures:
+      - name: customer_count
+        title: Customer Count
+        description: Number of customer records
+        type: count
+        format: number
+      - name: active_customers
+        title: Active Customers
+        description: Customers whose status is active
+        type: count
+        format: number
+        filters:
+          - sql: "{CUBE}.status = 'active'"
+
+    dimensions:
+      - name: country
+        title: Country
+        description: Customer country
+        sql: country
+        type: string
+      - name: status
+        title: Customer Status
+        description: Customer lifecycle status (active, inactive, churned)
+        sql: status
+        type: string
+      - name: signup_date
+        title: Signup Date
+        description: Date the customer signed up
+        sql: signup_date
+        type: time
+      - name: tenant_id
+        sql: tenant_id
+        type: string
+        visible: false

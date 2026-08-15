@@ -17,7 +17,7 @@ A **Generative BI (GenBI) platform** that enables business users to query enterp
 ### Backend Services
 - [Core Services](core-services.md) — Configuration, logging, LLM client, caching, auth, PII masking, observability
 - [Data Layer](data-layer.md) — Database models, connectors (read-only), Apache AGE graph schema, migrations
-- [Semantic Layer](semantic-layer.md) — dbt MetricFlow metrics → Cube.dev API → Python CubeClient
+- [Semantic Layer](semantic-layer.md) — Cube-native metric catalog → Cube.dev API → Python CubeClient
 
 ### Frontend
 - [Frontend Guide](frontend-guide.md) — Next.js 15 App Router, shadcn/ui components, SSE chat, Zod validators
@@ -45,7 +45,7 @@ Backend:       Python 3.12 · FastAPI · Uvicorn / Gunicorn
 LLM Layer:     Anthropic Claude (Opus for SQL, Haiku for speed)
                LangChain / LangGraph orchestration
                LlamaIndex for semantic indexing / RAG
-Semantic Layer: dbt (MetricFlow) + Cube.dev
+Semantic Layer: Cube.dev (native data models — metric catalog)
 Databases:     PostgreSQL 16 · pgvector (embeddings) · Apache AGE (graph lineage)
                Redis (query cache, session state)
 Frontend:      Next.js 15 · TypeScript 5.9 · Tailwind CSS v4 · shadcn/ui

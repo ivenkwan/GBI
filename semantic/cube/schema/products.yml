@@ -1,0 +1,39 @@
+# Product catalog (source: public.products). NOTE: sales.product_id does not
+# reference this table in the seed data — no join to Sales.
+cubes:
+  - name: Products
+    sql_table: public.products
+    data_source: default
+
+    joins: []
+
+    measures:
+      - name: product_count
+        title: Product Count
+        description: Number of products in the catalog
+        type: count
+        format: number
+      - name: avg_price
+        title: Average Price
+        description: Mean product list price
+        type: avg
+        sql: price
+        format: currency
+        meta:
+          currency: USD
+
+    dimensions:
+      - name: product_name
+        title: Product Name
+        description: Product name
+        sql: product_name
+        type: string
+      - name: category
+        title: Category
+        description: Product category (Software, Hardware, Services, Support, Training)
+        sql: category
+        type: string
+      - name: tenant_id
+        sql: tenant_id
+        type: string
+        visible: false

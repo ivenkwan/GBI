@@ -1,0 +1,79 @@
+"""Metrics endpoints — query the semantic layer via Cube.dev."""
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
+
+from app.core.auth import get_current_user
+
+router = APIRouter()
+
+
+class MetricSummary(BaseModel):
+    name: str
+    title: str
+    description: str
+    metric_type: str
+    cube_name: str
+    measure_name: str
+    dimensions: list[str]
+    time_dimensions: list[str]
+
+
+class MetricListResponse(BaseModel):
+    metrics: list[MetricSummary]
+    count: int
+
+
+@router.get("/list", response_model=MetricListResponse)
+async def list_metrics(
+    user: dict = Depends(get_current_user),
+):
+    """List all available metrics from the semantic layer (Cube /meta)."""
+    from app.semantic.cube_client import get_cube_client
+
+    try:
+        metrics = await get_cube_client().list_metrics()
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "code": "CUBE_UNAVAILABLE",
+                "message": f"Semantic layer unavailable: {type(e).__name__}",
+            },
+        ) from None
+
+    # Skip the bare-measure-name aliases: one entry per measure, keyed by
+    # the canonical `cube.measure` name.
+    seen_names: set[str] = set()
+    summaries: list[MetricSummary] = []
+    for metric in metrics.values():
+        if metric.name in seen_names:
+            continue
+        seen_names.add(metric.name)
+        summaries.append(
+            MetricSummary(
+                name=metric.name,
+                title=metric.title,
+                description=metric.description,
+                metric_type=metric.metric_type.value,
+                cube_name=metric.cube_name,
+                measure_name=metric.measure_name,
+                dimensions=metric.dimensions,
+                time_dimensions=metric.time_dimensions,
+            )
+        )
+
+    return MetricListResponse(metrics=summaries, count=len(summaries))
+
+
+@router.post("/query")
+async def query_metrics(
+    user: dict = Depends(get_current_user),
+):
+    """Execute a metric query against Cube.dev.
+
+    Deferred to Phase 10: analytics tables are RLS-enforced (Phase 8b), so
+    Cube data queries need per-tenant GUC driver work before this endpoint
+    can return tenant-correct results.
+    """
+    return {"data": [], "status": "not_implemented"}

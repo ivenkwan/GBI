@@ -444,6 +444,38 @@ class CacheService:
         self._stats.writes += 1
 
     # ------------------------------------------------------------------
+
+    async def get_cube_query_result(self, cube_query: dict, tenant_id: str) -> dict | None:
+        """Get a cached Cube (semantic-layer) query result.
+
+        Keyed by tenant + a hash of the canonical query JSON — same query,
+        same tenant, same answer within the QUERY_RESULTS TTL.
+        """
+        key = _key(tenant_id, "cube_query", _hash_sql(json.dumps(cube_query, sort_keys=True)))
+
+        value = self._l1.get(key, CacheTTL.QUERY_RESULTS)
+        if value is not None:
+            self._stats.l1_hits += 1
+            return value
+
+        value = await self._l2.get(key)
+        if value is not None:
+            self._stats.l2_hits += 1
+            self._l1.set(key, value)
+            return value
+
+        self._stats.l2_misses += 1
+        return None
+
+    async def set_cube_query_result(self, cube_query: dict, tenant_id: str, result: dict) -> None:
+        """Cache a Cube (semantic-layer) query result."""
+        key = _key(tenant_id, "cube_query", _hash_sql(json.dumps(cube_query, sort_keys=True)))
+
+        self._l1.set(key, result)
+        await self._l2.set(key, result, ttl=CacheTTL.QUERY_RESULTS)
+        self._stats.writes += 1
+
+    # ------------------------------------------------------------------
     # LLM response cache
     # ------------------------------------------------------------------
 

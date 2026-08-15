@@ -1,0 +1,51 @@
+# Web users (source: public.web_users) — analytics accounts, NOT app logins.
+# Joined from Activity (user_id is a real FK in the seed data).
+cubes:
+  - name: WebUsers
+    sql_table: public.web_users
+    data_source: default
+
+    joins:
+      - name: Activity
+        relationship: one_to_many
+        sql: "{CUBE}.id = {Activity}.user_id"
+
+    measures:
+      - name: user_count
+        title: Web User Count
+        description: Number of web-user records
+        type: count
+        format: number
+      - name: active_users
+        title: Active Web Users
+        description: Web users whose status is active
+        type: count
+        format: number
+        filters:
+          - sql: "{CUBE}.status = 'active'"
+
+    dimensions:
+      - name: country
+        title: Country
+        description: User country
+        sql: country
+        type: string
+      - name: status
+        title: User Status
+        description: User status (active, inactive)
+        sql: status
+        type: string
+      - name: signup_date
+        title: Signup Date
+        description: Date the user signed up
+        sql: signup_date
+        type: time
+      - name: last_login
+        title: Last Login
+        description: Date of the user's most recent login
+        sql: last_login
+        type: time
+      - name: tenant_id
+        sql: tenant_id
+        type: string
+        visible: false

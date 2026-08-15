@@ -1,6 +1,6 @@
 # GenBI Platform — Build Progress
 
-> **Last updated:** 2026-08-15 | **Stack tier:** Enterprise | **44/44 tasks complete**
+> **Last updated:** 2026-08-15 | **Stack tier:** Enterprise | **50/50 tasks complete**
 
 ---
 
@@ -1005,3 +1005,39 @@ is written carefully but has never executed.
 - Writing to tenant tables through the ORM requires setting the GUC on the
   session — copy the `set_tenant_guc` pattern when the first ORM writer
   (audit_log) lands.
+
+---
+
+## Phase 9 — Real Semantic Layer: Cube-Native Catalog (Tasks 45–50)
+
+> **Status: code complete 2026-08-15; live Cube boot pending a Docker
+> session (`make reset && make setup && make verify` — as with 8b).**
+> ADR 007 documents the pivot: the dbt tier was unrunnable scaffold (no dbt
+> toolchain, Cloud-only bridge, invalid YAML) — Cube-native data models are
+> now the single source of truth.
+
+| # | Task | Status |
+|---|---|---|
+| 45 | Catalog: `semantic/cube/schema/` — 10 cubes / 23 measures over the seeded tables, joins only on real FKs, tenant_id dimension everywhere | ✅ |
+| 46 | Runtime wiring: cube.js rewrite (real CUBEJS_DB_* driver env, cube_reader role), compose mount `/cube/conf`, node-fetch healthcheck, gen-env.sh | ✅ |
+| 47 | CubeClient fixes: JWT auth (was raw secret), raw-/meta cache + re-parse (was silently dropping parsed metrics), get_agent_context keyword ranking >20 metrics | ✅ |
+| 48 | `GET /metrics/list` real implementation (503 CUBE_UNAVAILABLE); `/metrics/query` explicitly deferred to Phase 10 (needs per-tenant Cube GUC driver) | ✅ |
+| 49 | Tests: catalog structural validation (9), client fixes (7), API list endpoint (3) — all offline | ✅ |
+| 50 | Cleanup/docs: delete `semantic/dbt/`, ADR 007, rewrite semantic README + docs, README refresh | ✅ |
+
+### Verified by
+
+- ruff clean; full suite: **82 passed, 14 skipped** (21 new tests; skips are
+  the DB-backed 8b suites that run in CI)
+- Catalog tests parse every schema YAML and enforce invariants (unique
+  names, symmetric joins, tenant dims, core metrics)
+- Fixed latent CI bug found via new tests: error-shape assertions in
+  `test_auth.py` expected top-level `code` (FastAPI nests under `detail`)
+
+### Deferred to Phase 10 (with /metrics/query + Explore)
+
+- Per-tenant Cube data path: `contextToOrchestratorId` + connection-init
+  `set_config('app.current_tenant_id', ...)` in the cube_reader driver
+- `retrieve_schema_context` pgvector wiring in NL2SQLAgent (stub returns [])
+- `scripts/embed_schema.py` uses an unverified embedding model
+  (`claude-embeddings-20250219`) — validate before relying on it

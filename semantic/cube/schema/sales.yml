@@ -1,0 +1,59 @@
+# Sales revenue analytics (source: public.sales).
+# NOTE: sales.product_id / sales.rep_id are NOT foreign keys to
+# products/sales_representatives in the seed data — no joins declared here.
+cubes:
+  - name: Sales
+    sql_table: public.sales
+    data_source: default
+
+    joins: []
+
+    measures:
+      - name: revenue_total
+        title: Total Revenue
+        description: Sum of revenue across all sales transactions
+        type: sum
+        sql: revenue
+        format: currency
+        meta:
+          currency: USD
+      - name: units_sold
+        title: Units Sold
+        description: Total units sold across all sales transactions
+        type: sum
+        sql: units
+        format: number
+      - name: avg_revenue_per_sale
+        title: Average Revenue per Sale
+        description: Mean revenue per sales transaction
+        type: avg
+        sql: revenue
+        format: currency
+        meta:
+          currency: USD
+      - name: sale_count
+        title: Sale Count
+        description: Number of sales transactions
+        type: count
+        format: number
+
+    dimensions:
+      - name: region
+        title: Region
+        description: Sales region name
+        sql: region
+        type: string
+      - name: product_name
+        title: Product Name
+        description: Product name as recorded on the sale
+        sql: product_name
+        type: string
+      - name: transaction_date
+        title: Transaction Date
+        description: Date of the sales transaction
+        sql: transaction_date
+        type: time
+      - name: tenant_id
+        sql: tenant_id
+        type: string
+        visible: false

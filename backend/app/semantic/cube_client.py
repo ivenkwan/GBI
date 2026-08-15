@@ -27,6 +27,7 @@ Metrics are NEVER re-implemented in agent code — always query via this client.
 
 import contextlib
 import json
+import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -36,6 +37,10 @@ import httpx
 
 from app.core.config import settings
 from app.core.logging import logger
+
+# Above this many metrics, get_agent_context keyword-ranks against the query
+# instead of injecting the full catalog into the LLM prompt.
+MAX_AGENT_CONTEXT_METRICS = 20
 
 # ---------------------------------------------------------------------------
 # Types
@@ -170,6 +175,9 @@ class CubeClient:
         self._redis = None
         self._redis_available = False
 
+        # Cached JWTs for the Authorization header: tenant_id -> (token, refresh_at_epoch)
+        self._auth_token_cache: dict[str | None, tuple[str, float]] = {}
+
     async def _ensure_redis(self) -> None:
         """Lazy-init Redis connection."""
         if self._redis is not None:
@@ -195,16 +203,27 @@ class CubeClient:
     # HTTP transport
     # ------------------------------------------------------------------
 
-    async def _request(self, path: str, method: str = "GET", json_body: dict | None = None) -> dict:
+    async def _request(
+        self,
+        path: str,
+        method: str = "GET",
+        json_body: dict | None = None,
+        tenant_id: str | None = None,
+    ) -> dict:
         """Make an authenticated HTTP request to Cube.dev.
 
-        Cube uses JWT authentication: Authorization: <token>
-        The token is the api_secret itself (HS256 JWT) or a pre-generated token.
+        Cube requires a JWT signed with the API secret (HS256) in the
+        Authorization header. The raw secret only works in dev mode; the
+        signed token works in both dev and production mode.
 
         Args:
             path: API path relative to api_url (e.g. "/meta", "/load").
             method: HTTP method.
             json_body: Request body for POST requests.
+            tenant_id: Optional tenant claim for data queries — Cube surfaces
+                JWT claims as securityContext, which drives the per-tenant
+                driver GUC (see semantic/cube/cube.js). Metadata requests
+                omit it.
 
         Returns:
             Parsed JSON response body.
@@ -218,8 +237,9 @@ class CubeClient:
         headers: dict[str, str] = {
             "Content-Type": "application/json",
         }
-        if self.api_secret:
-            headers["Authorization"] = self.api_secret
+        token = self._auth_token(tenant_id=tenant_id)
+        if token:
+            headers["Authorization"] = token
 
         async with httpx.AsyncClient(timeout=30.0) as client:
             if method == "GET":
@@ -229,6 +249,33 @@ class CubeClient:
 
             response.raise_for_status()
             return response.json()
+
+    def _auth_token(self, tenant_id: str | None = None) -> str | None:
+        """JWT for Cube's Authorization header, signed with the API secret.
+
+        Data queries pass tenant_id so Cube's securityContext carries the
+        tenant claim that selects the per-tenant driver (and its RLS GUC).
+        Tokens are cached per tenant until shortly before expiry. Returns
+        None when no secret is configured.
+        """
+        if not self.api_secret:
+            return None
+
+        now = datetime.now(UTC).timestamp()
+        cached = self._auth_token_cache.get(tenant_id)
+        if cached and now < cached[1]:
+            return cached[0]
+
+        from jose import jwt
+
+        claims: dict = {"exp": int(now + 3600)}
+        if tenant_id:
+            claims["tenantId"] = tenant_id
+
+        token = jwt.encode(claims, self.api_secret, algorithm="HS256")
+        # Refresh 5 minutes before expiry.
+        self._auth_token_cache[tenant_id] = (token, now + 3600 - 300)
+        return token
 
     # ------------------------------------------------------------------
     # Meta API — schema discovery
@@ -249,12 +296,16 @@ class CubeClient:
         Returns:
             Parsed CubeMetaResponse with cubes list and metric definitions map.
         """
-        # Check cache
+        # Check cache. The RAW /meta response is cached (not the parsed
+        # CubeMetaResponse) and re-parsed on hit — serializing the parsed
+        # form drops the metrics map.
         if not force_refresh:
             cached = await self._get_cached("cube:meta")
-            if cached is not None:
+            if isinstance(cached, dict) and "cubes" in cached:
                 logger.debug("CubeClient: meta cache hit")
-                return CubeMetaResponse(**cached) if isinstance(cached, dict) else cached
+                meta = self._parse_meta(cached)
+                self._meta_cache = (meta, datetime.now(UTC).timestamp())
+                return meta
 
             if self._meta_cache is not None:
                 meta, cached_at = self._meta_cache
@@ -268,8 +319,8 @@ class CubeClient:
         # Parse cubes
         meta = self._parse_meta(raw)
 
-        # Cache
-        await self._set_cached("cube:meta", meta)
+        # Cache the raw response for re-parse on hit
+        await self._set_cached("cube:meta", raw)
         self._meta_cache = (meta, datetime.now(UTC).timestamp())
 
         return meta
@@ -406,6 +457,7 @@ class CubeClient:
         limit: int = 1000,
         offset: int = 0,
         timezone: str = "UTC",
+        tenant_id: str | None = None,
     ) -> MetricQueryResult:
         """Execute a metric query against Cube.dev.
 
@@ -420,6 +472,9 @@ class CubeClient:
             limit: Max rows.
             offset: Pagination offset.
             timezone: Timezone for time dimension calculations.
+            tenant_id: Tenant claim for the request JWT — drives Cube's
+                per-tenant driver and its RLS GUC. Data queries under RLS
+                return zero rows without it.
 
         Returns:
             MetricQueryResult with flattened data and metadata.
@@ -455,7 +510,9 @@ class CubeClient:
         )
 
         try:
-            raw = await self._request("/load", method="POST", json_body={"query": cube_query})
+            raw = await self._request(
+                "/load", method="POST", json_body={"query": cube_query}, tenant_id=tenant_id
+            )
 
             # Cube /load response:
             # {
@@ -477,10 +534,11 @@ class CubeClient:
                     flat_row[short_key] = value
                 flat_data.append(flat_row)
 
-            # Compute total if a single metric
+            # Compute total if a single metric. The raw rows carry the
+            # fully-qualified "cube.measure" keys the query asked for.
             total = None
             if len(metrics) == 1 and data:
-                metric_key = metrics[0].replace(".", ".")
+                metric_key = metrics[0]
                 with contextlib.suppress(ValueError, TypeError):
                     total = sum(
                         float(row.get(metric_key, 0))
@@ -640,11 +698,6 @@ class CubeClient:
                         "time_dimensions": value.time_dimensions,
                         "format": value.format,
                     }
-                elif isinstance(value, CubeMetaResponse):
-                    data = {
-                        "cubes": value.cubes,
-                        "raw": value.raw,
-                    }
                 else:
                     data = value
 
@@ -683,13 +736,50 @@ class CubeClient:
             # Only include requested metrics
             return self.format_metrics_for_llm(metrics=metrics, metric_names=metric_names)
 
-        # TODO: Semantic search over metrics using the query text
-        # For now, return all metrics (typically < 50, well within token budget)
-        if len(metrics) > 20:
-            # If many metrics, return a summary
-            return self.format_metrics_for_llm(metrics=metrics)
+        if query and len(metrics) > MAX_AGENT_CONTEXT_METRICS:
+            selected = self._rank_metrics_for_query(metrics, query)
+            if selected:
+                return self.format_metrics_for_llm(
+                    metrics=metrics,
+                    metric_names=[m.name for m in selected],
+                )
+            # No keyword overlap — fall through to the full list rather than
+            # sending an empty catalog.
 
         return self.format_metrics_for_llm(metrics=metrics)
+
+    @staticmethod
+    def _rank_metrics_for_query(
+        metrics: dict[str, MetricDefinition], query: str, limit: int = MAX_AGENT_CONTEXT_METRICS
+    ) -> list[MetricDefinition]:
+        """Keyword-rank metrics against the query text.
+
+        Weights name/title/cube matches above description matches; ties keep
+        insertion order. Returns [] when nothing matches at all.
+        """
+        terms = [t for t in re.split(r"[^a-z0-9]+", query.lower()) if len(t) > 2]
+        if not terms:
+            return []
+
+        def score(metric: MetricDefinition) -> int:
+            name = metric.name.lower()
+            title = metric.title.lower()
+            description = metric.description.lower()
+            cube = metric.cube_name.lower()
+            total = 0
+            for term in terms:
+                total += 3 * (term in name)
+                total += 2 * (term in title)
+                total += 2 * (term in cube)
+                total += 1 * (term in description)
+            return total
+
+        ranked = sorted(
+            (m for m in metrics.values() if score(m) > 0),
+            key=score,
+            reverse=True,
+        )
+        return ranked[:limit]
 
     # ------------------------------------------------------------------
     # Cleanup

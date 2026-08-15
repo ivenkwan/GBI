@@ -1,0 +1,31 @@
+# Region lookup (source: public.regions). Joined from Deals and SalesReps.
+cubes:
+  - name: Regions
+    sql_table: public.regions
+    data_source: default
+
+    joins:
+      - name: Deals
+        relationship: one_to_many
+        sql: "{CUBE}.id = {Deals}.region_id"
+      - name: SalesReps
+        relationship: one_to_many
+        sql: "{CUBE}.id = {SalesReps}.region_id"
+
+    measures:
+      - name: region_count
+        title: Region Count
+        description: Number of regions
+        type: count
+        format: number
+
+    dimensions:
+      - name: region_name
+        title: Region Name
+        description: Region name (North, South, East, West, Central)
+        sql: region_name
+        type: string
+      - name: tenant_id
+        sql: tenant_id
+        type: string
+        visible: false

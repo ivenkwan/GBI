@@ -1,0 +1,72 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "stop-delivery-20260814T225214135Z-35888-fe1fd3121da9",
+  "runId": "20260814T225214135Z-35888-fe1fd3121da9",
+  "runStatus": "completed",
+  "coverage": {
+    "status": "complete",
+    "reasons": []
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "StopDelivery"
+  },
+  "revision": "f09cf44a528022d59b4561fa62d095433d9dac92",
+  "diffHash": "29b3bfedff56d26cb19098bc9f505e7967ec45a1992dfdf93b3f1e9e345cde46",
+  "rulesVersion": "unavailable",
+  "sessionHash": "718ec6b1c8c4411ac21a6dc7d92920c9d8595e956e30550dbace6d9f67496527",
+  "reportRef": ".mimosa/reports/task-review-sess_fd450c30-9606-41d3-ab28-747de74272cd-20260814T225214135Z-35888-fe1fd3121da9.json",
+  "events": [
+    {
+      "eventId": "hook-fd31565fb5be70f0047ed691ac591bd4",
+      "findingId": "mimosa-4a7e0a12d07b3fba49b6170c",
+      "type": "finding_blocked",
+      "at": "2026-08-14T22:52:14.684Z",
+      "identity": {
+        "projectRelativeFile": "backend/app/db/migrations/versions/0002_app_roles_rls.py",
+        "ruleId": "security",
+        "codeEvidenceHash": "26234236f46d5136e32e43cbcd1abf8e27ed05ae762e75ac8591a7b11e810957",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 85,
+      "endLine": 85,
+      "reasonCode": "stop_rewake",
+      "reportedToAgent": true,
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "evidenceHash": "26234236f46d5136e32e43cbcd1abf8e27ed05ae762e75ac8591a7b11e810957"
+      },
+      "sequence": 0
+    },
+    {
+      "eventId": "hook-9ad23bcc090148e127e898b739989849",
+      "findingId": "mimosa-a5b7b408d107848e6c6edb30",
+      "type": "finding_blocked",
+      "at": "2026-08-14T22:52:14.684Z",
+      "identity": {
+        "projectRelativeFile": "backend/app/db/migrations/versions/0002_app_roles_rls.py",
+        "ruleId": "security",
+        "codeEvidenceHash": "a3464d1c85ee5b6126050a6fda292f6ba091b0e8a208fce37d340d2e0725d3bf",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 122,
+      "endLine": 122,
+      "reasonCode": "stop_rewake",
+      "reportedToAgent": true,
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "evidenceHash": "a3464d1c85ee5b6126050a6fda292f6ba091b0e8a208fce37d340d2e0725d3bf"
+      },
+      "sequence": 1
+    }
+  ],
+  "observedFindingIds": [],
+  "verifiedFiles": [],
+  "recordedAt": "2026-08-14T22:52:15.200Z"
+}

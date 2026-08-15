@@ -7,10 +7,10 @@ Connects as the OWNER role (scripts/db_admin.owner_connect): schema_embeddings
 is RLS-enrolled, so the tenant GUC is set on the connection before any write
 (FORCE RLS binds the owner too).
 
-Usage:
-    uv run python scripts/embed_schema.py                # full sync
-    uv run python scripts/embed_schema.py --domain sales  # single domain
-    uv run python scripts/embed_schema.py --dry-run       # preview without writing
+Usage (from the repo root, backend venv active):
+    PYTHONPATH=backend uv run python scripts/embed_schema.py                # full sync
+    PYTHONPATH=backend uv run python scripts/embed_schema.py --domain sales  # single domain
+    PYTHONPATH=backend uv run python scripts/embed_schema.py --dry-run       # preview without writing
 """
 
 import argparse

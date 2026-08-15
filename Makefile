@@ -39,8 +39,8 @@ secrets: ## Regenerate .env files with fresh random secrets
 migrate: ## Apply Alembic migrations inside the backend container
 	@$(COMPOSE_DEV) exec -T backend uv run alembic upgrade head
 
-seed: ## Load synthetic test data
-	@$(COMPOSE_DEV) exec -T backend uv run python scripts/seed_test_data.py
+seed: ## Load synthetic test data (requires `make migrate` first — tables come from Alembic 0003)
+	@$(COMPOSE_DEV) exec -T -e PYTHONPATH=/app backend uv run python scripts/seed_test_data.py
 
 reset: ## ⚠️ NUKE all data and restart (down -v && up)
 	@$(COMPOSE_DEV) down -v

@@ -142,6 +142,63 @@ export function renderChart(req: ChartRenderRequest): Promise<ChartRenderRespons
   return request<ChartRenderResponse>("/charts/render", { method: "POST", body: req });
 }
 
+// --- Metrics ---
+
+export interface MetricSummary {
+  name: string;
+  title: string;
+  description: string;
+  metric_type: string;
+  cube_name: string;
+  measure_name: string;
+  dimensions: string[];
+  time_dimensions: string[];
+}
+
+export interface MetricListResponse {
+  metrics: MetricSummary[];
+  count: number;
+}
+
+export function listMetrics(): Promise<MetricListResponse> {
+  return request<MetricListResponse>("/metrics/list");
+}
+
+export interface MetricQueryRequest {
+  measures: string[];
+  dimensions?: string[];
+  time_dimensions?: { dimension: string; granularity: string }[];
+  filters?: { member: string; operator: string; values?: string[] }[];
+  order?: string[][];
+  limit?: number;
+  offset?: number;
+  timezone?: string;
+}
+
+export interface MetricQueryResponse {
+  data: Record<string, unknown>[];
+  annotation: Record<string, unknown>;
+  total: number | null;
+  query: Record<string, unknown>;
+  latency_ms: number;
+  cached: boolean;
+}
+
+export function queryMetrics(req: MetricQueryRequest): Promise<MetricQueryResponse> {
+  return request<MetricQueryResponse>("/metrics/query", { method: "POST", body: req });
+}
+
+export interface DatasourceSummary {
+  name: string;
+  title: string;
+  measures: number;
+  dimensions: number;
+}
+
+export function listDatasources(): Promise<{ datasources: DatasourceSummary[]; count: number }> {
+  return request<{ datasources: DatasourceSummary[]; count: number }>("/datasources");
+}
+
 // --- Health ---
 
 export function healthCheck(): Promise<{ status: string; version: string }> {

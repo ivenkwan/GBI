@@ -1,0 +1,50 @@
+# Customer orders (source: public.orders). Joins Customers on customer_id
+# (real FK in the seed data).
+cubes:
+  - name: Orders
+    sql_table: public.orders
+    data_source: default
+
+    joins:
+      - name: Customers
+        relationship: many_to_one
+        sql: "{CUBE}.customer_id = {Customers}.id"
+
+    measures:
+      - name: order_count
+        title: Order Count
+        description: Number of orders placed
+        type: count
+        format: number
+      - name: order_value
+        title: Total Order Value
+        description: Sum of order amounts
+        type: sum
+        sql: amount
+        format: currency
+        meta:
+          currency: USD
+      - name: avg_order_value
+        title: Average Order Value
+        description: Mean order amount
+        type: avg
+        sql: amount
+        format: currency
+        meta:
+          currency: USD
+
+    dimensions:
+      - name: status
+        title: Order Status
+        description: Order fulfillment status (completed, pending, cancelled)
+        sql: status
+        type: string
+      - name: order_date
+        title: Order Date
+        description: Date the order was placed
+        sql: order_date
+        type: time
+      - name: tenant_id
+        sql: tenant_id
+        type: string
+        visible: false

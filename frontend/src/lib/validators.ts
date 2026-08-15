@@ -48,6 +48,68 @@ export const SSEEventSchema = z.object({
 
 export type SSEEvent = z.infer<typeof SSEEventSchema>;
 
+/** Metric list response (GET /metrics/list) */
+export const MetricSummarySchema = z.object({
+  name: z.string(),
+  title: z.string(),
+  description: z.string(),
+  metric_type: z.string(),
+  cube_name: z.string(),
+  measure_name: z.string(),
+  dimensions: z.array(z.string()),
+  time_dimensions: z.array(z.string()),
+});
+
+export type MetricSummary = z.infer<typeof MetricSummarySchema>;
+
+export const MetricListResponseSchema = z.object({
+  metrics: z.array(MetricSummarySchema),
+  count: z.number(),
+});
+
+export type MetricListResponse = z.infer<typeof MetricListResponseSchema>;
+
+/** Metric query (POST /metrics/query) */
+export const MetricQueryRequestSchema = z.object({
+  measures: z.array(z.string()).min(1).max(5),
+  dimensions: z.array(z.string()).max(5).optional(),
+  time_dimensions: z
+    .array(
+      z.object({
+        dimension: z.string(),
+        granularity: z.enum(["day", "week", "month", "quarter", "year", "hour"]),
+      }),
+    )
+    .max(3)
+    .optional(),
+  filters: z
+    .array(
+      z.object({
+        member: z.string(),
+        operator: z.string(),
+        values: z.array(z.string()).optional(),
+      }),
+    )
+    .optional(),
+  order: z.array(z.array(z.string())).optional(),
+  limit: z.number().int().min(1).max(1000).optional(),
+  offset: z.number().int().min(0).optional(),
+  timezone: z.string().optional(),
+});
+
+export type MetricQueryRequest = z.infer<typeof MetricQueryRequestSchema>;
+
+export const MetricQueryResponseSchema = z.object({
+  data: z.array(z.record(z.unknown())),
+  annotation: z.record(z.unknown()),
+  total: z.number().nullable(),
+  query: z.record(z.unknown()),
+  latency_ms: z.number(),
+  cached: z.boolean(),
+});
+
+export type MetricQueryResponse = z.infer<typeof MetricQueryResponseSchema>;
+
 /** Chart AssemblyInput validation (Flint schema) */
 export const ChartAssemblyInputSchema = z.object({
   chartType: z.string().min(1),

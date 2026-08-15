@@ -1,0 +1,58 @@
+# Sales pipeline deals (source: public.deals). Joins SalesReps and Regions
+# (both real FKs in the seed data).
+cubes:
+  - name: Deals
+    sql_table: public.deals
+    data_source: default
+
+    joins:
+      - name: SalesReps
+        relationship: many_to_one
+        sql: "{CUBE}.rep_id = {SalesReps}.id"
+      - name: Regions
+        relationship: many_to_one
+        sql: "{CUBE}.region_id = {Regions}.id"
+
+    measures:
+      - name: pipeline_value
+        title: Pipeline Value
+        description: Sum of deal amounts across all stages
+        type: sum
+        sql: amount
+        format: currency
+        meta:
+          currency: USD
+      - name: deal_count
+        title: Deal Count
+        description: Number of deals
+        type: count
+        format: number
+      - name: won_deals
+        title: Won Deals
+        description: Deals closed as won
+        type: count
+        format: number
+        filters:
+          - sql: "{CUBE}.stage = 'closed_won'"
+      - name: win_rate
+        title: Win Rate
+        description: Share of deals closed as won
+        sql: "100.0 * {Deals.won_deals} / NULLIF({Deals.deal_count}, 0)"
+        type: number
+        format: percent
+
+    dimensions:
+      - name: stage
+        title: Deal Stage
+        description: Pipeline stage (prospecting, negotiation, closed_won, closed_lost)
+        sql: stage
+        type: string
+      - name: close_date
+        title: Close Date
+        description: Date the deal closed (or is expected to close)
+        sql: close_date
+        type: time
+      - name: tenant_id
+        sql: tenant_id
+        type: string
+        visible: false

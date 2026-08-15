@@ -6,9 +6,9 @@ regions, sales_representatives, deals, activity. This script only INSERTs
 data, connecting as the OWNER role (scripts/db_admin.owner_connect) and
 setting the tenant GUC per tenant pass (FORCE RLS binds the owner too).
 
-Usage:
-    uv run python scripts/seed_test_data.py              # seed all tables
-    uv run python scripts/seed_test_data.py --tenants 5   # multi-tenant
+Usage (from the repo root, backend venv active; in-container via `make seed`):
+    PYTHONPATH=backend uv run python scripts/seed_test_data.py              # seed all tables
+    PYTHONPATH=backend uv run python scripts/seed_test_data.py --tenants 5   # multi-tenant
 """
 
 import argparse
