@@ -1,0 +1,428 @@
+"use client";
+
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useAuth } from "@/components/auth/auth-provider";
+import { ChatRequestSchema, SSEEventSchema } from "@/lib/validators";
+import type { SSEEvent } from "@/lib/validators";
+import { ChartCard } from "@/components/charts/chart-card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { Send, BarChart3, Database, Zap, Settings, LogOut, User } from "lucide-react";
+
+interface StreamStage {
+  stage: string;
+  data: SSEEvent;
+}
+
+interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  streaming: boolean;
+  stages: StreamStage[];
+  sql?: string;
+  chartSpec?: Record<string, unknown>;
+  chartSvg?: string;
+  chartBase64?: string;
+  narrative?: string;
+  warnings: string[];
+}
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+
+export function ChatView() {
+  const { user, token, logout } = useAuth();
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [view, setView] = useState<"chat" | "metrics">("chat");
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Auto-scroll
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const updateMessageStage = useCallback(
+    (msgId: string, stage: string, data: SSEEvent) => {
+      setMessages((prev) =>
+        prev.map((m) => {
+          if (m.id !== msgId) return m;
+
+          const updated = { ...m, stages: [...m.stages, { stage, data }] };
+
+          // Update state from each stage
+          if (data.sql && stage === "sql") updated.sql = data.sql;
+          if (data.validated_sql && stage === "validation") updated.sql = data.validated_sql;
+          if (data.chart_spec && stage === "chart") updated.chartSpec = data.chart_spec as Record<string, unknown>;
+          if (data.svg && stage === "chart") updated.chartSvg = data.svg;
+          if (data.image_base64 && stage === "chart") updated.chartBase64 = data.image_base64;
+          if (data.narrative && stage === "narrative") updated.narrative = data.narrative;
+          if (data.warnings) updated.warnings = data.warnings;
+
+          if (stage === "done") {
+            updated.streaming = false;
+            updated.content = data.narrative ?? "Here's what I found.";
+          }
+
+          return updated;
+        }),
+      );
+    },
+    [],
+  );
+
+  const handleSend = async () => {
+    if (!input.trim() || loading) return;
+
+    // Validate input
+    const parsed = ChatRequestSchema.safeParse({ query: input });
+    if (!parsed.success) {
+      return; // silently reject invalid input
+    }
+
+    const msgId = crypto.randomUUID();
+    const userMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: input,
+      streaming: false,
+      stages: [],
+      warnings: [],
+    };
+    const assistantMessage: ChatMessage = {
+      id: msgId,
+      role: "assistant",
+      content: "",
+      streaming: true,
+      stages: [],
+      warnings: [],
+    };
+
+    setMessages((prev) => [...prev, userMessage, assistantMessage]);
+    setInput("");
+    setLoading(true);
+
+    try {
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      const res = await fetch(`${API_BASE}/chat/stream`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ query: parsed.data.query }),
+        signal: controller.signal,
+      });
+
+      if (!res.ok) {
+        throw new Error(`Stream failed: ${res.status}`);
+      }
+
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("No response stream");
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data: ")) continue;
+
+          try {
+            const raw = JSON.parse(trimmed.slice(6));
+            const event = SSEEventSchema.parse(raw);
+            updateMessageStage(msgId, event.event, event);
+          } catch {
+            // Skip unparseable chunks
+          }
+        }
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === msgId
+            ? { ...m, content: "Sorry, something went wrong.", streaming: false }
+            : m,
+        ),
+      );
+    } finally {
+      setLoading(false);
+      abortRef.current = null;
+    }
+  };
+
+  const handleCancel = () => {
+    abortRef.current?.abort();
+    setLoading(false);
+  };
+
+  // Stage badge labels
+  const stageLabels: Record<string, { label: string; color: "default" | "secondary" | "success" | "warning" }> = {
+    intent: { label: "Intent", color: "secondary" },
+    sql: { label: "SQL", color: "secondary" },
+    validation: { label: "Validated", color: "success" },
+    data: { label: "Results", color: "success" },
+    chart: { label: "Chart", color: "secondary" },
+    narrative: { label: "Insight", color: "default" },
+    done: { label: "Done", color: "success" },
+  };
+
+  return (
+    <div className="flex flex-col h-screen bg-gray-50">
+      {/* Top navbar */}
+      <header className="flex items-center justify-between px-6 py-3 bg-white border-b border-gray-200 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
+            <BarChart3 className="w-5 h-5 text-white" />
+          </div>
+          <h1 className="text-lg font-semibold text-gray-900">GenBI</h1>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setView(view === "chat" ? "metrics" : "chat")}
+                  className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+                >
+                  {view === "chat" ? <Database className="w-5 h-5" /> : <Zap className="w-5 h-5" />}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {view === "chat" ? "View metrics" : "View chat"}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+                  <Settings className="w-5 h-5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Settings</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <div className="flex items-center gap-2 pl-3 border-l border-gray-200">
+            <div className="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center">
+              <User className="w-4 h-4 text-brand-600" />
+            </div>
+            <span className="text-sm text-gray-600 hidden sm:inline">
+              {user?.name ?? "User"}
+            </span>
+            <button
+              onClick={logout}
+              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Messages area */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+          {messages.length === 0 && (
+            <div className="text-center mt-32">
+              <div className="w-16 h-16 bg-brand-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <BarChart3 className="w-8 h-8 text-brand-600" />
+              </div>
+              <h2 className="text-2xl font-light text-gray-600 mb-2">
+                Ask anything about your data
+              </h2>
+              <p className="text-sm text-gray-400">
+                Natural language to SQL, charts, and insights — instantly
+              </p>
+              <div className="flex gap-2 justify-center mt-6 flex-wrap">
+                {[
+                  "Show revenue by region",
+                  "Monthly active users trend",
+                  "Top 10 customers by value",
+                ].map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    onClick={() => {
+                      setInput(suggestion);
+                    }}
+                    className="px-3 py-1.5 text-xs bg-white border border-gray-200 rounded-full text-gray-600 hover:border-brand-300 hover:text-brand-600 transition-colors"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+            >
+              <div className={`max-w-[85%] ${msg.role === "user" ? "" : "w-full"}`}>
+                {/* User bubble */}
+                {msg.role === "user" && (
+                  <div className="bg-brand-600 text-white rounded-2xl rounded-br-md px-5 py-3 shadow-sm">
+                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                  </div>
+                )}
+
+                {/* Assistant card */}
+                {msg.role === "assistant" && (
+                  <Card>
+                    <CardContent className="pt-6 space-y-4">
+                      {/* Stage badges */}
+                      {msg.stages.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {msg.stages.map((s, i) => {
+                            const info = stageLabels[s.stage] ?? { label: s.stage, color: "secondary" as const };
+                            return (
+                              <Badge key={i} variant={info.color} className="text-[10px]">
+                                {info.label}
+                              </Badge>
+                            );
+                          })}
+                          {msg.streaming && (
+                            <Badge variant="secondary" className="text-[10px] animate-pulse">
+                              ...
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Streaming skeleton */}
+                      {msg.streaming && msg.stages.length === 0 && (
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-3/4" />
+                          <Skeleton className="h-4 w-1/2" />
+                          <Skeleton className="h-4 w-5/6" />
+                        </div>
+                      )}
+
+                      {/* SQL block */}
+                      {msg.sql && (
+                        <div className="bg-gray-900 rounded-lg overflow-hidden">
+                          <div className="flex items-center justify-between px-4 py-2 bg-gray-800">
+                            <span className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">
+                              Generated SQL
+                            </span>
+                            <button
+                              onClick={() => navigator.clipboard.writeText(msg.sql!)}
+                              className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
+                            >
+                              Copy
+                            </button>
+                          </div>
+                          <pre className="p-4 text-xs text-green-400 font-mono overflow-x-auto">
+                            {msg.sql}
+                          </pre>
+                        </div>
+                      )}
+
+                      {/* Chart */}
+                      {(msg.chartSvg || msg.chartBase64 || msg.chartSpec) && (
+                        <ChartCard
+                          spec={msg.chartSpec as any}
+                          svg={msg.chartSvg}
+                          imageBase64={msg.chartBase64}
+                        />
+                      )}
+
+                      {/* Narrative */}
+                      {msg.narrative && !msg.streaming && (
+                        <p className="text-sm text-gray-700 leading-relaxed">
+                          {msg.narrative}
+                        </p>
+                      )}
+
+                      {/* Warnings */}
+                      {msg.warnings.length > 0 && !msg.streaming && (
+                        <div className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
+                          {msg.warnings.map((w, i) => (
+                            <div key={i}>{w}</div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </div>
+          ))}
+
+          <div ref={chatEndRef} />
+        </div>
+      </div>
+
+      {/* Input bar */}
+      <div className="border-t border-gray-200 bg-white shrink-0">
+        <div className="max-w-4xl mx-auto px-4 py-4">
+          <div className="flex gap-3">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              placeholder="Ask a question about your data..."
+              className="flex-1 rounded-xl"
+              disabled={loading}
+            />
+            {loading ? (
+              <Button
+                onClick={handleCancel}
+                variant="destructive"
+                size="lg"
+                className="rounded-xl"
+              >
+                Cancel
+              </Button>
+            ) : (
+              <Button
+                onClick={handleSend}
+                disabled={!input.trim()}
+                size="lg"
+                className="rounded-xl"
+              >
+                <Send className="w-4 h-4 mr-1.5" />
+                Send
+              </Button>
+            )}
+          </div>
+          <p className="text-[10px] text-gray-400 mt-2 text-center">
+            GenBI may produce inaccurate results. Always verify data with source systems.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}

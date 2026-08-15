@@ -151,18 +151,18 @@ The router returns the plan as output — it does NOT invoke downstream agents. 
 | **Purpose** | Deterministic SQL safety gate — zero LLM calls |
 | **Protection** | Marked protected in CLAUDE.md — any relaxation requires security review |
 
-**Input kwargs:** `sql: str | None`, `tenant_id: str = "default"`, `user_roles: list[str] | None`
+**Input kwargs:** `sql: str | None`, `tenant_id: str = "default"`, `user_roles: list[str] | None`, `connector=None` (optional read connector with `explain(sql)` — ChatService passes one so the EXPLAIN dry-run runs under the RLS tenant GUC)
 
 **Seven safety checks (sequential):**
 1. **Multi-statement injection** — detects `;`-delimited statements outside string literals
-2. **Destructive patterns** — 12 hard-blocked (DROP, DELETE, TRUNCATE, ALTER, UPDATE, INSERT, CREATE, GRANT, REVOKE, COPY, RENAME, COMMENT ON SECURITY) + 4 warned (CREATE INDEX, VACUUM, ANALYZE, SET non-timeout)
+2. **Destructive patterns** — 17 hard-blocked (DROP, DELETE, TRUNCATE, ALTER, UPDATE, INSERT, CREATE, GRANT, REVOKE, COPY FROM, ...) + 4 warned (UPDATE/INSERT/CREATE TABLE/CREATE INDEX shapes)
 3. **Read-only enforcement** — only `SELECT`, `WITH`, `EXPLAIN`, `SHOW`, `DESCRIBE` pass
-4. **Timeout injection** — prepends `SET LOCAL statement_timeout = '30s'`
+4. **Timeout policy** — metadata only (`statement_timeout: "30s"` in output); enforced by the connector via `SET LOCAL` at execution time. The validator never mutates the SQL (a regression test pins this)
 5. **Basic sanity** — requires FROM/WHERE (currently always returns True)
-6. **EXPLAIN dry-run** — TODO stub
-7. **Row count estimate** — >1M rows requires user confirmation (TODO stub)
+6. **EXPLAIN dry-run** — runs `EXPLAIN (FORMAT JSON)` via the connector when the SQL is otherwise valid; fail-open (EXPLAIN problems never block)
+7. **Row count estimate** — >1M estimated rows sets `requires_confirmation: true` + an advisory warning; the pipeline then stops before execution until the client re-sends with `confirm_large_query: true` (Phase 13)
 
-**Output:** `output["validated_sql"]` contains the injected-timeout SQL string. `output["is_valid"]` is the pass/fail verdict.
+**Output:** `AgentResult.success` is the pass/fail verdict. `output` carries `validated_sql` (clean, unmutated), `statement_timeout`, `explain_plan`, `row_estimate`, `requires_confirmation`. The SSE `validation` event surfaces `valid`, `validated_sql`, `requires_confirmation`, `row_estimate`, `warnings`.
 
 ---
 

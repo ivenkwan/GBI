@@ -46,12 +46,15 @@ class ChatService:
         user_id: str,
         roles: list[str],
         conversation_id: str | None = None,
+        confirm_large_query: bool = False,
     ) -> dict:
         """Process a natural language query through the full pipeline.
 
         Returns a dict suitable for ChatResponse serialization.
         """
-        conversation_id = conversation_id or str(uuid4())
+        conversation_id = await self._resolve_conversation(
+            conversation_id=conversation_id, user_id=user_id, query=query
+        )
         warnings: list[str] = []
 
         logger.info(
@@ -62,32 +65,45 @@ class ChatService:
             query=query[:200],
         )
 
+        # Multi-turn context (Phase 14): prior turns for this conversation,
+        # fed into the NL2SQL prompt. Fail-open — cold start on any problem.
+        history = await self._load_history(conversation_id)
+        await self._persist_turn(conversation_id, "user", query)
+
         try:
             # Step 1: Route -- classify intent
             intent, plan = await self._step_route(query)
 
-            # Step 2: NL2SQL -- generate query
+            # Step 2: NL2SQL -- generate query (with conversation history)
             sql, sql_warnings = await self._step_nl2sql(
                 query=query,
                 user_id=user_id,
+                history=history,
             )
             warnings.extend(sql_warnings)
 
             if not sql:
+                await self._persist_turn(
+                    conversation_id, "assistant", "Could not generate SQL for this query"
+                )
                 return self._build_response(
                     conversation_id=conversation_id,
                     query=query,
                     warnings=warnings + ["Could not generate SQL for this query"],
                 )
 
-            # Step 3: Validate -- safety gate
-            valid, validation_warnings, validated_sql = await self._step_validate(
-                sql=sql,
-                roles=roles,
-            )
-            warnings.extend(validation_warnings)
+            # Step 3: Validate -- safety gate (EXPLAIN-backed when the
+            # connector is reachable; fail-open otherwise)
+            validation = await self._step_validate(sql=sql, roles=roles)
+            warnings.extend(validation["warnings"])
 
-            if not valid:
+            if not validation["valid"]:
+                await self._persist_turn(
+                    conversation_id,
+                    "assistant",
+                    "Generated SQL failed safety validation",
+                    generated_sql=sql,
+                )
                 return self._build_response(
                     conversation_id=conversation_id,
                     query=query,
@@ -95,13 +111,37 @@ class ChatService:
                     warnings=warnings + ["Generated SQL failed safety validation"],
                 )
 
+            # Step 3b: Large-query confirmation gate (>1M estimated rows).
+            # Stops before execution unless the request explicitly confirms.
+            if validation["requires_confirmation"] and not confirm_large_query:
+                await self._persist_turn(
+                    conversation_id,
+                    "assistant",
+                    "Confirmation required before running this large query",
+                    generated_sql=sql,
+                )
+                return self._build_response(
+                    conversation_id=conversation_id,
+                    query=query,
+                    sql=sql,
+                    warnings=warnings,
+                    requires_confirmation=True,
+                    row_estimate=validation["row_estimate"],
+                )
+
             # Step 4: Execute -- run the query (cached)
             data, exec_warnings = await self._step_execute(
-                sql=validated_sql or sql,
+                sql=validation["validated_sql"] or sql,
             )
             warnings.extend(exec_warnings)
 
             if data is None:
+                await self._persist_turn(
+                    conversation_id,
+                    "assistant",
+                    "Query execution returned no data",
+                    generated_sql=sql,
+                )
                 return self._build_response(
                     conversation_id=conversation_id,
                     query=query,
@@ -128,6 +168,12 @@ class ChatService:
 
             logger.info("Pipeline complete", session_id=self.session_id, warnings=len(warnings))
 
+            await self._persist_turn(
+                conversation_id,
+                "assistant",
+                narrative.get("narrative") or "Here's what I found.",
+                generated_sql=sql,
+            )
             return self._build_response(
                 conversation_id=conversation_id,
                 query=query,
@@ -137,10 +183,13 @@ class ChatService:
                 chart_image_base64=chart_output.get("image_base64"),
                 chart_svg=chart_output.get("svg"),
                 warnings=warnings,
+                requires_confirmation=False,
+                row_estimate=validation["row_estimate"],
             )
 
         except Exception as e:
             logger.error(f"Pipeline failed: {e}", session_id=self.session_id)
+            await self._persist_turn(conversation_id, "assistant", f"Pipeline error: {str(e)}")
             return self._build_response(
                 conversation_id=conversation_id,
                 query=query,
@@ -157,6 +206,7 @@ class ChatService:
         user_id: str,
         roles: list[str],
         conversation_id: str | None = None,
+        confirm_large_query: bool = False,
     ):
         """Streaming variant -- yields SSE events as each pipeline stage completes.
 
@@ -166,7 +216,7 @@ class ChatService:
         Each event includes the stage name and partial results. The frontend
         renders each stage incrementally as events arrive.
         """
-        conversation_id = conversation_id or str(uuid4())
+        conversation_id = await self._resolve_conversation(conversation_id, user_id, query)
         warnings: list[str] = []
 
         def _emit(event: str, data: dict) -> str:
@@ -179,41 +229,85 @@ class ChatService:
             query=query[:200],
         )
 
+        history = await self._load_history(conversation_id)
+        await self._persist_turn(conversation_id, "user", query)
+
         try:
-            # Start
-            yield _emit("start", {"query": query, "session_id": self.session_id})
+            # Start — includes the resolved conversation id so the client can
+            # thread follow-up turns (Phase 14).
+            yield _emit(
+                "start",
+                {
+                    "query": query,
+                    "session_id": self.session_id,
+                    "conversation_id": conversation_id,
+                },
+            )
 
             # Step 1: Route
             intent, plan = await self._step_route(query)
             yield _emit("intent", {"intent": intent, "plan": plan})
 
             # Step 2: NL2SQL
-            sql, sql_warnings = await self._step_nl2sql(query=query, user_id=user_id)
+            sql, sql_warnings = await self._step_nl2sql(
+                query=query, user_id=user_id, history=history
+            )
             warnings.extend(sql_warnings)
             yield _emit("sql", {"sql": sql, "warnings": sql_warnings})
 
             if not sql:
+                await self._persist_turn(
+                    conversation_id, "assistant", "Could not generate SQL for this query"
+                )
                 yield _emit("done", {"status": "no_sql", "warnings": warnings})
                 return
 
             # Step 3: Validate
-            valid, val_warnings, validated_sql = await self._step_validate(sql=sql, roles=roles)
-            warnings.extend(val_warnings)
+            validation = await self._step_validate(sql=sql, roles=roles)
+            warnings.extend(validation["warnings"])
             yield _emit(
                 "validation",
                 {
-                    "valid": valid,
-                    "validated_sql": validated_sql,
-                    "warnings": val_warnings,
+                    "valid": validation["valid"],
+                    "validated_sql": validation["validated_sql"],
+                    "requires_confirmation": validation["requires_confirmation"],
+                    "row_estimate": validation["row_estimate"],
+                    "warnings": validation["warnings"],
                 },
             )
 
-            if not valid:
+            if not validation["valid"]:
+                await self._persist_turn(
+                    conversation_id,
+                    "assistant",
+                    "Generated SQL failed safety validation",
+                    generated_sql=sql,
+                )
                 yield _emit("done", {"status": "validation_failed", "warnings": warnings})
                 return
 
+            # Step 3b: Large-query confirmation gate — stop before execution
+            # unless the request explicitly confirms.
+            if validation["requires_confirmation"] and not confirm_large_query:
+                await self._persist_turn(
+                    conversation_id,
+                    "assistant",
+                    "Confirmation required before running this large query",
+                    generated_sql=sql,
+                )
+                yield _emit(
+                    "done",
+                    {
+                        "status": "confirmation_required",
+                        "requires_confirmation": True,
+                        "row_estimate": validation["row_estimate"],
+                        "warnings": warnings,
+                    },
+                )
+                return
+
             # Step 4: Execute
-            data, exec_warnings = await self._step_execute(sql=validated_sql or sql)
+            data, exec_warnings = await self._step_execute(sql=validation["validated_sql"] or sql)
             warnings.extend(exec_warnings)
             yield _emit(
                 "data",
@@ -225,6 +319,12 @@ class ChatService:
             )
 
             if not data:
+                await self._persist_turn(
+                    conversation_id,
+                    "assistant",
+                    "Query execution returned no data",
+                    generated_sql=sql,
+                )
                 yield _emit("done", {"status": "no_data", "warnings": warnings})
                 return
 
@@ -258,15 +358,65 @@ class ChatService:
             )
 
             # Done
+            await self._persist_turn(
+                conversation_id,
+                "assistant",
+                narrative.get("narrative") or "Here's what I found.",
+                generated_sql=sql,
+            )
             yield _emit("done", {"status": "complete", "warnings": warnings})
 
         except Exception as e:
             logger.error(f"Streaming pipeline failed: {e}", session_id=self.session_id)
+            await self._persist_turn(conversation_id, "assistant", f"Pipeline error: {str(e)}")
             yield _emit("done", {"status": "error", "error": str(e), "warnings": warnings})
 
     # ------------------------------------------------------------------
     # Pipeline steps
     # ------------------------------------------------------------------
+
+    async def _resolve_conversation(
+        self, conversation_id: str | None, user_id: str, query: str
+    ) -> str:
+        """Use the given conversation id, or create one titled by the query."""
+        from app.services import conversations as conversations_service
+
+        if conversation_id:
+            return conversation_id
+        created = await conversations_service.create_conversation(
+            user_id=user_id, tenant_id=self.tenant_id, title=query
+        )
+        return created or str(uuid4())
+
+    async def _load_history(self, conversation_id: str, limit: int = 6) -> list[dict]:
+        """Prior turns for the NL2SQL prompt. Fail-open (cold start)."""
+        from app.services import conversations as conversations_service
+
+        try:
+            return await conversations_service.list_messages(
+                conversation_id=conversation_id, tenant_id=self.tenant_id, limit=limit
+            )
+        except Exception as e:
+            logger.warning("Conversation history unavailable — cold start: %s", e)
+            return []
+
+    async def _persist_turn(
+        self,
+        conversation_id: str,
+        role: str,
+        content: str,
+        generated_sql: str | None = None,
+    ) -> None:
+        """Append a chat turn. Fail-open inside the conversations service."""
+        from app.services import conversations as conversations_service
+
+        await conversations_service.append_message(
+            conversation_id=conversation_id,
+            tenant_id=self.tenant_id,
+            role=role,
+            content=content,
+            generated_sql=generated_sql,
+        )
 
     async def _step_route(self, query: str) -> tuple[str, list[dict]]:
         """Step 1: Classify query intent."""
@@ -288,11 +438,14 @@ class ChatService:
         self,
         query: str,
         user_id: str,
+        history: list[dict] | None = None,
     ) -> tuple[str | None, list[str]]:
         """Step 2: Generate SQL from natural language.
 
         Schema context is cached at L1+L2 per (query_hash, tenant_id).
         Metric definitions from Cube.dev are cached at L2 per tenant.
+        History (prior conversation turns) feeds the prompt for multi-turn
+        queries like "now break that down by region".
         """
         try:
             agent_cls = get_agent("nl2sql")
@@ -366,6 +519,7 @@ class ChatService:
                 metric_definitions=metric_context,
                 schema_context=schema_context,
                 few_shot_examples=few_shot_examples,
+                history=history,
             )
             sql = result.output.get("sql")
             return sql, result.warnings
@@ -377,20 +531,42 @@ class ChatService:
         self,
         sql: str,
         roles: list[str],
-    ) -> tuple[bool, list[str], str | None]:
-        """Step 3: Validate SQL for safety."""
+    ) -> dict:
+        """Step 3: Validate SQL for safety (EXPLAIN-backed, fail-open).
+
+        Returns {valid, warnings, validated_sql, requires_confirmation,
+        row_estimate}.
+        """
+        fail_open = {
+            "valid": True,
+            "warnings": ["Validation skipped -- agent not available"],
+            "validated_sql": sql,
+            "requires_confirmation": False,
+            "row_estimate": None,
+        }
         try:
             agent_cls = get_agent("validation")
             if not agent_cls:
                 logger.warning("ValidationAgent not registered -- skipping validation")
-                return True, ["Validation skipped -- agent not available"], sql
+                return fail_open
 
             agent = agent_cls(AgentConfig(model_name="deterministic"))
-            result = await agent.execute(
-                sql=sql,
-                tenant_id=self.tenant_id,
-                user_roles=roles,
+
+            # Short-lived read connector so the EXPLAIN dry-run runs under
+            # the tenant GUC (RLS-scoped estimates). Fail-open by design.
+            from app.connectors.postgresql_connector import PostgreSQLConnector
+
+            connector = PostgreSQLConnector(
+                connection_url=settings.DATABASE_URL, tenant_id=self.tenant_id
             )
+            async with connector:
+                result = await agent.execute(
+                    sql=sql,
+                    tenant_id=self.tenant_id,
+                    user_roles=roles,
+                    connector=connector,
+                )
+
             validated_sql = result.output.get("validated_sql", sql)
 
             if not result.success:
@@ -400,10 +576,22 @@ class ChatService:
                     sql=sql[:200],
                 )
 
-            return result.success, result.warnings, validated_sql
+            return {
+                "valid": result.success,
+                "warnings": result.warnings,
+                "validated_sql": validated_sql,
+                "requires_confirmation": bool(result.output.get("requires_confirmation")),
+                "row_estimate": result.output.get("row_estimate"),
+            }
         except Exception as e:
             logger.error(f"ValidationAgent failed: {e}")
-            return False, [f"Validation error: {str(e)}"], None
+            return {
+                "valid": False,
+                "warnings": [f"Validation error: {str(e)}"],
+                "validated_sql": None,
+                "requires_confirmation": False,
+                "row_estimate": None,
+            }
 
     async def _step_execute(self, sql: str) -> tuple[list[dict] | None, list[str]]:
         """Step 4: Execute SQL against the data source. Cached at L1+L2.
@@ -633,6 +821,8 @@ class ChatService:
         chart_image_base64: str | None = None,
         chart_svg: str | None = None,
         warnings: list[str] | None = None,
+        requires_confirmation: bool = False,
+        row_estimate: int | None = None,
     ) -> dict:
         """Build a ChatResponse-compatible dict."""
         return {
@@ -645,4 +835,6 @@ class ChatService:
             "chart_image_base64": chart_image_base64,
             "chart_svg": chart_svg,
             "warnings": warnings or [],
+            "requires_confirmation": requires_confirmation,
+            "row_estimate": row_estimate,
         }

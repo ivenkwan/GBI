@@ -85,6 +85,10 @@ components:
           maxLength: 5000
         conversation_id:
           type: string
+        confirm_large_query:
+          type: boolean
+          default: false
+          description: Explicit confirmation to run a query whose EXPLAIN row estimate exceeds 1M rows
 
     ChatResponse:
       type: object
@@ -107,6 +111,13 @@ components:
           type: array
           items:
             type: string
+        requires_confirmation:
+          type: boolean
+          description: True when the query needs explicit confirmation before execution
+        row_estimate:
+          type: integer
+          nullable: true
+          description: EXPLAIN-estimated row count, when available
 
     ChartRenderRequest:
       type: object

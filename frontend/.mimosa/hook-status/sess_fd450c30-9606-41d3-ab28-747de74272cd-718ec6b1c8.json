@@ -1,14 +1,14 @@
 {
   "schemaVersion": "mimosa-hook-status/v1",
-  "recordedAt": "2026-08-15T00:16:34.725Z",
+  "recordedAt": "2026-08-15T02:27:47.437Z",
   "sessionId": "sess_fd450c30-9606-41d3-ab28-747de74272cd",
   "event": "PostToolUse",
-  "toolName": "Write",
-  "file": "Z:\\GITHUB\\GBI\\docs\\adr\\008-per-tenant-cube-data-path.md",
-  "outcome": "clear",
-  "coverage": "complete",
+  "toolName": "Edit",
+  "file": "Z:\\GITHUB\\GBI\\backend\\tests\\services\\test_conversation_wiring.py",
+  "outcome": "inconclusive",
+  "coverage": "partial",
   "findingCount": 0,
-  "durationMs": 3,
+  "durationMs": 6,
   "hostState": "hook_complete",
   "reportHint": ".mimosa/reports/"
 }

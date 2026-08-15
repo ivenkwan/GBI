@@ -144,6 +144,21 @@ CREATE TABLE IF NOT EXISTS conversations (
 
 CREATE INDEX IF NOT EXISTS idx_conversations_tenant ON conversations(tenant_id);
 
+-- Chat turns (Phase 14): one row per user/assistant message. Mirrors
+-- Alembic 0004_messages (the authoritative copy).
+CREATE TABLE IF NOT EXISTS messages (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    conversation_id UUID NOT NULL REFERENCES conversations(id),
+    tenant_id       UUID NOT NULL REFERENCES tenants(id),
+    role            VARCHAR(20) NOT NULL,
+    content         TEXT NOT NULL,
+    generated_sql   TEXT,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_messages_tenant ON messages(tenant_id);
+
 -- ---------------------------------------------------------------------------
 -- Schema Embeddings (for NL2SQL semantic search)
 -- ---------------------------------------------------------------------------
@@ -209,6 +224,8 @@ ALTER TABLE agent_examples     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users              FORCE ROW LEVEL SECURITY;
 ALTER TABLE audit_log          FORCE ROW LEVEL SECURITY;
 ALTER TABLE conversations      FORCE ROW LEVEL SECURITY;
+ALTER TABLE messages           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE messages           FORCE ROW LEVEL SECURITY;
 ALTER TABLE schema_embeddings  FORCE ROW LEVEL SECURITY;
 ALTER TABLE agent_examples     FORCE ROW LEVEL SECURITY;
 
@@ -217,6 +234,8 @@ CREATE POLICY tenant_isolation ON users
 CREATE POLICY tenant_isolation ON audit_log
     USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
 CREATE POLICY tenant_isolation ON conversations
+    USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation ON messages
     USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
 CREATE POLICY tenant_isolation ON schema_embeddings
     USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
@@ -233,7 +252,7 @@ CREATE POLICY tenant_isolation ON agent_examples
 GRANT USAGE ON SCHEMA public TO genbi_app, genbi_auth;
 GRANT SELECT ON tenants TO genbi_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON
-    users, audit_log, conversations, schema_embeddings, agent_examples
+    users, audit_log, conversations, messages, schema_embeddings, agent_examples
     TO genbi_app;
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO genbi_app;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO genbi_app;

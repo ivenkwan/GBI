@@ -1,6 +1,6 @@
 # GenBI Platform — Development Documentation
 
-> **Version:** 0.1.0 | **Stack Tier:** Enterprise | **Last updated:** 2026-07-18
+> **Version:** 0.1.0 | **Stack Tier:** Enterprise | **Last updated:** 2026-08-15
 
 A **Generative BI (GenBI) platform** that enables business users to query enterprise data warehouses using natural language, auto-generates visualizations and narrative insights, and delivers governed, explainable analytics at scale.
 
@@ -9,7 +9,7 @@ A **Generative BI (GenBI) platform** that enables business users to query enterp
 ### Architecture & Design
 - [Architecture Overview](architecture-overview.md) — Four-tier architecture, data flow, technology stack
 - [Agent System](agent-system.md) — Multi-agent LangGraph pipeline, agent roster, LLM model usage
-- [Architecture Decision Records](adr/) — ADR 001–004 covering chart stack, agent topology, and Flint protocol
+- [Architecture Decision Records](adr/) — ADR 001–008 covering chart stack, agent topology, Flint bridge, AGE image, enforced RLS roles, Cube-native catalog, and per-tenant Cube data path
 
 ### API
 - [API Reference](api-reference.md) — Complete REST API documentation, request/response schemas, SSE streaming
@@ -20,7 +20,7 @@ A **Generative BI (GenBI) platform** that enables business users to query enterp
 - [Semantic Layer](semantic-layer.md) — Cube-native metric catalog → Cube.dev API → Python CubeClient
 
 ### Frontend
-- [Frontend Guide](frontend-guide.md) — Next.js 15 App Router, shadcn/ui components, SSE chat, Zod validators
+- [Frontend Guide](frontend-guide.md) — Next.js 15 App Router, shadcn/ui components, SSE chat, Explore metric workbench, Zod validators
 
 ### Operations
 - [Infrastructure](infrastructure.md) — Docker Compose (dev + prod), CI/CD, environment variables, scripts

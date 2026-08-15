@@ -54,6 +54,7 @@ export class ApiError extends Error {
 export interface ChatRequest {
   query: string;
   conversation_id?: string;
+  confirm_large_query?: boolean;
 }
 
 export interface ChatResponse {
@@ -66,6 +67,8 @@ export interface ChatResponse {
   chart_image_base64?: string;
   chart_svg?: string;
   warnings: string[];
+  requires_confirmation?: boolean;
+  row_estimate?: number | null;
 }
 
 export function sendChat(req: ChatRequest): Promise<ChatResponse> {
@@ -197,6 +200,37 @@ export interface DatasourceSummary {
 
 export function listDatasources(): Promise<{ datasources: DatasourceSummary[]; count: number }> {
   return request<{ datasources: DatasourceSummary[]; count: number }>("/datasources");
+}
+
+// --- Conversations ---
+
+export interface ConversationSummary {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConversationMessage {
+  role: "user" | "assistant";
+  content: string;
+  generated_sql?: string | null;
+  created_at: string;
+}
+
+export function listConversations(): Promise<{
+  conversations: ConversationSummary[];
+  count: number;
+}> {
+  return request<{ conversations: ConversationSummary[]; count: number }>("/conversations");
+}
+
+export function listConversationMessages(
+  conversationId: string,
+): Promise<{ messages: ConversationMessage[]; count: number }> {
+  return request<{ messages: ConversationMessage[]; count: number }>(
+    `/conversations/${conversationId}/messages`,
+  );
 }
 
 // --- Health ---

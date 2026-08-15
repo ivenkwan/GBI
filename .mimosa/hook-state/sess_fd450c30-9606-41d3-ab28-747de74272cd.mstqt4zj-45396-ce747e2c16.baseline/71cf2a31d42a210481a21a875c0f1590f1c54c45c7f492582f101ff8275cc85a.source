@@ -1,0 +1,105 @@
+"use client";
+
+import { useState } from "react";
+
+interface ChartAssemblyInput {
+  chartType: string;
+  encodings: Record<string, { field: string }>;
+  baseSize: { width: number; height: number };
+  data: { values: Record<string, unknown>[] };
+}
+
+interface ChartCardProps {
+  spec: ChartAssemblyInput;
+  imageBase64?: string;
+  svg?: string;
+  title?: string;
+  onDownload?: (format: "png" | "svg") => void;
+}
+
+export function ChartCard({ spec, imageBase64, svg, title, onDownload }: ChartCardProps) {
+  const [format, setFormat] = useState<"png" | "svg">("svg");
+
+  return (
+    <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-gray-600">
+            {title ?? spec.chartType}
+          </span>
+          <span className="text-[10px] text-gray-400 bg-gray-200 px-1.5 py-0.5 rounded">
+            Flint
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setFormat("svg")}
+            className={`text-[10px] px-2 py-0.5 rounded ${
+              format === "svg"
+                ? "bg-brand-600 text-white"
+                : "text-gray-500 hover:bg-gray-200"
+            }`}
+          >
+            SVG
+          </button>
+          <button
+            onClick={() => setFormat("png")}
+            className={`text-[10px] px-2 py-0.5 rounded ${
+              format === "png"
+                ? "bg-brand-600 text-white"
+                : "text-gray-500 hover:bg-gray-200"
+            }`}
+          >
+            PNG
+          </button>
+          <button
+            onClick={() => onDownload?.(format)}
+            className="text-[10px] px-2 py-0.5 rounded text-gray-500 hover:bg-gray-200"
+          >
+            Download
+          </button>
+        </div>
+      </div>
+
+      {/* Chart */}
+      <div className="p-4">
+        {format === "svg" && svg ? (
+          <div
+            className="vis-flint-chart w-full"
+            dangerouslySetInnerHTML={{ __html: svg }}
+          />
+        ) : imageBase64 ? (
+          <img
+            src={`data:image/png;base64,${imageBase64}`}
+            alt={spec.chartType}
+            className="w-full rounded-lg"
+          />
+        ) : (
+          <div className="flex items-center justify-center h-48 bg-gray-50 text-gray-400 text-sm rounded-lg">
+            Chart rendering...
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Render a grid of chart cards from an array of results. */
+export function ChartGrid({
+  charts,
+}: {
+  charts: { spec: ChartAssemblyInput; imageBase64?: string; svg?: string; title?: string }[];
+}) {
+  if (charts.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {charts.map((chart, i) => (
+        <ChartCard key={i} {...chart} />
+      ))}
+    </div>
+  );
+}

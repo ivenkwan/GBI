@@ -116,6 +116,7 @@ On failure (missing, expired, or invalid token): HTTP 401 with:
 |---|---|---|
 | `query` | `string` | Required, 1–5000 chars |
 | `conversation_id` | `string \| null` | Optional UUID for multi-turn |
+| `confirm_large_query` | `bool` | Default false — set true to proceed when the EXPLAIN row estimate exceeds 1M (see below) |
 
 **Response:** `ChatResponse`
 ```json
@@ -127,9 +128,13 @@ On failure (missing, expired, or invalid token): HTTP 401 with:
   "chart_spec": {"chartType": "Bar Chart", "encodings": {...}},
   "narrative": "Revenue in Q3 was highest in the Northeast region at $4.2M...",
   "chart_image_base64": null,
-  "warnings": []
+  "warnings": [],
+  "requires_confirmation": false,
+  "row_estimate": 1200
 }
 ```
+
+**Large-query confirmation:** when the validated SQL's EXPLAIN estimate exceeds 1M rows, the response returns early with `requires_confirmation: true`, `row_estimate`, the SQL, and warnings — no data, chart, or narrative. Re-send the same query with `confirm_large_query: true` to execute.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -156,7 +161,7 @@ On failure (missing, expired, or invalid token): HTTP 401 with:
 | `start` | `conversation_id`, `query` | Pipeline started |
 | `intent` | `intent`, `dispatch_plan` | Router classified the query |
 | `sql` | `sql`, `warnings` | NL2SQL agent generated SQL |
-| `validation` | `validated_sql`, `warnings` | Validation agent cleared SQL |
+| `validation` | `valid`, `validated_sql`, `requires_confirmation`, `row_estimate`, `warnings` | Validation gate (EXPLAIN-backed) |
 | `data` | `row_count`, `warnings` | Query executed, data returned |
 | `chart` | `chart_spec`, `image_base64`, `svg` | Chart generated + rendered |
 | `narrative` | `narrative`, `warnings` | Narrative agent wrote insight |
@@ -170,16 +175,16 @@ data: {"event":"intent","intent":"chat_data","dispatch_plan":["nl2sql","validati
 
 data: {"event":"sql","sql":"SELECT region, SUM(revenue_amount) AS total FROM ...","warnings":[]}
 
-data: {"event":"validation","is_valid":true,"validated_sql":"SET LOCAL statement_timeout = '30s'; SELECT ...","warnings":[]}
+data: {"event":"validation","valid":true,"validated_sql":"SELECT region, SUM(revenue_amount) AS total FROM ...","requires_confirmation":false,"row_estimate":1200,"warnings":[]}
 
-data: {"event":"done","status":"success","warnings":[]}
+data: {"event":"done","status":"complete","warnings":[]}
 ```
 
 [see more...]
 
 ```
 
-**Status values on `done`:** `success`, `no_sql`, `validation_failed`, `no_data`, `error`
+**Status values on `done`:** `complete`, `no_sql`, `validation_failed`, `confirmation_required` (>1M-row estimate — re-send with `confirm_large_query: true`), `no_data`, `error`
 
 ---
 
@@ -235,6 +240,28 @@ data: {"event":"done","status":"success","warnings":[]}
   "errors": []
 }
 ```
+
+---
+
+## Conversations
+
+> Multi-turn chat history (Phase 14). Requires `Authorization: Bearer <token>`.
+
+### `GET /conversations`
+✅ List the current user's conversations, most recently active first (RLS tenant-scoped + per-user).
+
+**Response:** `{conversations: [{id, title, created_at, updated_at}], count}`
+
+Errors: `503` `PERSISTENCE_UNAVAILABLE` when the store is unreachable.
+
+### `GET /conversations/{conversation_id}/messages`
+✅ A conversation's turns in chronological order (most recent 50 by default). Other tenants' ids return zero messages (RLS).
+
+**Response:** `{messages: [{role, content, generated_sql?, created_at}], count}`
+
+Errors: `400 INVALID_CONVERSATION` (malformed id), `503 PERSISTENCE_UNAVAILABLE`.
+
+**Multi-turn flow:** send chat requests with the same `conversation_id`; the NL2SQL agent receives the prior turns as a "Conversation History" prompt section (follow-ups like "now break that down by region" work). The SSE `start` event carries the resolved `conversation_id`; turns persist automatically (fail-open).
 
 ---
 

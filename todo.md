@@ -1,6 +1,6 @@
 # GenBI Platform — Build Progress
 
-> **Last updated:** 2026-08-15 | **Stack tier:** Enterprise | **66/66 tasks complete**
+> **Last updated:** 2026-08-15 | **Stack tier:** Enterprise | **75/75 tasks complete (Phases 1–13 roadmap + Phase 14)**
 
 ---
 
@@ -1133,3 +1133,63 @@ is written carefully but has never executed.
 
 - Validation hardening: EXPLAIN-backed SQL gate (connector's explain() is
   implemented but unused), >1M-row confirmation, chat-pipeline tests
+
+---
+
+## Phase 13 — Validation Hardening (Tasks 67–70)
+
+> **Status: code complete 2026-08-15.** The final planned phase — completes
+> the original roadmap at 70/70 tasks. The SQL safety gate is now
+> EXPLAIN-backed and the >1M-row confirmation contract is real end-to-end.
+
+| # | Task | Status |
+|---|---|---|
+| 67 | EXPLAIN wiring: ValidationAgent `connector` kwarg (protected file — pure strengthening), real row estimates + plan text, fail-open both layers; ChatService passes a short-lived RLS-scoped connector | ✅ |
+| 68 | Confirmation contract: `_step_validate` → dict return; gate in sync + stream paths stops before execution until `confirm_large_query: true`; ChatRequest/ChatResponse fields; SSE `validation` payload + `done` status `confirmation_required` | ✅ |
+| 69 | Frontend: confirm panel ("Confirm and run" re-sends with the flag), schemas extended; fixed a latent onClick-arg bug in handleSend exposed by the new signature | ✅ |
+| 70 | Tests: 13 new — agent+fake connector (estimates flow, >1M flags, EXPLAIN error fails open, destructive SQL never EXPLAINed) + full pipeline orchestration (sync happy/no_sql/validation_failed/confirm-block-then-proceed; stream event order/confirmation_required/confirmed-resend) | ✅ |
+
+### Verified by
+
+- 133 passed / 14 skipped (13 new); ruff clean; frontend typecheck/lint clean
+- Orchestration tests run the REAL deterministic ValidationAgent with only
+  LLM agents mocked — the confirmation gate is exercised end-to-end
+- Doc debt fixed: agent-system.md stale checks table (is_valid key,
+  timeout-injection claim, pattern counts), openapi.yaml fields, CLAUDE.md
+  protected-file paths (validation agent + dbt-era metrics path)
+
+### Roadmap status: COMPLETE (70/70)
+
+Future candidates (new roadmap): conversation persistence + multi-turn
+chat (conversations table still unwritten), reports/dashboards build-out,
+AGE lineage wiring, feedback API (feedback_score column), per-role
+validation permissions (user_roles plumbing exists, unused).
+
+---
+
+## Phase 14 — Conversations & Multi-Turn Chat (Tasks 71–75)
+
+> **Status: code complete 2026-08-15.** The chat product finally has memory:
+> conversations persist, history feeds the NL2SQL prompt, and the UI lists
+> and resumes threads.
+
+| # | Task | Status |
+|---|---|---|
+| 71 | Alembic 0004_messages: messages table (RLS FORCE + tenant_isolation + genbi_app grants) mirrored in init.sql; ORM Message model | ✅ |
+| 72 | `app/services/conversations.py`: create/list/append via asyncpg on genbi_app + tenant GUC (Phase 12 pattern); per-user scoping predicate; fail-open writes, raise-on-read | ✅ |
+| 73 | `GET /conversations` + `GET /conversations/{id}/messages` (JWT-scoped; 400/503 paths); SSE `start` event now carries conversation_id | ✅ |
+| 74 | History injection: ChatService resolves/creates the conversation, loads last 6 turns into the NL2SQL prompt ("## Conversation History" section), persists user + assistant turns at every pipeline exit (both modes) | ✅ |
+| 75 | Frontend: conversations sidebar (list, new-chat, active highlight), replay-on-select, send carries conversation_id; 18 new backend tests (service contract, endpoints, agent prompt section, wiring incl. fail-open paths) | ✅ |
+
+### Verified by
+
+- 151 passed / 14 skipped (18 new); ruff clean; frontend typecheck/lint clean
+- Pipeline tests extended to mock conversation persistence (fail-open held —
+  the earlier unmocked run passed, just slowly)
+- Live behavior (Docker session): send two follow-up questions in one
+  conversation; sidebar lists/resumes threads
+
+### Follow-ups
+
+- Message pagination UI (limit param exists), conversation rename/delete,
+- reports/dashboards build-out; feedback API; AGE wiring (unchanged queue)

@@ -1,0 +1,137 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "stop-20260815T020049818Z-39376-600d9a836aa9",
+  "runId": "20260815T020049818Z-39376-600d9a836aa9",
+  "runStatus": "inconclusive",
+  "coverage": {
+    "status": "partial",
+    "reasons": [
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "backend/tests/services/test_chat_pipeline.py",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "backend/tests/agents/test_validation_explain.py",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "backend/tests/services/test_chat_pipeline.py",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "backend/tests/agents/test_validation_explain.py",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "agent-check",
+        "target": ".",
+        "detail": "spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affectsCompletion": true
+      }
+    ]
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "Stop"
+  },
+  "revision": "2159486f314a10837dc8ba12ed16d75be1c8ec10",
+  "diffHash": "be831faef28453f0d67770bd72bfeb1974e60b66d2c32fc17049d9a43b5849f4",
+  "rulesVersion": "unavailable",
+  "sessionHash": "718ec6b1c8c4411ac21a6dc7d92920c9d8595e956e30550dbace6d9f67496527",
+  "reportRef": ".mimosa/reports/task-review-sess_fd450c30-9606-41d3-ab28-747de74272cd-20260815T020049818Z-39376-600d9a836aa9.json",
+  "events": [
+    {
+      "eventId": "hook-36f1cb738da1ea89b51054ee306c4bed",
+      "findingId": "mimosa-c31fa7df9b5ca26ede8fc035",
+      "type": "finding_observed",
+      "at": "2026-08-15T02:00:49.818Z",
+      "identity": {
+        "projectRelativeFile": "backend/tests/agents/test_validation_explain.py",
+        "ruleId": "security",
+        "codeEvidenceHash": "a29f6a253668c3e95af2fe2b73fe225f73ff969dfb5be39e1aac32f57ed24039",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 73,
+      "endLine": 73,
+      "reasonCode": "observe",
+      "reportedToAgent": false,
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "evidenceHash": "a29f6a253668c3e95af2fe2b73fe225f73ff969dfb5be39e1aac32f57ed24039"
+      },
+      "sequence": 0
+    }
+  ],
+  "observedFindingIds": [
+    "mimosa-bfaaaf7c7853c2260c5da443",
+    "mimosa-226d5d3d51b056a8767abbbc",
+    "mimosa-5027212c2e39b704d2a18975",
+    "mimosa-5de75347405d519858eec8fc",
+    "mimosa-b48f4acdcd51017307c63ffb",
+    "mimosa-c31fa7df9b5ca26ede8fc035"
+  ],
+  "verifiedFiles": [
+    {
+      "file": "backend/app/agents/validation/validation_agent.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "backend/app/services/chat_service.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "frontend/src/lib/api-client.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "frontend/src/lib/validators.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "frontend/src/components/chat/chat-view.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "backend/tests/services/test_chat_pipeline.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "backend/tests/agents/test_validation_explain.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "backend/app/models/chat.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "backend/app/api/v1/chat.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    }
+  ],
+  "recordedAt": "2026-08-15T02:00:50.333Z"
+}

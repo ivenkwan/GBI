@@ -1,0 +1,147 @@
+/** API client — centralized HTTP layer for all backend calls.
+ *
+ * Every frontend data-fetch goes through this module.
+ * Never call fetch() directly in components.
+ */
+
+import type { ChartAssemblyInput } from "@/types/chart";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+
+interface RequestOptions {
+  method?: string;
+  body?: unknown;
+}
+
+async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: options.method ?? "GET",
+    headers,
+    body: options.body ? JSON.stringify(options.body) : undefined,
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: res.statusText }));
+    throw new ApiError(res.status, error.code ?? "UNKNOWN", error.message ?? "Request failed");
+  }
+
+  return res.json();
+}
+
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    public code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+// --- Chat ---
+
+export interface ChatRequest {
+  query: string;
+  conversation_id?: string;
+}
+
+export interface ChatResponse {
+  conversation_id: string;
+  query: string;
+  sql?: string;
+  sql_explanation?: string;
+  chart_spec?: Record<string, unknown>;
+  narrative?: string;
+  chart_image_base64?: string;
+  chart_svg?: string;
+  warnings: string[];
+}
+
+export function sendChat(req: ChatRequest): Promise<ChatResponse> {
+  return request<ChatResponse>("/chat", { method: "POST", body: req });
+}
+
+export function streamChat(
+  req: ChatRequest,
+  onEvent: (event: Record<string, unknown>) => void,
+  onError: (error: Error) => void,
+): AbortController {
+  const controller = new AbortController();
+
+  fetch(`${API_BASE}/chat/stream`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+    body: JSON.stringify(req),
+    signal: controller.signal,
+  })
+    .then(async (res) => {
+      const reader = res.body?.getReader();
+      if (!reader) return;
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const event = JSON.parse(line.slice(6));
+              onEvent(event);
+            } catch {
+              // Skip unparseable chunks
+            }
+          }
+        }
+      }
+    })
+    .catch(onError);
+
+  return controller;
+}
+
+// --- Charts ---
+
+export interface ChartRenderRequest {
+  spec: ChartAssemblyInput;
+  backend?: string;
+  format?: string;
+}
+
+export interface ChartRenderResponse {
+  success: boolean;
+  format: string;
+  image_base64?: string;
+  svg?: string;
+  warnings: string[];
+  errors: string[];
+}
+
+export function renderChart(req: ChartRenderRequest): Promise<ChartRenderResponse> {
+  return request<ChartRenderResponse>("/charts/render", { method: "POST", body: req });
+}
+
+// --- Health ---
+
+export function healthCheck(): Promise<{ status: string; version: string }> {
+  return request("/health");
+}

@@ -1,0 +1,472 @@
+{
+  "schema_version": "mimosa-task-review/v2",
+  "run_id": "20260815T020049818Z-39376-600d9a836aa9",
+  "run_status": "inconclusive",
+  "errors": [
+    {
+      "stage": "baseline-read",
+      "target": "backend/tests/services/test_chat_pipeline.py",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "baseline-read",
+      "target": "backend/tests/agents/test_validation_explain.py",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "agent-check",
+      "target": ".",
+      "reason": "spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT"
+    }
+  ],
+  "coverage": {
+    "schema_version": "mimosa-hook-coverage/v1",
+    "status": "partial",
+    "scope": "hook_observed_diff",
+    "baseline": {
+      "complete": true,
+      "captured_files": 469,
+      "candidate_limit": 5000,
+      "truncated": false,
+      "enumeration_error_count": 0,
+      "snapshot_error_count": 0,
+      "compensated_target_count": 9
+    },
+    "change_tracking": {
+      "touched_observed": 3,
+      "touched_retained": 3,
+      "truncated": false,
+      "bash_mutation": true,
+      "bash_discovered": 11,
+      "bash_discovery_limit": 80,
+      "bash_discovery_truncated": false
+    },
+    "candidates": {
+      "eligible_files": 11,
+      "selected_files": 11,
+      "limit": 20,
+      "truncated": false
+    },
+    "scanning": {
+      "required_files": 9,
+      "scanned_files": 9,
+      "skipped_files": 0,
+      "failed_files": 0,
+      "project_checks_required": 2,
+      "project_checks_completed": 1
+    },
+    "notification": {
+      "eligible_findings": 1,
+      "detailed_findings": 1,
+      "detail_limit": 3,
+      "truncated": false
+    },
+    "reason_counts": {
+      "baseline_snapshot_unreadable": 2,
+      "project_check_failed": 3
+    },
+    "reasons": [
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "backend/tests/services/test_chat_pipeline.py",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "backend/tests/agents/test_validation_explain.py",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "backend/tests/services/test_chat_pipeline.py",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "backend/tests/agents/test_validation_explain.py",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "agent-check",
+        "target": ".",
+        "detail": "spawnSync C:\\Program Files\\nodejs\\node.exe ETIMEDOUT",
+        "affects_completion": true
+      }
+    ],
+    "reasons_truncated": false
+  },
+  "generated_at": "2026-08-15T02:00:49.818Z",
+  "session_id": "sess_fd450c30-9606-41d3-ab28-747de74272cd",
+  "target": ".",
+  "revision": "2159486f314a10837dc8ba12ed16d75be1c8ec10",
+  "rules_version": "unavailable",
+  "diff_hash": "be831faef28453f0d67770bd72bfeb1974e60b66d2c32fc17049d9a43b5849f4",
+  "diff": {
+    "algorithm": "sha256",
+    "changed_file_count": 11,
+    "changed_files": [
+      {
+        "file": ".github/workflows/ci.yml",
+        "ranges": [
+          {
+            "start": 72,
+            "end": 75
+          },
+          {
+            "start": 77,
+            "end": 78
+          }
+        ],
+        "before_hash": "e5462f6f66830c1d98ecfc8c6897b7e7021272079a880009455564ae4244d43b",
+        "after_hash": "9883e1ed527df9f0eaa44f0eded63b2e3307bbad0b14debf7f64fa1246639100"
+      },
+      {
+        "file": "backend/app/agents/validation/validation_agent.py",
+        "ranges": [
+          {
+            "start": 85,
+            "end": 85
+          },
+          {
+            "start": 94,
+            "end": 98
+          },
+          {
+            "start": 155,
+            "end": 166
+          }
+        ],
+        "before_hash": "628c53d191d1366f54c08310407d5fbdb7576be7c6d9539426778772c417095b",
+        "after_hash": "fa929b207b589e54da98552434bdbcaddb836dc05006c618640dd40d1cb15cb8"
+      },
+      {
+        "file": "backend/app/api/v1/chat.py",
+        "ranges": [
+          {
+            "start": 25,
+            "end": 25
+          },
+          {
+            "start": 44,
+            "end": 44
+          }
+        ],
+        "before_hash": "832a41cb2b21ec6956bc8453a9a36fd91629d4dc274cb18584a8d75dc10cc042",
+        "after_hash": "2bd5a15baa74c401d1ac3a44f709e760a05c5c6a5d326270605800c36c701598"
+      },
+      {
+        "file": "backend/app/models/chat.py",
+        "ranges": [
+          {
+            "start": 15,
+            "end": 19
+          },
+          {
+            "start": 33,
+            "end": 38
+          }
+        ],
+        "before_hash": "4f81eafcf656b81da132023b87a82e2e2a495c6efa75de9235edc9e7f4a30472",
+        "after_hash": "4266908fa5f2612fcd25bd00bb4687879f71e6604184c9bb5b7aad120857597c"
+      },
+      {
+        "file": "backend/app/services/chat_service.py",
+        "ranges": [
+          {
+            "start": 49,
+            "end": 49
+          },
+          {
+            "start": 84,
+            "end": 87
+          },
+          {
+            "start": 89,
+            "end": 89
+          },
+          {
+            "start": 97,
+            "end": 108
+          },
+          {
+            "start": 111,
+            "end": 111
+          },
+          {
+            "start": 151,
+            "end": 152
+          },
+          {
+            "start": 173,
+            "end": 173
+          },
+          {
+            "start": 214,
+            "end": 215
+          },
+          {
+            "start": 219,
+            "end": 223
+          },
+          {
+            "start": 227,
+            "end": 227
+          },
+          {
+            "start": 231,
+            "end": 244
+          },
+          {
+            "start": 246,
+            "end": 246
+          },
+          {
+            "start": 410,
+            "end": 422
+          },
+          {
+            "start": 427,
+            "end": 427
+          },
+          {
+            "start": 430,
+            "end": 436
+          },
+          {
+            "start": 438,
+            "end": 445
+          },
+          {
+            "start": 455,
+            "end": 461
+          },
+          {
+            "start": 464,
+            "end": 470
+          },
+          {
+            "start": 700,
+            "end": 701
+          },
+          {
+            "start": 714,
+            "end": 715
+          }
+        ],
+        "before_hash": "bcd703aaa50874d94c94474c8c91a275c1aac821f83b341dbfdfa9232e197195",
+        "after_hash": "9abcbcf85d77459c8caf1c23b2dc9fe7b98b1797340b4bef25c4f9d1c430f323"
+      },
+      {
+        "file": "backend/tests/agents/test_validation_explain.py",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 88
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "b22129edd5d0ad96fbe396eadd963ab1cd3032821119d7938a4146407f1fa6d9"
+      },
+      {
+        "file": "backend/tests/services/test_chat_pipeline.py",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 247
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "85d1e2f80df46515f91c934a50788e6cc920cf01c8f79b83c88c61e3ad6440b6"
+      },
+      {
+        "file": "CLAUDE.md",
+        "ranges": [
+          {
+            "start": 300,
+            "end": 301
+          }
+        ],
+        "before_hash": "1355a66ede87a0ee970804b42b0358a1a7b3a628ea4897e1a7d64de9ed23a9db",
+        "after_hash": "a6cddbe0215a14e1ec2d14bb01276a457918f9b528f9c1bae7b7a8fe92ff01f2"
+      },
+      {
+        "file": "frontend/src/components/chat/chat-view.tsx",
+        "ranges": [
+          {
+            "start": 34,
+            "end": 38
+          },
+          {
+            "start": 77,
+            "end": 83
+          },
+          {
+            "start": 93,
+            "end": 95
+          },
+          {
+            "start": 98,
+            "end": 101
+          },
+          {
+            "start": 110,
+            "end": 110
+          },
+          {
+            "start": 138,
+            "end": 141
+          },
+          {
+            "start": 385,
+            "end": 405
+          },
+          {
+            "start": 429,
+            "end": 429
+          },
+          {
+            "start": 444,
+            "end": 444
+          }
+        ],
+        "before_hash": "dda464a61740529d479f098a8dbc079b08806bfc2bf56127ed6dc13dbec96f25",
+        "after_hash": "0d2bcd07927f28a38502e2df984e40a269e9f376f2671bdec701854dd77b81cd"
+      },
+      {
+        "file": "frontend/src/lib/api-client.ts",
+        "ranges": [
+          {
+            "start": 57,
+            "end": 57
+          },
+          {
+            "start": 70,
+            "end": 71
+          }
+        ],
+        "before_hash": "7b5abd2467467cb79aa70b9c666bbeb1ec0ef8dbd4124b307525330cca15a1f7",
+        "after_hash": "3043c8ea96cf76c1a9e0bee6c189d6ab892b9ded059301af10a3cb7d6cf0c577"
+      },
+      {
+        "file": "frontend/src/lib/validators.ts",
+        "ranges": [
+          {
+            "start": 7,
+            "end": 7
+          },
+          {
+            "start": 48,
+            "end": 49
+          }
+        ],
+        "before_hash": "8667e3fe151675fb9a874ff7e64f7a8843cf07f0f10e615cb298ad2114113179",
+        "after_hash": "0a9b6ed02e8c2fcf59cbb48197fd35b11387baeba0b9f67dd5befae000d106f9"
+      }
+    ]
+  },
+  "timing": {
+    "started_at": "2026-08-15T02:00:47.251Z",
+    "completed_at": "2026-08-15T02:00:49.818Z",
+    "duration_ms": 2567,
+    "measurement": "hook_wall_clock"
+  },
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "model_calls": 0,
+    "measurement": "known-zero"
+  },
+  "telemetry": {
+    "schemaVersion": "mimosa-gate-telemetry/v1",
+    "profile": "gate",
+    "operation": "Stop",
+    "outcome": "partial/INCONCLUSIVE",
+    "latencyMs": 2567,
+    "peakMemoryBytes": 143130624,
+    "memoryMeasurement": "max-observed-process-rss",
+    "scannedFiles": 9,
+    "cache": {
+      "hits": 0,
+      "misses": 0,
+      "measurement": "not-applicable"
+    },
+    "denyCount": 0,
+    "tokens": {
+      "input": 0,
+      "output": 0,
+      "total": 0,
+      "modelCalls": 0,
+      "measurement": "known-zero"
+    }
+  },
+  "finding_count": 1,
+  "rewake_finding_count": 1,
+  "evidence_boundary": {
+    "scan": "candidate",
+    "static_fix_verification": "observed_static_only",
+    "runtime_verification": "not_performed"
+  },
+  "finding_events": [
+    {
+      "finding_id": "mimosa-c31fa7df9b5ca26ede8fc035",
+      "file": "backend/tests/agents/test_validation_explain.py",
+      "line": 73,
+      "severity": "high",
+      "category": "SQL 注入",
+      "status": "blocked",
+      "decision": "stop_rewake",
+      "at": "2026-08-15T02:00:49.818Z",
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "a29f6a253668c3e95af2fe2b73fe225f73ff969dfb5be39e1aac32f57ed24039",
+        "runtime_oracle": false
+      }
+    }
+  ],
+  "findings": [
+    {
+      "finding_id": "mimosa-c31fa7df9b5ca26ede8fc035",
+      "file": "backend/tests/agents/test_validation_explain.py",
+      "line": 73,
+      "end_line": 73,
+      "severity": "high",
+      "category": "SQL 注入",
+      "kind": "semgrep",
+      "advisory": false,
+      "status": "blocked",
+      "evidence_boundary": "candidate",
+      "evidence": [
+        {
+          "kind": "static_scan",
+          "boundary": "candidate",
+          "producer": "deterministic",
+          "source": "semgrep",
+          "file": "backend/tests/agents/test_validation_explain.py",
+          "line": 73,
+          "evidence_hash": "a29f6a253668c3e95af2fe2b73fe225f73ff969dfb5be39e1aac32f57ed24039",
+          "runtime_oracle": false
+        }
+      ],
+      "already_reported_to_agent": false,
+      "selected_for_rewake": true
+    }
+  ],
+  "artifacts": {
+    "immutable_report": ".mimosa/reports/task-review-sess_fd450c30-9606-41d3-ab28-747de74272cd-20260815T020049818Z-39376-600d9a836aa9.json",
+    "latest_report": ".mimosa/reports/task-review-sess_fd450c30-9606-41d3-ab28-747de74272cd.json",
+    "history_summary": ".mimosa/history/run-20260815T020049818Z-39376-600d9a836aa9.json"
+  }
+}

@@ -362,7 +362,7 @@ parsing, and destructive-pattern detection all run for real. See
 | Area | Status | Notes |
 |---|---|---|
 | Agent pipeline (NL→SQL→Chart→Narrative) | ✅ Implemented | Sync + SSE streaming |
-| Validation safety gate | ✅ Implemented | Destructive-pattern + read-only enforcement |
+| Validation safety gate | ✅ Hardened | EXPLAIN-backed row estimates + >1M-row confirmation flow (Phase 13); deterministic pattern gate remains |
 | Semantic layer (Cube-native catalog) | ✅ Implemented | 10 cubes / 23 measures; tenant-scoped /metrics/query + Explore page (ADR 007/008) |
 | Governance: audit trail + login throttling | ✅ Implemented | Every LLM call audited (tenant-scoped, fail-open); 5 failed logins → 429 (Phase 12) |
 | NL2SQL schema grounding (pgvector retrieval) | ✅ Implemented | Schema context + few-shot into every prompt (Phase 11); needs `embed_schema.py --examples` + OPENAI_API_KEY |
@@ -371,15 +371,17 @@ parsing, and destructive-pattern detection all run for real. See
 | Chart hallucination detection | ✅ Implemented | 6 validation categories + auto-correct |
 | Dual-tier cache (L1 LRU + L2 Redis) | ✅ Implemented | Schema, metrics, results, charts |
 | Observability (OTel + Langfuse + Prometheus) | ✅ Wired | `/metrics` endpoint on backend |
-| Frontend chat UI | ✅ Implemented | SSE streaming, stage rendering |
+| Frontend chat UI | ✅ Implemented | SSE streaming, stage rendering, conversation sidebar + multi-turn history (Phase 14) |
 | Environment provisioning (`make setup`) | ✅ Implemented | One-command bootstrap |
-| End-to-end verification | ✅ Verified | 61+ tests pass, `make verify` green, CI builds (Phases 7–8) |
+| End-to-end verification | ✅ Verified | 120 tests pass, `make verify` green, CI builds + eval gate (Phases 7–12) |
 
-> Phase 7 (build & test verification) closed out Phases 5b/6 as VERIFIED; the
-> platform builds, boots, and passes its full test suite. Phase 8 added the
-> auth + chat vertical slice (login, /chat route, landing page).
+> Phase 7 (build & test verification) closed out Phases 5b/6 as VERIFIED.
+> Phases 8–12 delivered the auth + chat vertical slice, enforced tenant
+> isolation (non-superuser roles, ADR 006), the Cube-native metric catalog
+> (ADR 007), tenant-scoped Metrics + Explore (ADR 008), NL2SQL schema
+> grounding, and governance (audit trail + login throttling).
 
-> See [`todo.md`](todo.md) for the phase tracker (Phases 1–8) and the
+> See [`todo.md`](todo.md) for the phase tracker (Phases 1–12) and the
 > implementation/verification history.
 
 ---

@@ -2,6 +2,11 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import {
+  listConversationMessages,
+  listConversations,
+  type ConversationSummary,
+} from "@/lib/api-client";
 import { useAuth } from "@/components/auth/auth-provider";
 import { ChatRequestSchema, SSEEventSchema } from "@/lib/validators";
 import type { SSEEvent } from "@/lib/validators";
@@ -12,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { Send, BarChart3, Database, Settings, LogOut, User } from "lucide-react";
+import { Send, BarChart3, Database, Settings, LogOut, Plus, User } from "lucide-react";
 
 interface StreamStage {
   stage: string;
@@ -31,6 +36,11 @@ interface ChatMessage {
   chartBase64?: string;
   narrative?: string;
   warnings: string[];
+  // Large-query confirmation (Phase 13): set when the pipeline stops with
+  // status "confirmation_required"; the panel offers Confirm and run.
+  needsConfirm?: boolean;
+  rowEstimate?: number | null;
+  confirmQuery?: string;
 }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
@@ -43,6 +53,55 @@ export function ChatView() {
   const router = useRouter();
   const chatEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  // Conversations (Phase 14): sidebar list + the active thread. A null id
+  // means "new chat" — the backend creates the conversation on first send
+  // and returns its id in the SSE start event.
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+
+  const loadConversations = useCallback(async () => {
+    try {
+      const res = await listConversations();
+      setConversations(res.conversations);
+    } catch {
+      // Sidebar is best-effort; chat works without it
+    }
+  }, []);
+
+  useEffect(() => {
+    loadConversations();
+  }, [loadConversations]);
+
+  const handleSelectConversation = useCallback(async (id: string) => {
+    if (loading) return;
+    setConversationId(id);
+    setMessages([]);
+    try {
+      const res = await listConversationMessages(id);
+      setMessages(
+        res.messages.map((m, i) => ({
+          id: `${id}-${i}`,
+          role: m.role,
+          content: m.content,
+          streaming: false,
+          stages: [],
+          warnings: [],
+          sql: m.generated_sql ?? undefined,
+          narrative: m.role === "assistant" ? m.content : undefined,
+        })),
+      );
+    } catch {
+      setMessages([]);
+    }
+  }, [loading]);
+
+  const handleNewChat = useCallback(() => {
+    if (loading) return;
+    setConversationId(null);
+    setMessages([]);
+    setInput("");
+  }, [loading]);
 
   // Auto-scroll
   useEffect(() => {
@@ -69,6 +128,13 @@ export function ChatView() {
           if (stage === "done") {
             updated.streaming = false;
             updated.content = data.narrative ?? "Here's what I found.";
+            if (data.status === "confirmation_required" && data.requires_confirmation) {
+              updated.needsConfirm = true;
+              updated.rowEstimate = data.row_estimate ?? null;
+              updated.content =
+                "This query is estimated to scan a large number of rows. " +
+                "Please confirm before it runs.";
+            }
           }
 
           return updated;
@@ -78,11 +144,15 @@ export function ChatView() {
     [],
   );
 
-  const handleSend = async () => {
-    if (!input.trim() || loading) return;
+  const handleSend = async (overrideQuery?: string, confirmLarge = false) => {
+    const outgoing = overrideQuery ?? input;
+    if (!outgoing.trim() || loading) return;
 
     // Validate input
-    const parsed = ChatRequestSchema.safeParse({ query: input });
+    const parsed = ChatRequestSchema.safeParse({
+      query: outgoing,
+      confirm_large_query: confirmLarge || undefined,
+    });
     if (!parsed.success) {
       return; // silently reject invalid input
     }
@@ -91,7 +161,7 @@ export function ChatView() {
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: "user",
-      content: input,
+      content: outgoing,
       streaming: false,
       stages: [],
       warnings: [],
@@ -119,7 +189,11 @@ export function ChatView() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ query: parsed.data.query }),
+        body: JSON.stringify({
+          query: parsed.data.query,
+          confirm_large_query: parsed.data.confirm_large_query ?? false,
+          conversation_id: conversationId ?? undefined,
+        }),
         signal: controller.signal,
       });
 
@@ -149,6 +223,15 @@ export function ChatView() {
             const raw = JSON.parse(trimmed.slice(6));
             const event = SSEEventSchema.parse(raw);
             updateMessageStage(msgId, event.event, event);
+
+            // Conversation threading (Phase 14): capture the server-assigned
+            // id on start; refresh the sidebar ordering when a turn ends.
+            if (event.event === "start" && event.conversation_id) {
+              setConversationId(event.conversation_id);
+            }
+            if (event.event === "done") {
+              loadConversations();
+            }
           } catch {
             // Skip unparseable chunks
           }
@@ -187,7 +270,42 @@ export function ChatView() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50">
+      {/* Conversations sidebar (Phase 14) */}
+      <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-gray-200 bg-white">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+            Conversations
+          </span>
+          <button
+            onClick={handleNewChat}
+            title="New chat"
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto py-2">
+          {conversations.length === 0 && (
+            <p className="px-4 py-2 text-xs text-gray-400">No conversations yet</p>
+          )}
+          {conversations.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => handleSelectConversation(c.id)}
+              className={`w-full text-left px-4 py-2 text-sm truncate transition-colors ${
+                c.id === conversationId
+                  ? "bg-brand-50 text-brand-700 border-l-2 border-brand-600"
+                  : "text-gray-600 hover:bg-gray-50 border-l-2 border-transparent"
+              }`}
+            >
+              {c.title}
+            </button>
+          ))}
+        </div>
+      </aside>
+
+      <div className="flex flex-col flex-1 min-w-0">
       {/* Top navbar */}
       <header className="flex items-center justify-between px-6 py-3 bg-white border-b border-gray-200 shrink-0">
         <div className="flex items-center gap-3">
@@ -363,6 +481,27 @@ export function ChatView() {
                           ))}
                         </div>
                       )}
+
+                      {/* Large-query confirmation (Phase 13) */}
+                      {msg.needsConfirm && !msg.streaming && (
+                        <div className="flex items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                          <span className="text-xs text-amber-700">
+                            Estimated to scan{" "}
+                            {msg.rowEstimate ? `~${msg.rowEstimate.toLocaleString()} rows` : "many rows"}.
+                            Run anyway?
+                          </span>
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              const idx = messages.findIndex((m) => m.id === msg.id);
+                              const original = idx > 0 ? messages[idx - 1].content : "";
+                              if (original) handleSend(original, true);
+                            }}
+                          >
+                            Confirm and run
+                          </Button>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 )}
@@ -386,8 +525,7 @@ export function ChatView() {
                   e.preventDefault();
                   handleSend();
                 }
-              }}
-              placeholder="Ask a question about your data..."
+              }}              placeholder="Ask a question about your data..."
               className="flex-1 rounded-xl"
               disabled={loading}
             />
@@ -402,7 +540,7 @@ export function ChatView() {
               </Button>
             ) : (
               <Button
-                onClick={handleSend}
+                onClick={() => handleSend()}
                 disabled={!input.trim()}
                 size="lg"
                 className="rounded-xl"
@@ -416,6 +554,7 @@ export function ChatView() {
             GenBI may produce inaccurate results. Always verify data with source systems.
           </p>
         </div>
+      </div>
       </div>
     </div>
   );

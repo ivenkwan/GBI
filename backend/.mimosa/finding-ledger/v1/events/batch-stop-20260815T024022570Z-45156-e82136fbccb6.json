@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "stop-20260815T024022570Z-45156-e82136fbccb6",
+  "runId": "20260815T024022570Z-45156-e82136fbccb6",
+  "runStatus": "completed",
+  "coverage": {
+    "status": "complete",
+    "reasons": [
+      {
+        "code": "baseline_partial",
+        "stage": "baseline",
+        "target": ".",
+        "detail": "baseline capture had enumeration or snapshot errors",
+        "affectsCompletion": false
+      }
+    ]
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "Stop"
+  },
+  "revision": "2159486f314a10837dc8ba12ed16d75be1c8ec10",
+  "diffHash": "15545710622b532318c9500bc4e7cc60c2d73e7f9b77276df78ce677f53cb03a",
+  "rulesVersion": "unavailable",
+  "sessionHash": "718ec6b1c8c4411ac21a6dc7d92920c9d8595e956e30550dbace6d9f67496527",
+  "reportRef": ".mimosa/reports/task-review-sess_fd450c30-9606-41d3-ab28-747de74272cd-20260815T024022570Z-45156-e82136fbccb6.json",
+  "events": [],
+  "observedFindingIds": [
+    "mimosa-3f9ca82e5094f76d2bea3c2f",
+    "mimosa-1ea21cc8aa31a9ce6a71f147"
+  ],
+  "verifiedFiles": [
+    {
+      "file": "app/services/chat_service.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "app/agents/nl2sql/nl2sql_agent.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "tests/services/test_conversation_wiring.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "tests/api/test_conversations_api.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "app/api/v1/conversations.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "tests/services/test_conversations.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "tests/services/test_chat_pipeline.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    }
+  ],
+  "recordedAt": "2026-08-15T02:40:23.084Z"
+}

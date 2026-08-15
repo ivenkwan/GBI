@@ -4,6 +4,7 @@ import { z } from "zod";
 export const ChatRequestSchema = z.object({
   query: z.string().min(1, "Query cannot be empty").max(2000, "Query too long"),
   conversation_id: z.string().uuid().optional(),
+  confirm_large_query: z.boolean().optional(),
 });
 
 export type ChatRequest = z.infer<typeof ChatRequestSchema>;
@@ -29,6 +30,7 @@ export const SSEEventSchema = z.object({
     "start", "intent", "sql", "validation", "data",
     "chart", "narrative", "done",
   ]),
+  conversation_id: z.string().optional(),
   intent: z.string().optional(),
   plan: z.array(z.record(z.unknown())).optional(),
   sql: z.string().nullable().optional(),
@@ -44,6 +46,8 @@ export const SSEEventSchema = z.object({
   error: z.string().optional(),
   warnings: z.array(z.string()).optional(),
   session_id: z.string().optional(),
+  requires_confirmation: z.boolean().optional(),
+  row_estimate: z.number().nullable().optional(),
 });
 
 export type SSEEvent = z.infer<typeof SSEEventSchema>;

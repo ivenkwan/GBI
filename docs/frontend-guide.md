@@ -26,8 +26,10 @@ frontend/src/
 │   ├── page.tsx             ← Landing page (hero + auth-aware CTA)
 │   ├── login/
 │   │   └── page.tsx         ← Login page (LoginForm → redirects to /chat)
-│   └── chat/
-│       └── page.tsx         ← Chat page (AuthGuard → ChatView)
+│   ├── chat/
+│   │   └── page.tsx         ← Chat page (AuthGuard → ChatView)
+│   └── explore/
+│       └── page.tsx         ← Explore page (AuthGuard → ExploreView)
 ├── components/
 │   ├── auth/
 │   │   ├── auth-provider.tsx    ← AuthProvider + AuthGuard (redirects to /login)
@@ -36,6 +38,8 @@ frontend/src/
 │   │   └── chart-card.tsx       ← ChartCard + ChartGrid
 │   ├── chat/
 │   │   └── chat-view.tsx        ← Full ChatView with SSE consumption
+│   ├── explore/
+│   │   └── explore-view.tsx     ← Metric catalog + native query builder
 │   └── ui/                  ← 11 shadcn/ui primitives
 ├── lib/
 │   ├── api-client.ts        ← Centralized API client with JWT + SSE
@@ -82,6 +86,9 @@ class ApiError extends Error {
 sendChat(req: ChatRequest): Promise<ChatResponse>              // POST /chat
 streamChat(req: ChatRequest, onEvent, onError): AbortController  // POST /chat/stream (SSE)
 renderChart(req: ChartRenderRequest): Promise<ChartRenderResponse>  // POST /charts/render
+listMetrics(): Promise<MetricListResponse>                    // GET /metrics/list (Phase 10)
+queryMetrics(req: MetricQueryRequest): Promise<MetricQueryResponse>  // POST /metrics/query (tenant-scoped)
+listDatasources(): Promise<{ datasources: DatasourceSummary[]; count: number }>  // GET /datasources
 healthCheck(): Promise<{ status: string; version: string }>     // GET /health
 ```
 

@@ -148,8 +148,9 @@ scrape_configs:
 | **LLM** | `ANTHROPIC_API_KEY` | (required) |
 | | `LLM_REASONING_MODEL` | `claude-opus-4` |
 | | `LLM_FAST_MODEL` | `claude-haiku-4` |
-| **Database** | `DATABASE_URL` | `postgresql+asyncpg://genbi:genbi@localhost:5432/genbi` |
-| | `DATABASE_URL_SYNC` | `postgresql+psycopg2://genbi:genbi@localhost:5432/genbi` |
+| **Database** | `DATABASE_URL` | `postgresql+asyncpg://genbi_app:genbi_app@localhost:5432/genbi` (RLS-bound runtime role) |
+| | `DATABASE_URL_AUTH` | (optional) `postgresql+asyncpg://genbi_auth:genbi_auth@…` — login-only role; derived from `DATABASE_URL` if unset |
+| | `DATABASE_URL_SYNC` | `postgresql://genbi:genbi@localhost:5432/genbi` (owner — Alembic + admin scripts only) |
 | **Redis** | `REDIS_URL` | `redis://localhost:6379/0` |
 | **Semantic** | `CUBE_API_URL` | `http://localhost:4000/cubejs-api/v1` |
 | | `CUBE_API_SECRET` | (required) |

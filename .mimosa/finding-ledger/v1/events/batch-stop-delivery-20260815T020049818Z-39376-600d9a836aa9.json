@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "stop-delivery-20260815T020049818Z-39376-600d9a836aa9",
+  "runId": "20260815T020049818Z-39376-600d9a836aa9",
+  "runStatus": "completed",
+  "coverage": {
+    "status": "complete",
+    "reasons": []
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "StopDelivery"
+  },
+  "revision": "2159486f314a10837dc8ba12ed16d75be1c8ec10",
+  "diffHash": "be831faef28453f0d67770bd72bfeb1974e60b66d2c32fc17049d9a43b5849f4",
+  "rulesVersion": "unavailable",
+  "sessionHash": "718ec6b1c8c4411ac21a6dc7d92920c9d8595e956e30550dbace6d9f67496527",
+  "reportRef": ".mimosa/reports/task-review-sess_fd450c30-9606-41d3-ab28-747de74272cd-20260815T020049818Z-39376-600d9a836aa9.json",
+  "events": [
+    {
+      "eventId": "hook-8614ce9aaa095d93137262c0bfbde2de",
+      "findingId": "mimosa-c31fa7df9b5ca26ede8fc035",
+      "type": "finding_blocked",
+      "at": "2026-08-15T02:00:50.359Z",
+      "identity": {
+        "projectRelativeFile": "backend/tests/agents/test_validation_explain.py",
+        "ruleId": "security",
+        "codeEvidenceHash": "a29f6a253668c3e95af2fe2b73fe225f73ff969dfb5be39e1aac32f57ed24039",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 73,
+      "endLine": 73,
+      "reasonCode": "stop_rewake",
+      "reportedToAgent": true,
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "evidenceHash": "a29f6a253668c3e95af2fe2b73fe225f73ff969dfb5be39e1aac32f57ed24039"
+      },
+      "sequence": 0
+    }
+  ],
+  "observedFindingIds": [],
+  "verifiedFiles": [],
+  "recordedAt": "2026-08-15T02:00:50.865Z"
+}

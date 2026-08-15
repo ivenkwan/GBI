@@ -174,6 +174,10 @@ FastAPI `Depends(get_current_user)` extracts the Bearer token from `HTTPBearer`,
 
 **Used by:** All API routes except health checks (see [API Reference](api-reference.md)).
 
+### Login endpoint
+
+End users obtain a token via `POST /auth/login` (see [API Reference](api-reference.md#auth)) — bcrypt password check against the `users` table through the login-only `genbi_auth` DB role (its cross-tenant SELECT is the single RLS carve-out; see [ADR 006](adr/006-enforced-rls-roles.md)). Failed attempts are rate-limited in Redis (5 failures → 429 for 15 minutes).
+
 ---
 
 ## 6. PII Masking
