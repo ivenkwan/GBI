@@ -171,14 +171,14 @@ governance controls, and a Next.js frontend layered on top.
 │  Interface      Next.js 15 · FastAPI REST · SSE     │
 ├─────────────────────────────────────────────────────┤
 │  Orchestration  LangGraph agents (NL2SQL, ChartGen, │
-│                 Narrative, Router, Validation)       │
+│                 Narrative, Router, Validation)      │
 ├─────────────────────────────────────────────────────┤
 │  Semantic       Cube-native metric catalog → Cube API│
 ├─────────────────────────────────────────────────────┤
-│  Data           PostgreSQL · pgvector · Apache AGE   │
+│  Data           PostgreSQL · pgvector · Apache AGE  │
 │                 (connectors: read-only, tenant-scoped)│
 ├─────────────────────────────────────────────────────┤
-│  Governance     RLS · PII masking · audit log · JWT  │
+│  Governance     RLS · PII masking · audit log · JWT │
 └─────────────────────────────────────────────────────┘
 ```
 
