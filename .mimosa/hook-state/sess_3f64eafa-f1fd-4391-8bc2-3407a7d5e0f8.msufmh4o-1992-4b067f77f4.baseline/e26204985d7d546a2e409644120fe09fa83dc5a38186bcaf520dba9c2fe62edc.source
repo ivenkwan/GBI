@@ -65,6 +65,18 @@ def _patch_pipeline(
     cache.set_query_result = AsyncMock()
     monkeypatch.setattr("app.services.chat_service.get_cache", lambda: cache)
 
+    # Conversations (Phase 14): mock persistence so no real DB connect is
+    # attempted (keeps these tests fast and offline).
+    import app.services.conversations as conversations_module
+
+    monkeypatch.setattr(conversations_module, "create_conversation", AsyncMock(return_value=None))
+    monkeypatch.setattr(
+        conversations_module,
+        "list_messages",
+        AsyncMock(return_value=[]),
+    )
+    monkeypatch.setattr(conversations_module, "append_message", AsyncMock())
+
     # ValidationAgent's short-lived EXPLAIN connector
     explain_conn = MagicMock()
     explain_conn.explain = AsyncMock(

@@ -233,6 +233,55 @@ export function listConversationMessages(
   );
 }
 
+// --- Reports ---
+
+export interface ReportSection {
+  position: number;
+  metric_name: string;
+  section_title: string;
+  chart_spec: Record<string, unknown>;
+  chart_svg?: string | null;
+  data_total?: number | null;
+  row_count: number;
+  narrative?: string | null;
+}
+
+export interface Report {
+  report_id: string;
+  title: string;
+  prompt: string;
+  summary?: string | null;
+  status: string;
+  created_at: string;
+  sections: ReportSection[];
+  warnings: string[];
+}
+
+export interface ReportSummary {
+  id: string;
+  title: string;
+  created_at: string;
+  section_count: number;
+}
+
+export function generateReport(
+  prompt: string,
+  maxSections = 3,
+): Promise<Report> {
+  return request<Report>("/reports/generate", {
+    method: "POST",
+    body: { prompt, max_sections: maxSections },
+  });
+}
+
+export function listReports(): Promise<{ reports: ReportSummary[]; count: number }> {
+  return request<{ reports: ReportSummary[]; count: number }>("/reports");
+}
+
+export function getReport(reportId: string): Promise<Report> {
+  return request<Report>(`/reports/${reportId}`);
+}
+
 // --- Health ---
 
 export function healthCheck(): Promise<{ status: string; version: string }> {

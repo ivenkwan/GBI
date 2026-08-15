@@ -365,6 +365,7 @@ parsing, and destructive-pattern detection all run for real. See
 | Validation safety gate | ✅ Hardened | EXPLAIN-backed row estimates + >1M-row confirmation flow (Phase 13); deterministic pattern gate remains |
 | Semantic layer (Cube-native catalog) | ✅ Implemented | 10 cubes / 23 measures; tenant-scoped /metrics/query + Explore page (ADR 007/008) |
 | Governance: audit trail + login throttling | ✅ Implemented | Every LLM call audited (tenant-scoped, fail-open); 5 failed logins → 429; feedback API + per-role query policy (Phases 12/15) |
+| Reports (multi-chart from NL) | ✅ Implemented | LLM-planned + deterministic execution, persisted + browsable UI (Phase 16) |
 | NL2SQL schema grounding (pgvector retrieval) | ✅ Implemented | Schema context + few-shot into every prompt (Phase 11); needs `embed_schema.py --examples` + OPENAI_API_KEY |
 | Multi-tenant RLS + JWT | ✅ Enforced | Non-superuser runtime roles + FORCE RLS on all tenant tables, incl. analytics (ADR 006) |
 | PII masking | ✅ Wired | Applied at the execution chokepoint |

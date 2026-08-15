@@ -30,6 +30,7 @@ export const SSEEventSchema = z.object({
     "start", "intent", "sql", "validation", "data",
     "chart", "narrative", "done",
   ]),
+  conversation_id: z.string().optional(),
   intent: z.string().optional(),
   plan: z.array(z.record(z.unknown())).optional(),
   sql: z.string().nullable().optional(),

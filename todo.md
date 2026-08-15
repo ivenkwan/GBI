@@ -1,6 +1,6 @@
 # GenBI Platform — Build Progress
 
-> **Last updated:** 2026-08-15 | **Stack tier:** Enterprise | **78/78 tasks complete (Phases 1–14 + governance bundle)**
+> **Last updated:** 2026-08-15 | **Stack tier:** Enterprise | **84/84 tasks complete (Phases 1–16 — full original vision shipped)**
 
 ---
 
@@ -1220,3 +1220,32 @@ validation permissions (user_roles plumbing exists, unused).
 - Frontend thumbs up/down buttons on assistant messages (writes via the new
   endpoint) — small UI addition, deferred
 - AGE sync scheduler (`sync_semantic_layer_to_graph` still has no caller)
+
+---
+
+## Phase 16 — Reports & Dashboards: The Capstone (Tasks 79–84)
+
+> **Status: code complete 2026-08-15.** The last original-scaffold stub is
+> real: multi-chart reports from natural language, persisted and browsable.
+
+| # | Task | Status |
+|---|---|---|
+| 79 | Alembic 0005_reports: reports + report_sections tables (RLS FORCE + tenant_isolation + genbi_app grants + indexes), init.sql mirror, ORM models | ✅ |
+| 80 | Report service (`app/services/reports.py`): LLM-planned pipeline (2 LLM calls/report — planner over the metric catalog at temp 0 + one summary call), deterministic per-section execution (tenant-scoped Cube query → ChartAssemblyInput → FlintChartBridge SVG), per-section fail-open; persistence via the conversations GUC-writer pattern (writes fail-open, reads raise) | ✅ |
+| 81 | API: POST /reports/generate (full report incl. sections), GET /reports (list, declared before /{id}), GET /reports/{report_id} (400/404/503 paths) | ✅ |
+| 82 | New prompt `.claude/prompts/report-planner-system.md` (JSON contract: title + sections with exact catalog metric names, dimension/granularity rules) | ✅ |
+| 83 | Frontend /reports page: prompt box + section-count select + Generate; sidebar list of past reports; report rendering with per-section ChartCards (reusing the chart stack, no new deps); chat header FileText nav | ✅ |
+| 84 | Tests: 21 new (12 service — planner sanitization, deterministic chart specs, happy path with tenant-threading + total computation, partial failure, persistence-failure warning, GUC+insert contract, fail-open; 9 API — generate/list/get matrix) | ✅ |
+
+### Verified by
+
+- 181 passed / 14 skipped (21 new); ruff clean; frontend typecheck/lint clean;
+  build compiles all 8 pages (reports included); chain verified → 0005_reports
+- Live (Docker session): generate "Q3 revenue and pipeline report", view it
+  from the list, re-open it after reload (persistence)
+
+### Follow-ups
+
+- `/dashboards` frontend dir still empty (report list is the surface for now)
+- Scheduled/regenerating reports, PDF export, dashboard pinning, AGE
+  DASHBOARD_USES lineage wiring — unchanged queue

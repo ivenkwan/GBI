@@ -3,10 +3,9 @@
 Apache AGE (A Graph Extension) is a PostgreSQL extension that provides
 graph database capabilities via openCypher queries. GenBI uses it for:
 
-1. Data lineage: tracking where metrics come from (source table → dbt model → Cube measure)
+1. Data lineage: tracking where metrics come from (source table → Cube measure)
 2. Relationship analysis: discovering join paths between tables for SQL generation
 3. Impact analysis: what downstream assets are affected by a schema change
-4. User access graphs: which users can access which data assets
 
 Architecture:
     Schema Catalog → Graph Ingestion → AGE Graph (genbi_graph)
@@ -14,11 +13,19 @@ Architecture:
     LineageAgent ← openCypher queries ← AGE
          ↓
     Graph context injected into NL2SQLAgent (join paths)
+
+Every cypher statement is a complete inline literal with AGE parameter
+binding (``$name`` placeholders inside the ``$$`` body; values ride in the
+third ``ag_catalog.cypher`` argument, bound via the ``:params`` SQLAlchemy
+named parameter) — never string-interpolated.
 """
 
+import json
 from dataclasses import dataclass, field
 from enum import StrEnum
 from uuid import uuid4
+
+from sqlalchemy import text
 
 from app.core.logging import logger
 
@@ -42,8 +49,6 @@ from app.core.logging import logger
 #   DASHBOARD_USES (Dashboard → Metric) { position }
 #   USER_CAN_ACCESS (User → Table | Metric) { role, granted_at }
 #   TABLE_JOINS (Table → Table) { join_columns, join_type }
-
-GRAPH_NAME = "genbi_graph"
 
 
 class VertexLabel(StrEnum):
@@ -71,52 +76,81 @@ class EdgeLabel(StrEnum):
 async def init_age_graph(db_session) -> None:
     """Initialize the Apache AGE graph if it doesn't exist.
 
-    Creates the genbi_graph graph and all vertex/edge labels.
-    Safe to call on startup — idempotent via IF NOT EXISTS.
+    Safe to call on startup — the create_graph failure for an existing
+    graph is caught and rolled back.
     """
-    sql = f"""
-    -- Load AGE extension
-    CREATE EXTENSION IF NOT EXISTS age;
-
-    -- Set search path
-    SET search_path = ag_catalog, public;
-
-    -- Create graph if not exists
-    SELECT * FROM ag_catalog.create_graph('{GRAPH_NAME}');
-    """
-
     try:
-        await db_session.execute(sql)
+        await db_session.execute(
+            text(
+                "CREATE EXTENSION IF NOT EXISTS age; "
+                "SET search_path = ag_catalog, public; "
+                "SELECT * FROM ag_catalog.create_graph('genbi_graph');"
+            )
+        )
         await db_session.commit()
-        logger.info(f"AGE graph '{GRAPH_NAME}' initialized successfully")
+        logger.info("AGE graph 'genbi_graph' initialized successfully")
     except Exception as e:
         logger.info(f"AGE graph already exists or init skipped: {e}")
         await db_session.rollback()
 
 
 async def create_indices(db_session) -> None:
-    """Create indices on the graph for efficient lookups."""
-    queries = [
-        f"SELECT * FROM ag_catalog.create_vlabel('{GRAPH_NAME}', 'Table')",
-        f"SELECT * FROM ag_catalog.create_vlabel('{GRAPH_NAME}', 'Column')",
-        f"SELECT * FROM ag_catalog.create_vlabel('{GRAPH_NAME}', 'Metric')",
-        f"SELECT * FROM ag_catalog.create_elabel('{GRAPH_NAME}', 'TABLE_CONTAINS')",
-        f"SELECT * FROM ag_catalog.create_elabel('{GRAPH_NAME}', 'METRIC_SOURCE')",
-        f"SELECT * FROM ag_catalog.create_elabel('{GRAPH_NAME}', 'TABLE_JOINS')",
-    ]
-
-    for q in queries:
-        try:
-            await db_session.execute(q)
-        except Exception as e:
-            logger.debug(f"Index creation skipped: {e}")
+    """Create vertex/edge labels on the graph (idempotent, best-effort)."""
+    try:
+        await db_session.execute(
+            text("SELECT * FROM ag_catalog.create_vlabel('genbi_graph', 'Table')")
+        )
+    except Exception as e:
+        logger.debug(f"Label creation skipped (may exist): {e}")
+    try:
+        await db_session.execute(
+            text("SELECT * FROM ag_catalog.create_vlabel('genbi_graph', 'Column')")
+        )
+    except Exception as e:
+        logger.debug(f"Label creation skipped (may exist): {e}")
+    try:
+        await db_session.execute(
+            text("SELECT * FROM ag_catalog.create_vlabel('genbi_graph', 'Metric')")
+        )
+    except Exception as e:
+        logger.debug(f"Label creation skipped (may exist): {e}")
+    try:
+        await db_session.execute(
+            text("SELECT * FROM ag_catalog.create_vlabel('genbi_graph', 'Dashboard')")
+        )
+    except Exception as e:
+        logger.debug(f"Label creation skipped (may exist): {e}")
+    try:
+        await db_session.execute(
+            text("SELECT * FROM ag_catalog.create_elabel('genbi_graph', 'TABLE_CONTAINS')")
+        )
+    except Exception as e:
+        logger.debug(f"Label creation skipped (may exist): {e}")
+    try:
+        await db_session.execute(
+            text("SELECT * FROM ag_catalog.create_elabel('genbi_graph', 'METRIC_SOURCE')")
+        )
+    except Exception as e:
+        logger.debug(f"Label creation skipped (may exist): {e}")
+    try:
+        await db_session.execute(
+            text("SELECT * FROM ag_catalog.create_elabel('genbi_graph', 'DASHBOARD_USES')")
+        )
+    except Exception as e:
+        logger.debug(f"Label creation skipped (may exist): {e}")
+    try:
+        await db_session.execute(
+            text("SELECT * FROM ag_catalog.create_elabel('genbi_graph', 'TABLE_JOINS')")
+        )
+    except Exception as e:
+        logger.debug(f"Label creation skipped (may exist): {e}")
 
     await db_session.commit()
-    logger.info(f"AGE graph indices created for '{GRAPH_NAME}'")
+    logger.info("AGE graph labels ensured for 'genbi_graph'")
 
 
 # ---------------------------------------------------------------------------
-# Graph operations (openCypher via AGE)
+# Data classes
 # ---------------------------------------------------------------------------
 
 
@@ -149,7 +183,7 @@ class LineagePath:
 
 
 # ---------------------------------------------------------------------------
-# Lineage queries
+# Graph ingestion
 # ---------------------------------------------------------------------------
 
 
@@ -165,19 +199,15 @@ async def ingest_table(
     """
     table_id = str(uuid4())
 
-    cypher = f"""
-    SELECT * FROM ag_catalog.cypher('{GRAPH_NAME}', $$
-        CREATE (t:Table {{
-            id: '{table_id}',
-            name: '{table_name}',
-            schema: '{schema}',
-            description: ''
-        }})
-        RETURN t
-    $$) AS (t ag_catalog.agtype);
-    """
-
-    result = await db_session.execute(cypher)
+    await db_session.execute(
+        text(
+            "SELECT * FROM ag_catalog.cypher('genbi_graph', $$ "
+            "CREATE (t:Table { id: $id, name: $name, schema: $schema, description: '' }) "
+            "RETURN t "
+            "$$, :params) AS (result ag_catalog.agtype);"
+        ),
+        {"params": json.dumps({"id": table_id, "name": table_name, "schema": schema})},
+    )
     await db_session.commit()
 
     if columns:
@@ -204,21 +234,27 @@ async def ingest_column(
     """Add a Column vertex and TABLE_CONTAINS edge to the graph."""
     col_id = str(uuid4())
 
-    cypher = f"""
-    SELECT * FROM ag_catalog.cypher('{GRAPH_NAME}', $$
-        MATCH (t:Table {{id: '{table_id}'}})
-        CREATE (c:Column {{
-            id: '{col_id}',
-            name: '{column_name}',
-            data_type: '{data_type}',
-            description: '{description}'
-        }})
-        CREATE (t)-[:TABLE_CONTAINS]->(c)
-        RETURN c
-    $$) AS (c ag_catalog.agtype);
-    """
-
-    await db_session.execute(cypher)
+    await db_session.execute(
+        text(
+            "SELECT * FROM ag_catalog.cypher('genbi_graph', $$ "
+            "MATCH (t:Table { id: $table_id }) "
+            "CREATE (c:Column { id: $id, name: $name, data_type: $type, description: $desc }) "
+            "CREATE (t)-[:TABLE_CONTAINS]->(c) "
+            "RETURN c "
+            "$$, :params) AS (result ag_catalog.agtype);"
+        ),
+        {
+            "params": json.dumps(
+                {
+                    "table_id": table_id,
+                    "id": col_id,
+                    "name": column_name,
+                    "type": data_type,
+                    "desc": description,
+                }
+            )
+        },
+    )
     return col_id
 
 
@@ -233,21 +269,28 @@ async def ingest_metric(
     """Ingest a metric and link it to its source column."""
     metric_id = str(uuid4())
 
-    cypher = f"""
-    SELECT * FROM ag_catalog.cypher('{GRAPH_NAME}', $$
-        MATCH (t:Table {{id: '{source_table_id}'}})-[:TABLE_CONTAINS]->(c:Column {{name: '{source_column_name}'}})
-        CREATE (m:Metric {{
-            id: '{metric_id}',
-            name: '{metric_name}',
-            description: '{description}',
-            metric_type: '{metric_type}'
-        }})
-        CREATE (m)-[:METRIC_SOURCE]->(c)
-        RETURN m
-    $$) AS (m ag_catalog.agtype);
-    """
-
-    await db_session.execute(cypher)
+    await db_session.execute(
+        text(
+            "SELECT * FROM ag_catalog.cypher('genbi_graph', $$ "
+            "MATCH (t:Table { id: $table_id })-[:TABLE_CONTAINS]->(c:Column { name: $column }) "
+            "CREATE (m:Metric { id: $id, name: $name, description: $desc, metric_type: $mtype }) "
+            "CREATE (m)-[:METRIC_SOURCE]->(c) "
+            "RETURN m "
+            "$$, :params) AS (result ag_catalog.agtype);"
+        ),
+        {
+            "params": json.dumps(
+                {
+                    "table_id": source_table_id,
+                    "column": source_column_name,
+                    "id": metric_id,
+                    "name": metric_name,
+                    "desc": description,
+                    "mtype": metric_type,
+                }
+            )
+        },
+    )
     logger.info(f"Ingested metric '{metric_name}' linked to column '{source_column_name}'")
     return metric_id
 
@@ -260,17 +303,19 @@ async def ingest_join_path(
     join_type: str = "INNER",
 ) -> None:
     """Record a known join path between two tables."""
-    cypher = f"""
-    SELECT * FROM ag_catalog.cypher('{GRAPH_NAME}', $$
-        MATCH (a:Table {{id: '{table_a_id}'}}), (b:Table {{id: '{table_b_id}'}})
-        CREATE (a)-[:TABLE_JOINS {{
-            join_columns: '{join_columns}',
-            join_type: '{join_type}'
-        }}]->(b)
-    $$) AS (e ag_catalog.agtype);
-    """
-
-    await db_session.execute(cypher)
+    await db_session.execute(
+        text(
+            "SELECT * FROM ag_catalog.cypher('genbi_graph', $$ "
+            "MATCH (a:Table { id: $a }), (b:Table { id: $b }) "
+            "CREATE (a)-[:TABLE_JOINS { join_columns: $cols, join_type: $jtype }]->(b) "
+            "$$, :params) AS (result ag_catalog.agtype);"
+        ),
+        {
+            "params": json.dumps(
+                {"a": table_a_id, "b": table_b_id, "cols": join_columns, "jtype": join_type}
+            )
+        },
+    )
     logger.info(f"Ingested join path: {table_a_id} -> {table_b_id} on {join_columns}")
 
 
@@ -287,14 +332,16 @@ async def get_metric_lineage(
 
     Returns the full lineage path: Metric → Column → Table.
     """
-    cypher = f"""
-    SELECT * FROM ag_catalog.cypher('{GRAPH_NAME}', $$
-        MATCH path = (m:Metric {{name: '{metric_name}'}})-[:METRIC_SOURCE]->(c:Column)<-[:TABLE_CONTAINS]-(t:Table)
-        RETURN path
-    $$) AS (path ag_catalog.agtype);
-    """
-
-    result = await db_session.execute(cypher)
+    result = await db_session.execute(
+        text(
+            "SELECT * FROM ag_catalog.cypher('genbi_graph', $$ "
+            "MATCH path = (m:Metric { name: $name })-[:METRIC_SOURCE]->(c:Column)"
+            "<-[:TABLE_CONTAINS]-(t:Table) "
+            "RETURN path "
+            "$$, :params) AS (result ag_catalog.agtype);"
+        ),
+        {"params": json.dumps({"name": metric_name})},
+    )
     rows = result.fetchall()
 
     paths = []
@@ -327,16 +374,17 @@ async def find_join_paths(
 
     This is used by NL2SQLAgent to discover how to join tables in generated SQL.
     """
-    cypher = f"""
-    SELECT * FROM ag_catalog.cypher('{GRAPH_NAME}', $$
-        MATCH path = (a:Table {{id: '{table_a_id}'}})-[:TABLE_JOINS*1..{max_depth}]-(b:Table {{id: '{table_b_id}'}})
-        RETURN path
-        ORDER BY length(path)
-        LIMIT 5
-    $$) AS (path ag_catalog.agtype);
-    """
-
-    result = await db_session.execute(cypher)
+    result = await db_session.execute(
+        text(
+            "SELECT * FROM ag_catalog.cypher('genbi_graph', $$ "
+            "MATCH path = (a:Table { id: $a })-[:TABLE_JOINS*1..3]-(b:Table { id: $b }) "
+            "RETURN path "
+            "ORDER BY length(path) "
+            "LIMIT 5 "
+            "$$, :params) AS (result ag_catalog.agtype);"
+        ),
+        {"params": json.dumps({"a": table_a_id, "b": table_b_id})},
+    )
     rows = result.fetchall()
 
     paths = []
@@ -362,14 +410,17 @@ async def get_downstream_impact(
 
     Used for impact analysis before schema migrations.
     """
-    cypher = f"""
-    SELECT * FROM ag_catalog.cypher('{GRAPH_NAME}', $$
-        MATCH (t:Table {{name: '{table_name}'}})-[:TABLE_CONTAINS]->(c:Column)<-[:METRIC_SOURCE]-(m:Metric)-[:DASHBOARD_USES]-(d:Dashboard)
-        RETURN t.name AS table_name, m.name AS metric_name, collect(d.name) AS dashboards
-    $$) AS (table_name ag_catalog.agtype, metric_name ag_catalog.agtype, dashboards ag_catalog.agtype);
-    """
-
-    result = await db_session.execute(cypher)
+    result = await db_session.execute(
+        text(
+            "SELECT * FROM ag_catalog.cypher('genbi_graph', $$ "
+            "MATCH (t:Table { name: $name })-[:TABLE_CONTAINS]->(c:Column)"
+            "<-[:METRIC_SOURCE]-(m:Metric)-[:DASHBOARD_USES]-(d:Dashboard) "
+            "RETURN t.name AS table_name, m.name AS metric_name, collect(d.name) AS dashboards "
+            "$$, :params) AS (table_name ag_catalog.agtype, metric_name ag_catalog.agtype, "
+            "dashboards ag_catalog.agtype);"
+        ),
+        {"params": json.dumps({"name": table_name})},
+    )
     rows = result.fetchall()
 
     impact = []

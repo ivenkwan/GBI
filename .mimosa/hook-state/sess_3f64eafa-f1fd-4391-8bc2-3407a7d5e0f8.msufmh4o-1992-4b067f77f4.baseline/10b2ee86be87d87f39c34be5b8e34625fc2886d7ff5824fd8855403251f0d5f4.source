@@ -202,6 +202,37 @@ export function listDatasources(): Promise<{ datasources: DatasourceSummary[]; c
   return request<{ datasources: DatasourceSummary[]; count: number }>("/datasources");
 }
 
+// --- Conversations ---
+
+export interface ConversationSummary {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConversationMessage {
+  role: "user" | "assistant";
+  content: string;
+  generated_sql?: string | null;
+  created_at: string;
+}
+
+export function listConversations(): Promise<{
+  conversations: ConversationSummary[];
+  count: number;
+}> {
+  return request<{ conversations: ConversationSummary[]; count: number }>("/conversations");
+}
+
+export function listConversationMessages(
+  conversationId: string,
+): Promise<{ messages: ConversationMessage[]; count: number }> {
+  return request<{ messages: ConversationMessage[]; count: number }>(
+    `/conversations/${conversationId}/messages`,
+  );
+}
+
 // --- Health ---
 
 export function healthCheck(): Promise<{ status: string; version: string }> {

@@ -52,6 +52,7 @@ class NL2SQLAgent(BaseAgent):
         tenant_id: str = "default",
         user_id: str = "",
         session_id: str = "",
+        history: list[dict] | None = None,
         **kwargs,
     ) -> AgentResult:
         """Generate SQL from a natural language query.
@@ -66,6 +67,9 @@ class NL2SQLAgent(BaseAgent):
             tenant_id: Multi-tenant identifier for data isolation.
             user_id: User identifier for audit logging.
             session_id: Session identifier for audit logging.
+            history: Prior conversation turns (Phase 14) — enables follow-up
+                queries like "now break that down by region". Each dict has
+                role/content/generated_sql keys.
         """
         start = time.time()
         run_id = str(uuid4())
@@ -77,6 +81,7 @@ class NL2SQLAgent(BaseAgent):
             query=query[:200],
             tables=len(schema_context or []),
             examples=len(few_shot_examples or []),
+            history_turns=len(history or []),
             tenant_id=tenant_id,
         )
 
@@ -88,6 +93,7 @@ class NL2SQLAgent(BaseAgent):
             few_shot_examples=few_shot_examples,
             metric_definitions=metric_definitions,
             tenant_id=tenant_id,
+            history=history,
         )
 
         try:
@@ -155,12 +161,28 @@ class NL2SQLAgent(BaseAgent):
         few_shot_examples: list[dict] | None,
         metric_definitions: list[dict] | str | None,
         tenant_id: str,
+        history: list[dict] | None = None,
     ) -> str:
         """Build the full user message with schema context, examples, and metrics."""
         parts = []
 
-        # 1. The user\'s question
+        # 1. The user's question
         parts.append(f"## User Question\n\n{query}")
+
+        # 1b. Conversation history (Phase 14): prior turns give referents for
+        # follow-up questions ("now break that down by region"). The CURRENT
+        # question always takes precedence.
+        if history:
+            parts.append("\n## Conversation History (previous turns)\n")
+            for turn in history[-6:]:
+                role = turn.get("role", "user")
+                content = str(turn.get("content", ""))[:500]
+                if role == "user":
+                    parts.append(f"User: {content}")
+                else:
+                    sql = turn.get("generated_sql")
+                    suffix = f" [SQL: {sql[:200]}]" if sql else ""
+                    parts.append(f"Assistant: {content[:300]}{suffix}")
 
         # 2. Schema context (compressed top-k)
         if schema_context:

@@ -334,13 +334,40 @@ Errors: `400 INVALID_METRIC`, `503 CUBE_UNAVAILABLE`, `422` validation.
 
 ## Reports
 
-> ⚠️ All endpoints are stubs. TODO: implement report generation pipeline.
+> Multi-chart reports (Phase 16). Requires `Authorization: Bearer <token>`.
 
 ### `POST /reports/generate`
-Generate a multi-chart report from a natural language prompt.
+✅ Generate a multi-chart report from a natural language prompt.
+
+LLM-planned (one fast-model call picks 2–4 metrics from the semantic-layer catalog) with deterministic execution: per-section tenant-scoped Cube query → chart render → one overall narrative. Sections that return no data are skipped with a warning; the report persists best-effort.
+
+**Request:**
+```json
+{"prompt": "Q3 performance: revenue, pipeline, and active users", "max_sections": 3}
+```
+
+| Field | Type | Constraints |
+|---|---|---|
+| `prompt` | `string` | Required, 1–2000 chars |
+| `max_sections` | `int` | 2–4, default 3 |
+
+**Response:** `ReportOut` — `{report_id, title, prompt, summary?, status, created_at, sections: [{position, metric_name, section_title, chart_spec, chart_svg?, data_total?, row_count, narrative?}], warnings}`
+
+Errors: `503` `REPORT_GENERATION_FAILED` (planning/exec failure), `422` validation.
+
+### `GET /reports`
+✅ List the current user's reports, newest first.
+
+**Response:** `{reports: [{id, title, created_at, section_count}], count}`
+
+Errors: `503` `PERSISTENCE_UNAVAILABLE`.
 
 ### `GET /reports/{report_id}`
-Retrieve a previously generated report.
+✅ Retrieve a persisted report (RLS tenant-scoped).
+
+**Response:** same `ReportOut` shape as generate.
+
+Errors: `400` `INVALID_REPORT` (malformed id), `404` `REPORT_NOT_FOUND`, `503` `PERSISTENCE_UNAVAILABLE`.
 
 ---
 

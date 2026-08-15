@@ -159,6 +159,40 @@ CREATE TABLE IF NOT EXISTS messages (
 CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_messages_tenant ON messages(tenant_id);
 
+-- Reports (Phase 16): LLM-planned multi-chart reports. Mirrors Alembic
+-- 0005_reports (the authoritative copy).
+CREATE TABLE IF NOT EXISTS reports (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id   UUID NOT NULL REFERENCES tenants(id),
+    user_id     UUID NOT NULL,
+    prompt      TEXT NOT NULL,
+    title       VARCHAR(500) NOT NULL,
+    summary     TEXT,
+    status      VARCHAR(20) NOT NULL DEFAULT 'complete',
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_reports_tenant ON reports(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_reports_user ON reports(user_id);
+
+CREATE TABLE IF NOT EXISTS report_sections (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    report_id     UUID NOT NULL REFERENCES reports(id),
+    tenant_id     UUID NOT NULL REFERENCES tenants(id),
+    position      INTEGER NOT NULL DEFAULT 0,
+    metric_name   VARCHAR(255) NOT NULL,
+    section_title VARCHAR(500) NOT NULL,
+    chart_spec    JSONB NOT NULL DEFAULT '{}',
+    chart_svg     TEXT,
+    data_total    DOUBLE PRECISION,
+    row_count     INTEGER NOT NULL DEFAULT 0,
+    narrative     TEXT,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_report_sections_report ON report_sections(report_id);
+CREATE INDEX IF NOT EXISTS idx_report_sections_tenant ON report_sections(tenant_id);
+
 -- ---------------------------------------------------------------------------
 -- Schema Embeddings (for NL2SQL semantic search)
 -- ---------------------------------------------------------------------------
@@ -226,6 +260,10 @@ ALTER TABLE audit_log          FORCE ROW LEVEL SECURITY;
 ALTER TABLE conversations      FORCE ROW LEVEL SECURITY;
 ALTER TABLE messages           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages           FORCE ROW LEVEL SECURITY;
+ALTER TABLE reports            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reports            FORCE ROW LEVEL SECURITY;
+ALTER TABLE report_sections    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE report_sections    FORCE ROW LEVEL SECURITY;
 ALTER TABLE schema_embeddings  FORCE ROW LEVEL SECURITY;
 ALTER TABLE agent_examples     FORCE ROW LEVEL SECURITY;
 
@@ -236,6 +274,10 @@ CREATE POLICY tenant_isolation ON audit_log
 CREATE POLICY tenant_isolation ON conversations
     USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
 CREATE POLICY tenant_isolation ON messages
+    USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation ON reports
+    USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
+CREATE POLICY tenant_isolation ON report_sections
     USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
 CREATE POLICY tenant_isolation ON schema_embeddings
     USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID);
@@ -252,7 +294,8 @@ CREATE POLICY tenant_isolation ON agent_examples
 GRANT USAGE ON SCHEMA public TO genbi_app, genbi_auth;
 GRANT SELECT ON tenants TO genbi_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON
-    users, audit_log, conversations, messages, schema_embeddings, agent_examples
+    users, audit_log, conversations, messages,
+    reports, report_sections, schema_embeddings, agent_examples
     TO genbi_app;
 GRANT SELECT ON ALL TABLES IN SCHEMA public TO genbi_app;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO genbi_app;

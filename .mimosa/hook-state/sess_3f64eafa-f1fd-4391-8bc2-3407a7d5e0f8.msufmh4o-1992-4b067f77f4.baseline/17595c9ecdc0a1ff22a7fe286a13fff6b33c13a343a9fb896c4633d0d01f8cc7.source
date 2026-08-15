@@ -88,3 +88,37 @@ async def write_audit_entry(entry: dict) -> None:
     except Exception as e:
         # Fail open — an audit outage must never break the chat pipeline.
         logger.error("Audit write failed (non-fatal): %s", e)
+
+
+async def record_feedback(session_id: str, tenant_id: str, score: int) -> bool:
+    """Attach a thumbs-up/down score to the audit rows of a chat session.
+
+    Updates every audit_log row for the session (one per LLM call in the
+    pipeline) — the feedback is about the response as a whole. Fail-open:
+    returns False on any problem; the endpoint maps that to a 503.
+    """
+    session_uuid = _as_uuid(session_id)
+    tenant_uuid = _as_uuid(tenant_id)
+    if session_uuid is None or tenant_uuid is None:
+        logger.warning("Feedback skipped — non-UUID session/tenant")
+        return False
+
+    try:
+        conn = await asyncpg.connect(_dsn())
+        try:
+            await conn.execute(
+                "SELECT set_config('app.current_tenant_id', $1, false)",
+                str(tenant_uuid),
+            )
+            async with conn.transaction():
+                row = await conn.execute(
+                    "UPDATE audit_log SET feedback_score = $1 WHERE session_id = $2::uuid",
+                    score,
+                    str(session_uuid),
+                )
+        finally:
+            await conn.close()
+        return "UPDATE" in (row or "")
+    except Exception as e:
+        logger.warning("Feedback write failed (non-fatal): %s", e)
+        return False

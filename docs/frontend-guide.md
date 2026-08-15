@@ -278,7 +278,7 @@ Redirects to `/chat` if already authenticated; otherwise renders `LoginForm`, wh
 
 ### `chat/page.tsx` — Chat Page
 
-Wraps `ChatView` in `AuthGuard` (redirects to `/login` when signed out). The header's database icon navigates to `/explore`.
+Wraps `ChatView` in `AuthGuard` (redirects to `/login` when signed out). The header's database icon navigates to `/explore`; the file icon to `/reports`.
 
 ### `explore/page.tsx` — Explore Page (Phase 10)
 
@@ -289,6 +289,15 @@ Wraps `ExploreView` (`components/explore/explore-view.tsx`) in `AuthGuard`. The 
 - **Run**: `POST /metrics/query` → results table (hand-built Tailwind `<table>`, cube-prefix-stripped keys) +, when sliced by a dimension, a bar chart: the client builds a `ChartAssemblyInput` from the result rows, renders via `POST /charts/render`, and displays through the existing `ChartCard`.
 - Empty results show an RLS-aware hint (tenant has no data — `make seed`).
 - API functions live in `lib/api-client.ts` (`listMetrics`, `queryMetrics`, `listDatasources`); Zod schemas (`MetricQueryRequestSchema` etc.) in `lib/validators.ts`.
+
+### `reports/page.tsx` — Reports Page (Phase 16)
+
+Wraps `ReportsView` (`components/reports/reports-view.tsx`) in `AuthGuard`. The multi-chart report workbench:
+
+- **Generator**: prompt input + section-count select (2–4) + Generate → `POST /reports/generate`.
+- **Sidebar**: past reports from `GET /reports` (title, section count); select loads via `GET /reports/{id}`.
+- **Report display**: title + overall summary + badges, per-section cards (heading with total/row count, `ChartCard` with the persisted SVG, optional narrative), warnings panel (skipped metrics, persistence notice).
+- API functions: `generateReport`, `listReports`, `getReport` in `lib/api-client.ts`.
 
 ### Configuration
 

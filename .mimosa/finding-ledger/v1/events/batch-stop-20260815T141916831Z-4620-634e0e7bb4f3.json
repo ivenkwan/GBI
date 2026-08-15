@@ -1,0 +1,163 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "stop-20260815T141916831Z-4620-634e0e7bb4f3",
+  "runId": "20260815T141916831Z-4620-634e0e7bb4f3",
+  "runStatus": "inconclusive",
+  "coverage": {
+    "status": "partial",
+    "reasons": [
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "frontend/src/components/reports/reports-view.tsx",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "frontend/src/app/reports/page.tsx",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "backend/tests/services/test_reports.py",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "backend/tests/api/test_reports_api.py",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "backend/app/services/reports.py",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": ".claude/prompts/report-planner-system.md",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "frontend/src/components/reports/reports-view.tsx",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "frontend/src/app/reports/page.tsx",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "backend/tests/services/test_reports.py",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "backend/tests/api/test_reports_api.py",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "backend/app/services/reports.py",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": ".claude/prompts/report-planner-system.md",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      }
+    ]
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "Stop"
+  },
+  "revision": "b580038f72364a54320ff5cc4d6582914d1e70eb",
+  "diffHash": "8dc141bc9be1642e9ac6f2ef621d46f07b3ea1854364d7784effb40d10d4c5cc",
+  "rulesVersion": "unavailable",
+  "sessionHash": "718ec6b1c8c4411ac21a6dc7d92920c9d8595e956e30550dbace6d9f67496527",
+  "reportRef": ".mimosa/reports/task-review-sess_fd450c30-9606-41d3-ab28-747de74272cd-20260815T141916831Z-4620-634e0e7bb4f3.json",
+  "events": [],
+  "observedFindingIds": [
+    "mimosa-5027212c2e39b704d2a18975",
+    "mimosa-5de75347405d519858eec8fc",
+    "mimosa-b48f4acdcd51017307c63ffb"
+  ],
+  "verifiedFiles": [
+    {
+      "file": "backend/app/db/migrations/versions/0005_reports.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "backend/app/db/models.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "frontend/src/lib/api-client.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "frontend/src/components/reports/reports-view.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "frontend/src/components/chat/chat-view.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "frontend/src/app/reports/page.tsx",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "backend/tests/services/test_reports.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "backend/tests/api/test_reports_api.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "backend/app/services/reports.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "backend/app/api/v1/reports.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    }
+  ],
+  "recordedAt": "2026-08-15T14:19:17.307Z"
+}

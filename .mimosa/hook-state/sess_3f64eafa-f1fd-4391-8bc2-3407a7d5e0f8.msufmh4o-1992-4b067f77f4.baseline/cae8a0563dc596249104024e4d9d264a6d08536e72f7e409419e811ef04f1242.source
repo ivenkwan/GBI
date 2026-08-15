@@ -147,6 +147,13 @@ class ValidationAgent(BaseAgent):
         if not self._has_required_clauses(sql):
             warnings.append("Query may be missing FROM or WHERE clause")
 
+        # 5b. Role-based restrictions (Phase 15). Roles gate specific query
+        # shapes; a denied shape is a WARNING (the connector enforces hard
+        # limits regardless) unless the role lacks query rights entirely.
+        role_errors, role_warnings = self._check_role_restrictions(sql, user_roles or [])
+        errors.extend(role_errors)
+        warnings.extend(role_warnings)
+
         # Build validation output
         valid = len(errors) == 0
         explain_plan = None
@@ -274,6 +281,47 @@ class ValidationAgent(BaseAgent):
         return sql_stripped.startswith(
             ("SELECT", "WITH", "EXPLAIN", "EXPLAIN ANALYZE", "SHOW", "DESCRIBE")
         )
+
+    # Roles that constrain what SQL shapes a user may run (Phase 15).
+    # The connector's read-only gate and RLS remain the hard enforcement —
+    # this is a policy layer on top.
+    QUERY_ROLES = ("admin", "analyst", "user", "viewer")
+
+    # The 'viewer' role: denormalized single-table lookups only.
+    VIEWER_ROLE_RESTRICTIONS: list[tuple[str, str]] = [
+        (r"\bJOIN\b", "JOINs (viewer role)"),
+        (r"\bUNION\b", "UNION (viewer role)"),
+        (r"\bWITH\b", "CTEs (viewer role)"),
+    ]
+
+    def _check_role_restrictions(
+        self, sql: str, user_roles: list[str]
+    ) -> tuple[list[str], list[str]]:
+        """Role-based query-shape restrictions.
+
+        - Empty/missing roles: unrestricted (tests, internal calls) — the
+          JWT-authenticated API path always provides roles.
+        - 'viewer': JOIN/UNION/CTE shapes are rejected (single-table
+          lookups only).
+        """
+        errors: list[str] = []
+        warnings: list[str] = []
+        sql_upper = sql.upper()
+
+        if user_roles and not any(role in user_roles for role in self.QUERY_ROLES):
+            errors.append(
+                f"User roles {user_roles} are not authorized to run queries "
+                f"(requires one of {list(self.QUERY_ROLES)})"
+            )
+            return errors, warnings
+
+        if "viewer" in user_roles:
+            for pattern, description in self.VIEWER_ROLE_RESTRICTIONS:
+                if re.search(pattern, sql_upper):
+                    errors.append(f"Query uses {description}, not permitted for the viewer role")
+                    break
+
+        return errors, warnings
 
     def _has_required_clauses(self, sql: str) -> bool:
         """Basic sanity check: SELECT should have FROM or be a simple expression."""

@@ -16,7 +16,7 @@ And are enrolled in RLS with FORCE (see infra/postgres/init.sql).
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -133,46 +133,6 @@ class Message(Base):
     role: Mapped[str] = mapped_column(String(20), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     generated_sql: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-
-
-class Report(Base):
-    """A generated multi-chart report (Phase 16). RLS tenant-scoped."""
-
-    __tablename__ = "reports"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    tenant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False, index=True
-    )
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
-    prompt: Mapped[str] = mapped_column(Text, nullable=False)
-    title: Mapped[str] = mapped_column(String(500), nullable=False)
-    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
-    status: Mapped[str] = mapped_column(String(20), nullable=False, default="complete")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-
-
-class ReportSection(Base):
-    """One metric section of a report: query + chart + narrative."""
-
-    __tablename__ = "report_sections"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    report_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("reports.id"), nullable=False, index=True
-    )
-    tenant_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("tenants.id"), nullable=False, index=True
-    )
-    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    metric_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    section_title: Mapped[str] = mapped_column(String(500), nullable=False)
-    chart_spec: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
-    chart_svg: Mapped[str | None] = mapped_column(Text, nullable=True)
-    data_total: Mapped[float | None] = mapped_column(Float, nullable=True)
-    row_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    narrative: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
