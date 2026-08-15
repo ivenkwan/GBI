@@ -271,7 +271,17 @@ Redirects to `/chat` if already authenticated; otherwise renders `LoginForm`, wh
 
 ### `chat/page.tsx` — Chat Page
 
-Wraps `ChatView` in `AuthGuard` (redirects to `/login` when signed out).
+Wraps `ChatView` in `AuthGuard` (redirects to `/login` when signed out). The header's database icon navigates to `/explore`.
+
+### `explore/page.tsx` — Explore Page (Phase 10)
+
+Wraps `ExploreView` (`components/explore/explore-view.tsx`) in `AuthGuard`. The semantic-layer workbench:
+
+- **Catalog**: metrics from `GET /metrics/list` as clickable cards (title, cube, `metric_type` badge); selecting one sets the query's measure.
+- **Query builder**: native `<select>` elements (no new deps) for measure, group-by dimension (from the measure's dimensions), optional time granularity (day/month via its first time dimension), and row limit.
+- **Run**: `POST /metrics/query` → results table (hand-built Tailwind `<table>`, cube-prefix-stripped keys) +, when sliced by a dimension, a bar chart: the client builds a `ChartAssemblyInput` from the result rows, renders via `POST /charts/render`, and displays through the existing `ChartCard`.
+- Empty results show an RLS-aware hint (tenant has no data — `make seed`).
+- API functions live in `lib/api-client.ts` (`listMetrics`, `queryMetrics`, `listDatasources`); Zod schemas (`MetricQueryRequestSchema` etc.) in `lib/validators.ts`.
 
 ### Configuration
 

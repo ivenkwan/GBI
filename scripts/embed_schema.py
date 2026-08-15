@@ -18,9 +18,9 @@ import asyncio
 import json
 import sys
 from datetime import datetime, timezone
+from pathlib import Path
 from uuid import uuid4
 
-from app.core.config import settings
 from app.core.logging import logger
 from db_admin import owner_connect, set_tenant_guc
 
@@ -116,21 +116,13 @@ def build_embedding_text(table: dict) -> str:
 async def generate_embedding(text: str) -> list[float]:
     """Generate an embedding vector for schema metadata text.
 
-    Uses Anthropic's embeddings API via the LLM client.
-
-    Returns:
-        List of floats — the embedding vector.
+    Delegates to the shared provider (app.core.embeddings — OpenAI
+    text-embedding-3-small; the original Anthropic embeddings call targeted
+    a model that does not exist).
     """
-    import anthropic
+    from app.core.embeddings import embed_text
 
-    client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
-
-    response = await client.embeddings.create(
-        model="claude-embeddings-20250219",
-        input=text,
-    )
-
-    return response.embeddings[0].embedding
+    return await embed_text(text)
 
 
 async def sync_schema(
@@ -226,6 +218,65 @@ async def sync_schema(
     }
 
 
+async def sync_examples(conn, examples_file: str, tenant_id: str = DEFAULT_TENANT_ID) -> int:
+    """(Re)seed agent_examples with the golden NL/SQL pairs for few-shot retrieval.
+
+    Idempotent: deletes existing nl2sql examples for the tenant, then inserts
+    the golden set with query embeddings. Runs as the owner with the tenant
+    GUC set (agent_examples is RLS-enforced).
+    """
+    from app.core.embeddings import vector_literal
+
+    path = Path(examples_file)
+    if not path.is_file():
+        logger.error("Examples file not found: %s", path)
+        return 0
+
+    cases = json.loads(path.read_text(encoding="utf-8"))
+    if not cases:
+        logger.warning("Examples file is empty: %s", path)
+        return 0
+
+    await set_tenant_guc(conn, tenant_id)
+    async with conn.transaction():
+        await conn.execute(
+            "DELETE FROM agent_examples WHERE agent_name = $1 AND tenant_id = $2::uuid",
+            "nl2sql",
+            tenant_id,
+        )
+        for case in cases:
+            nl_query = case.get("nl_query", "")
+            expected_sql = case.get("expected_sql", "")
+            if not nl_query or not expected_sql:
+                continue
+            embedding = await generate_embedding(nl_query)
+            await conn.execute(
+                "INSERT INTO agent_examples "
+                "(agent_name, nl_query, expected_sql, tags, embedding, tenant_id) "
+                "VALUES ($1, $2, $3, $4::jsonb, $5::vector(1536), $6::uuid)",
+                "nl2sql",
+                nl_query,
+                expected_sql,
+                json.dumps([case.get("category", "golden")]),
+                vector_literal(embedding),
+                tenant_id,
+            )
+
+    logger.info("Few-shot examples seeded", count=len(cases), tenant=tenant_id)
+    return len(cases)
+
+
+async def _invalidate_caches(tenant_id: str) -> None:
+    """Best-effort: drop cached schema context so retrieval sees fresh rows."""
+    try:
+        from app.core.cache import get_cache
+
+        await get_cache().invalidate_schema(tenant_id)
+        logger.info("Schema context cache invalidated", tenant=tenant_id)
+    except Exception as e:
+        logger.warning("Cache invalidation skipped (non-fatal): %s", e)
+
+
 async def main():
     parser = argparse.ArgumentParser(
         description="Sync database schema metadata to pgvector embeddings"
@@ -241,6 +292,16 @@ async def main():
     parser.add_argument(
         "--dry-run", action="store_true",
         help="Preview tables without generating embeddings or writing",
+    )
+    parser.add_argument(
+        "--examples", action="store_true",
+        help="Also seed agent_examples with the golden NL/SQL pairs",
+    )
+    parser.add_argument(
+        "--examples-file",
+        default=None,
+        help="Golden JSON path for --examples "
+        "(default: backend/tests/evals/nl2sql_golden.json relative to repo root)",
     )
     parser.add_argument(
         "--connection-url",
@@ -263,6 +324,13 @@ async def main():
             schema=args.schema,
             dry_run=args.dry_run,
         )
+
+        if args.examples and not args.dry_run:
+            examples_file = args.examples_file
+            if examples_file is None:
+                repo_root = Path(__file__).resolve().parents[1]
+                examples_file = str(repo_root / "backend" / "tests" / "evals" / "nl2sql_golden.json")
+            await sync_examples(conn, examples_file)
     finally:
         await conn.close()
 
@@ -275,6 +343,9 @@ async def main():
 
     if result["errors"] > 0:
         sys.exit(1)
+
+    if not args.dry_run:
+        await _invalidate_caches(DEFAULT_TENANT_ID)
 
 
 if __name__ == "__main__":

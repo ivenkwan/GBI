@@ -1,14 +1,14 @@
 {
   "schemaVersion": "mimosa-hook-status/v1",
-  "recordedAt": "2026-08-15T00:12:58.618Z",
+  "recordedAt": "2026-08-15T00:55:25.490Z",
   "sessionId": "sess_fd450c30-9606-41d3-ab28-747de74272cd",
   "event": "PostToolUse",
-  "toolName": "Write",
-  "file": "Z:\\GITHUB\\GBI\\frontend\\src\\app\\explore\\page.tsx",
+  "toolName": "Edit",
+  "file": "Z:\\GITHUB\\GBI\\scripts\\verify.sh",
   "outcome": "inconclusive",
   "coverage": "partial",
   "findingCount": 0,
-  "durationMs": 5,
+  "durationMs": 4,
   "hostState": "hook_complete",
   "reportHint": ".mimosa/reports/"
 }

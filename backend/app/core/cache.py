@@ -377,6 +377,38 @@ class CacheService:
         self._stats.writes += 1
 
     # ------------------------------------------------------------------
+    # Few-shot examples cache
+    # ------------------------------------------------------------------
+
+    async def get_few_shot_examples(self, query: str, tenant_id: str) -> list[dict] | None:
+        """Get cached few-shot examples for a query."""
+        query_hash = _hash_query(query)
+        key = _key(tenant_id, "fewshot", query_hash)
+
+        value = self._l1.get(key, CacheTTL.LLM_RESPONSE)
+        if value is not None:
+            self._stats.l1_hits += 1
+            return value
+
+        value = await self._l2.get(key)
+        if value is not None:
+            self._stats.l2_hits += 1
+            self._l1.set(key, value)
+            return value
+
+        self._stats.l2_misses += 1
+        return None
+
+    async def set_few_shot_examples(self, query: str, tenant_id: str, examples: list[dict]) -> None:
+        """Cache few-shot examples for a query."""
+        query_hash = _hash_query(query)
+        key = _key(tenant_id, "fewshot", query_hash)
+
+        self._l1.set(key, examples)
+        await self._l2.set(key, examples, ttl=CacheTTL.LLM_RESPONSE)
+        self._stats.writes += 1
+
+    # ------------------------------------------------------------------
     # Metric definitions cache
     # ------------------------------------------------------------------
 

@@ -1,6 +1,6 @@
 # GenBI Platform — Build Progress
 
-> **Last updated:** 2026-08-15 | **Stack tier:** Enterprise | **50/50 tasks complete**
+> **Last updated:** 2026-08-15 | **Stack tier:** Enterprise | **61/61 tasks complete**
 
 ---
 
@@ -1041,3 +1041,67 @@ is written carefully but has never executed.
 - `retrieve_schema_context` pgvector wiring in NL2SQLAgent (stub returns [])
 - `scripts/embed_schema.py` uses an unverified embedding model
   (`claude-embeddings-20250219`) — validate before relying on it
+
+---
+
+## Phase 10 — Metrics + Explore: Tenant-Scoped Cube Data (Tasks 51–56)
+
+> **Status: code complete 2026-08-15; live chain (JWT→Cube→GUC→RLS) verified
+> in code/CI mocks, live confirmation pending a Docker session via the new
+> `make verify` metric-query check.** ADR 008 documents the design; the
+> failure mode is closed (misconfiguration ⇒ zero rows, never cross-tenant).
+
+| # | Task | Status |
+|---|---|---|
+| 51 | Per-tenant Cube data path: `tenantId` JWT claim → `contextToOrchestratorId` → driverFactory pg `options` GUC (`semantic/cube/cube.js`) | ✅ |
+| 52 | CubeClient: per-tenant token cache, `query(tenant_id=...)`, metric_key no-op fix; first-ever query() tests | ✅ |
+| 53 | `POST /metrics/query` real (catalog validation 400, 503 CUBE_UNAVAILABLE, tenant-scoped, 300s two-tier cache keyed on canonical query) | ✅ |
+| 54 | `GET /datasources` real (cubes from /meta); `/datasources/test` stays a documented stub (different feature) | ✅ |
+| 55 | Explore page: catalog cards, native-select query builder, results table, ChartCard via /charts/render; chat header toggle now navigates to /explore (was dead state) | ✅ |
+| 56 | `verify.sh`: live tenant-scoped metric query check (login → query → expect non-empty rows) | ✅ |
+
+### Verified by
+
+- Backend: 17 new tests (tenant tokens, query() shape/flattening/total,
+  API happy/tenant-threading/cache-hit/400/503/422/auth, datasources) —
+  full suite green, ruff clean
+- Frontend: typecheck + lint clean, build compiles all 7 pages (explore
+  included)
+- Pending live (Docker): `make verify` metric-query check proves the whole
+  JWT→securityContext→per-tenant-driver→GUC→RLS chain end-to-end
+
+### Follow-ups
+
+- Safety hardening (EXPLAIN-backed validation, >1M-row confirm,
+  tests/services) and the small bundle (login rate limiting, audit_log
+  writer, retrieve_schema_context pgvector wiring, embedding-model
+  validation) remain queued.
+
+---
+
+## Phase 11 — NL2SQL Context Wiring (Tasks 57–61)
+
+> **Status: code complete 2026-08-15.** Closes the core-loop gap: the NL2SQL
+> agent generated SQL with ZERO schema context and ZERO few-shot examples
+> (both retrieval stubs returned [] and nothing called them — invisible to
+> the golden eval because it mocks the LLM).
+
+| # | Task | Status |
+|---|---|---|
+| 57 | Embedding provider: `app/core/embeddings.py` (OpenAI text-embedding-3-small — 1536 dims match VECTOR(1536); the Anthropic embeddings call targeted a nonexistent API). Config: OPENAI_API_KEY/EMBEDDING_MODEL/EMBEDDING_DIMS + env templates | ✅ |
+| 58 | Retrieval service: `app/services/schema_retrieval.py` — pgvector cosine top-k on schema_embeddings + agent_examples via the RLS-bound connector (tenant GUC); fail-open everywhere | ✅ |
+| 59 | ChatService wiring: schema context (get/set_schema_context, TTL 86400 — previously unused methods) + few-shot (new cache methods, TTL 3600) flow into agent.execute | ✅ |
+| 60 | embed_schema.py: shared embedding provider, cache invalidation after sync, `--examples` golden-set seeding (20 NL/SQL pairs → agent_examples, idempotent); prompt touch-up (dbt → Cube.dev) | ✅ |
+| 61 | Tests: 13 new (provider dims/errors, retrieval contract/tenant-scoping/fail-open, service wiring incl. cache-hit and degradation paths) | ✅ |
+
+### Verified by
+
+- 13 new tests; full suite green; ruff clean
+- Ops flow: `PYTHONPATH=backend uv run python scripts/embed_schema.py --examples`
+  arms both retrieval sources (needs OPENAI_API_KEY), then invalidates cache
+
+### Remaining roadmap
+
+- Governance completion (audit_log writer + login rate limiting)
+- Validation hardening (EXPLAIN-backed gate, >1M-row confirm, pipeline tests)
+- ivfflat index on agent_examples if the example set grows

@@ -73,6 +73,7 @@ if should_write "$BACKEND_ENV"; then
   # Host-based (non-Docker) dev should override these via a local .env override.
   sed \
     -e "s|^ANTHROPIC_API_KEY=.*|ANTHROPIC_API_KEY=sk-ant-REPLACE-ME|" \
+    -e "s|^OPENAI_API_KEY=.*|OPENAI_API_KEY=sk-REPLACE-ME|" \
     -e "s|^DATABASE_URL=.*|DATABASE_URL=postgresql+asyncpg://genbi_app:genbi_app@postgres:5432/${PG_DB}|" \
     -e "s|^DATABASE_URL_AUTH=.*|DATABASE_URL_AUTH=postgresql+asyncpg://genbi_auth:genbi_auth@postgres:5432/${PG_DB}|" \
     -e "s|^DATABASE_URL_SYNC=.*|DATABASE_URL_SYNC=postgresql://${PG_USER}:${PG_PASS}@postgres:5432/${PG_DB}|" \
@@ -85,7 +86,7 @@ if should_write "$BACKEND_ENV"; then
   echo "  wrote:  $BACKEND_ENV"
   echo "           (JWT_SECRET_KEY, CUBE_API_SECRET, TENANT_ENCRYPTION_KEY randomized)"
   if grep -q "REPLACE-ME" "$BACKEND_ENV"; then
-    echo "  ⚠️  ANTHROPIC_API_KEY is a placeholder — set it before running LLM features."
+    echo "  ⚠️  ANTHROPIC_API_KEY / OPENAI_API_KEY are placeholders — set them before running LLM/embedding features."
   fi
 fi
 

@@ -56,6 +56,12 @@ class Settings(BaseSettings):
     LLM_REASONING_MODEL: str = "claude-opus-4"
     LLM_FAST_MODEL: str = "claude-haiku-4"
 
+    # --- Embeddings (schema/few-shot retrieval; OpenAI text-embedding-3-small
+    # produces exactly the 1536 dims the VECTOR(1536) columns expect) ---
+    OPENAI_API_KEY: str = ""
+    EMBEDDING_MODEL: str = "text-embedding-3-small"
+    EMBEDDING_DIMS: int = 1536
+
     # --- Database ---
     # Runtime role (non-superuser; RLS-bound). Owner credentials stay in
     # DATABASE_URL_SYNC for Alembic and admin scripts only.

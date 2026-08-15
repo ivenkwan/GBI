@@ -99,6 +99,34 @@ else
   bad "auth role could read audit_log — its grants are too broad"
 fi
 
+# --- 6b. Tenant-scoped metric query (Phase 10: JWT → Cube → GUC → RLS) ------
+TOKEN="$(echo "$LOGIN_RESP" | sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p')"
+if [[ -n "$TOKEN" ]]; then
+  METRIC_RESP="$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:8000/api/v1/metrics/query \
+    -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+    -d '{"measures":["Sales.revenue_total"],"limit":5}' 2>/dev/null || echo '000')"
+  METRIC_BODY="$(curl -s -X POST http://localhost:8000/api/v1/metrics/query \
+    -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+    -d '{"measures":["Sales.revenue_total"],"limit":5}' 2>/dev/null || true)"
+  if [[ "$METRIC_RESP" == "200" ]] && echo "$METRIC_BODY" | grep -q '"data":\[{'; then
+    ok "tenant-scoped metric query returns rows (JWT→Cube→GUC→RLS chain live)"
+  elif [[ "$METRIC_RESP" == "200" ]]; then
+    echo "  ⚠️  metric query OK but 0 rows — tenant has no seed data (make seed)?"
+  else
+    bad "metric query failed (HTTP $METRIC_RESP) — Cube tenant path broken?"
+  fi
+else
+  echo "  ℹ️  skipping metric query check (no token — login failed above)"
+fi
+
+# --- 6c. NL2SQL schema grounding (Phase 11) ----------------------------------
+EMBED_COUNT="$(psql_exec 'SELECT count(*) FROM schema_embeddings;' || echo 0)"
+if [[ "${EMBED_COUNT:-0}" =~ ^[0-9]+$ ]] && [[ "${EMBED_COUNT}" -ge 1 ]]; then
+  ok "schema embeddings present ($EMBED_COUNT tables) — NL2SQL schema grounding armed"
+else
+  echo "  ℹ️  schema_embeddings empty — run scripts/embed_schema.py to arm schema grounding"
+fi
+
 # --- 7. Auth: login issues a JWT ---------------------------------------------
 LOGIN_RESP="$(curl -sf -X POST http://localhost:8000/api/v1/auth/login \
   -H 'Content-Type: application/json' \

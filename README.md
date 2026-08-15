@@ -263,6 +263,8 @@ genbi/
 - [ADR 004 — Flint bridge fallback](docs/adr/004-flint-bridge-fallback.md) — render fallback path
 - [ADR 005 — AGE + pgvector image](docs/adr/005-age-and-pgvector-image.md) — custom Postgres image for both extensions
 - [ADR 006 — Enforced RLS roles](docs/adr/006-enforced-rls-roles.md) — non-superuser runtime roles, RLS actually enforced
+- [ADR 007 — Cube-native semantic layer](docs/adr/007-cube-native-semantic-layer.md) — metric catalog as Cube data models (dbt tier dropped)
+- [ADR 008 — Per-tenant Cube data path](docs/adr/008-per-tenant-cube-data-path.md) — JWT tenant claims → per-tenant driver GUC → RLS, fail-closed
 
 ### AI assistant context
 - [CLAUDE.md](CLAUDE.md) — full project context, hard rules, and conventions for AI coding tools
@@ -361,7 +363,8 @@ parsing, and destructive-pattern detection all run for real. See
 |---|---|---|
 | Agent pipeline (NL→SQL→Chart→Narrative) | ✅ Implemented | Sync + SSE streaming |
 | Validation safety gate | ✅ Implemented | Destructive-pattern + read-only enforcement |
-| Semantic layer (Cube-native catalog) | ✅ Implemented | 10 cubes / 23 measures, /metrics/list live; data queries Phase 10 (ADR 007) |
+| Semantic layer (Cube-native catalog) | ✅ Implemented | 10 cubes / 23 measures; tenant-scoped /metrics/query + Explore page (ADR 007/008) |
+| NL2SQL schema grounding (pgvector retrieval) | ✅ Implemented | Schema context + few-shot into every prompt (Phase 11); needs `embed_schema.py --examples` + OPENAI_API_KEY |
 | Multi-tenant RLS + JWT | ✅ Enforced | Non-superuser runtime roles + FORCE RLS on all tenant tables, incl. analytics (ADR 006) |
 | PII masking | ✅ Wired | Applied at the execution chokepoint |
 | Chart hallucination detection | ✅ Implemented | 6 validation categories + auto-correct |

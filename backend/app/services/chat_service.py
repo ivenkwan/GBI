@@ -310,9 +310,8 @@ class ChatService:
 
             # Load metric definitions from Cube.dev semantic layer (cached)
             metric_context = ""
+            cache = get_cache()
             try:
-                cache = get_cache()
-
                 # Check cache for metric definitions
                 cached_metrics = await cache.get_metric_definitions(self.tenant_id)
                 if cached_metrics is not None:
@@ -328,12 +327,45 @@ class ChatService:
             except Exception as e:
                 logger.warning(f"Metric context unavailable -- continuing without: {e}")
 
+            # Schema context: pgvector top-k tables for this query (cached
+            # per query+tenant). Fails open to [] — same contract as metrics.
+            schema_context: list[dict] = []
+            try:
+                cached_schema = await cache.get_schema_context(query, self.tenant_id)
+                if cached_schema is not None:
+                    schema_context = cached_schema
+                else:
+                    from app.services.schema_retrieval import retrieve_schema_context
+
+                    schema_context = await retrieve_schema_context(query, self.tenant_id)
+                    await cache.set_schema_context(query, self.tenant_id, schema_context)
+                    logger.info("Schema context retrieved", tables=len(schema_context))
+            except Exception as e:
+                logger.warning(f"Schema context unavailable -- continuing without: {e}")
+
+            # Few-shot examples: similar validated NL/SQL pairs (cached).
+            few_shot_examples: list[dict] = []
+            try:
+                cached_examples = await cache.get_few_shot_examples(query, self.tenant_id)
+                if cached_examples is not None:
+                    few_shot_examples = cached_examples
+                else:
+                    from app.services.schema_retrieval import retrieve_few_shot_examples
+
+                    few_shot_examples = await retrieve_few_shot_examples(query, self.tenant_id)
+                    await cache.set_few_shot_examples(query, self.tenant_id, few_shot_examples)
+                    logger.info("Few-shot examples retrieved", count=len(few_shot_examples))
+            except Exception as e:
+                logger.warning(f"Few-shot examples unavailable -- continuing without: {e}")
+
             result = await agent.execute(
                 query=query,
                 tenant_id=self.tenant_id,
                 user_id=user_id,
                 session_id=self.session_id,
                 metric_definitions=metric_context,
+                schema_context=schema_context,
+                few_shot_examples=few_shot_examples,
             )
             sql = result.output.get("sql")
             return sql, result.warnings

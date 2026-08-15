@@ -157,6 +157,26 @@ def list_connectors() -> list[str]: ...
 
 ---
 
+## Schema Retrieval (NL2SQL grounding, Phase 11)
+
+**File:** `backend/app/services/schema_retrieval.py` | **Provider:** `backend/app/core/embeddings.py`
+
+The user's query is embedded (OpenAI `text-embedding-3-small`, 1536 dims —
+matching the `VECTOR(1536)` columns) and matched against the tenant-scoped
+`schema_embeddings` (top-k tables) and `agent_examples` (top-k validated
+NL/SQL pairs) tables via cosine distance (`<=>`). Reads run through
+`PostgreSQLConnector` as the RLS-bound `genbi_app` role with the tenant GUC
+set, so retrieval is tenant-isolated at the database layer.
+
+Wired in `ChatService._step_nl2sql` with the two-tier cache
+(`schema:{query_hash}` TTL 86400s, `fewshot:{query_hash}` TTL 3600s) and
+everything fails open — no key / no embeddings / DB down → empty context.
+Populate with `PYTHONPATH=backend uv run python scripts/embed_schema.py
+--examples` (embeds all tables + the 20 golden NL/SQL pairs; needs
+`OPENAI_API_KEY`; invalidates the schema cache after sync).
+
+---
+
 ## Apache AGE Graph Schema
 
 **File:** `backend/app/db/graph_schema.py` | **Graph name:** `genbi_graph`

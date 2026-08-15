@@ -154,9 +154,7 @@ async def test_query_metrics_happy_path_threads_tenant(api_client, auth_headers,
     assert fake.last_query_tenant == DEFAULT_TENANT_ID
 
 
-async def test_query_metrics_second_call_served_from_cache(
-    api_client, auth_headers, monkeypatch
-):
+async def test_query_metrics_second_call_served_from_cache(api_client, auth_headers, monkeypatch):
     fake = FakeCubeClient(metrics=_catalog(), query_result=QUERY_RESULT)
     monkeypatch.setattr("app.semantic.cube_client.get_cube_client", lambda: fake)
 

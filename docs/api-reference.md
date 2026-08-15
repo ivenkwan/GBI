@@ -240,25 +240,59 @@ data: {"event":"done","status":"success","warnings":[]}
 
 ## Datasources
 
-> ⚠️ All endpoints are stubs.
-
 ### `GET /datasources`
-List configured data sources for the current tenant.
+✅ List the semantic layer's cubes for the current tenant (from Cube `/meta`).
+
+**Response:**
+```json
+{
+  "datasources": [
+    {"name": "Sales", "title": "Sales", "measures": 4, "dimensions": 4}
+  ],
+  "count": 1
+}
+```
+
+Errors: `503` `{"detail": {"code": "CUBE_UNAVAILABLE", ...}}` when Cube is unreachable.
 
 ### `POST /datasources/test`
-Test a database connection.
+⚠️ Stub. Targets a different feature (admin-configured external warehouses), not the built-in semantic-layer source.
 
 ---
 
 ## Metrics
 
-> ⚠️ All endpoints are stubs. TODO: query Cube.dev meta API and dbt manifest.
-
 ### `GET /metrics/list`
-List all metrics from the semantic layer.
+✅ List all metrics from the semantic layer (catalog of 10 cubes / 23 measures).
+
+**Response:** `{metrics: [{name, title, description, metric_type, cube_name, measure_name, dimensions, time_dimensions}], count}`
 
 ### `POST /metrics/query`
-Execute a metric query against Cube.dev.
+✅ Execute a **tenant-scoped** metric query against Cube.dev (ADR 008: the JWT's tenant claim drives Cube's per-tenant driver and its RLS GUC — results are isolated at the database layer).
+
+**Request:**
+```json
+{
+  "measures": ["Sales.revenue_total"],
+  "dimensions": ["Sales.region"],
+  "time_dimensions": [{"dimension": "Sales.transaction_date", "granularity": "month"}],
+  "limit": 100
+}
+```
+
+| Field | Type | Constraints |
+|---|---|---|
+| `measures` | `string[]` | 1–5, must exist in the catalog (`400 INVALID_METRIC` otherwise) |
+| `dimensions` | `string[]?` | ≤ 5 group-bys |
+| `time_dimensions` | `[{dimension, granularity, date_range?}]?` | ≤ 3; granularity: day/week/month/quarter/year/hour |
+| `filters` | `[{member, operator, values?}]?` | Cube filter syntax |
+| `order` | `[[field, dir]]?` | e.g. `[["Sales.revenue_total", "desc"]]` |
+| `limit` / `offset` | `int` | 1–1000 / ≥ 0 |
+| `timezone` | `string` | default `UTC` |
+
+**Response:** `{data: [...flattened rows...], annotation, total, query, latency_ms, cached}` — row keys are stripped of cube prefixes. Results are cached per tenant for 300s (same query → `cached: true`).
+
+Errors: `400 INVALID_METRIC`, `503 CUBE_UNAVAILABLE`, `422` validation.
 
 ---
 

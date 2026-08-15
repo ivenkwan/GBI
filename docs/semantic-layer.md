@@ -64,27 +64,31 @@ dangling in the seed data, so Sales declares no joins.
 
 ### RLS interaction (important)
 
-Analytics tables are FORCE-RLS tenant-scoped (Phase 8b / ADR 006).
-`cube_reader` sets no `app.current_tenant_id` GUC, so **data queries (/load)
-return zero rows today** — by design, not by accident. `/meta` (definitions)
-is unaffected. Per-tenant Cube data queries (driver-level GUC via
-`contextToOrchestratorId` + connection-init SQL) are Phase 10, delivered
-together with `/api/v1/metrics/query` and the Explore UI.
+Analytics tables are FORCE-RLS tenant-scoped (Phase 8b / ADR 006), and data
+queries are tenant-correct since Phase 10 (ADR 008): the backend mints JWTs
+carrying a `tenantId` claim; Cube keys orchestrators (driver pools) by
+tenant; each pool's connections set `app.current_tenant_id` via the pg
+`options` parameter — the GUC the RLS policies consume. **Postgres remains
+the enforcement layer**: if any link is misconfigured, queries return zero
+rows (fail-closed), never another tenant's data. `POST /api/v1/metrics/query`
+and the Explore page use this path; metadata (`/meta`) needs no tenant.
 
 ## CubeClient
 
 **Location:** `backend/app/semantic/cube_client.py`
 
-- **Auth:** HS256 JWT signed with `CUBE_API_SECRET` (cached ~1h) — the raw
-  secret only works in Cube dev mode, the signed token works everywhere.
+- **Auth:** HS256 JWT signed with `CUBE_API_SECRET` (cached ~1h). Data
+  queries add a `tenantId` claim — cached per tenant — which Cube surfaces
+  as `securityContext` (ADR 008).
 - **`get_meta()`**: fetches/parse `/meta` → `CubeMetaResponse{cubes,
   metrics, raw}`. The **raw payload** is what gets cached (Redis + in-memory,
   TTL 5 min) and re-parsed on hit — serializing the parsed form loses the
   metrics map.
 - **`list_metrics()` / `get_metric(name)`**: MetricDefinition lookup, indexed
   both as `cube.measure` and bare `measure`.
-- **`query(...)`**: POST `/load` with measures/dimensions/timeDimensions/
-  filters — **tenant-incorrect until Phase 10** (see RLS note above).
+- **`query(..., tenant_id=...)`**: POST `/load` with measures/dimensions/timeDimensions/
+  filters — tenant-scoped through the per-tenant driver GUC; results cached
+  per tenant in the two-tier cache (300s).
 - **`get_agent_context(query=...)`**: the primary agent integration point.
   With ≤20 metrics, formats the full catalog; above that, keyword-ranks
   metrics against the query (name 3×, title/cube 2×, description 1×) and
@@ -111,7 +115,11 @@ format          # {"currency": "USD"} | {"percent": ...} | None
 
 - `GET /api/v1/metrics/list` — the catalog as JSON (JWT-authenticated;
   `503 {"detail": {"code": "CUBE_UNAVAILABLE"}}` when Cube is down).
-- `POST /api/v1/metrics/query` — Phase 10 (needs per-tenant Cube data path).
+- `POST /api/v1/metrics/query` — tenant-scoped metric query (ADR 008);
+  measures validated against the catalog (`400 INVALID_METRIC`); results
+  cached 300s per tenant.
+- `GET /api/v1/datasources` — the cubes as datasource summaries.
+- Frontend: the `/explore` page (catalog → query builder → table + chart).
 
 ## Key Principle
 

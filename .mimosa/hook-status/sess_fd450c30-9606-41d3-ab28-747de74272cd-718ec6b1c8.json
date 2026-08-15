@@ -1,14 +1,14 @@
 {
   "schemaVersion": "mimosa-hook-status/v1",
-  "recordedAt": "2026-08-15T00:07:38.675Z",
+  "recordedAt": "2026-08-15T00:56:19.590Z",
   "sessionId": "sess_fd450c30-9606-41d3-ab28-747de74272cd",
   "event": "PostToolUse",
   "toolName": "Edit",
-  "file": "backend/app/core/cache.py",
+  "file": "docs/data-layer.md",
   "outcome": "clear",
   "coverage": "complete",
   "findingCount": 0,
-  "durationMs": 6,
+  "durationMs": 4,
   "hostState": "hook_complete",
   "reportHint": ".mimosa/reports/"
 }
