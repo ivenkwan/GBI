@@ -147,6 +147,15 @@ On failure (missing, expired, or invalid token): HTTP 401 with:
 | `chart_image_base64` | `string \| null` | Rendered chart (PNG) |
 | `warnings` | `string[]` | Advisory messages |
 
+### `POST /chat/feedback`
+✅ Record thumbs-up/down feedback on a chat response (Phase 15).
+
+**Request:** `{"session_id": "<uuid>", "score": 1}` — score: `1` up, `-1` down, `0` clear. The `session_id` is the one from the SSE `start` event / sync response (NOT the conversation id).
+
+The score lands on the audit rows of the session (`audit_log.feedback_score`), completing the governance loop.
+
+Errors: `503` `FEEDBACK_UNAVAILABLE` (no matching audit rows or store unreachable), `422` validation.
+
 ### `POST /chat/stream`
 ✅ **Streaming variant.** Returns SSE events as the agent pipeline progresses.
 

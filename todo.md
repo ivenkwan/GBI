@@ -1,6 +1,6 @@
 # GenBI Platform — Build Progress
 
-> **Last updated:** 2026-08-15 | **Stack tier:** Enterprise | **75/75 tasks complete (Phases 1–13 roadmap + Phase 14)**
+> **Last updated:** 2026-08-15 | **Stack tier:** Enterprise | **78/78 tasks complete (Phases 1–14 + governance bundle)**
 
 ---
 
@@ -1193,3 +1193,30 @@ validation permissions (user_roles plumbing exists, unused).
 
 - Message pagination UI (limit param exists), conversation rename/delete,
 - reports/dashboards build-out; feedback API; AGE wiring (unchanged queue)
+
+---
+
+## Phase 15 — Governance Bundle (Tasks 76–78)
+
+> **Status: code complete 2026-08-15.** Three quick governance wins: feedback
+> loop, role-based query policy, and AGE lineage parameterization.
+
+| # | Task | Status |
+|---|---|---|
+| 76 | Feedback API: `POST /chat/feedback` (session_id + score −1/0/+1) → `audit_log.feedback_score` via the GUC writer pattern (updates all rows of the session); 503 FEEDBACK_UNAVAILABLE on failure | ✅ |
+| 77 | Per-role validation: ValidationAgent `_check_role_restrictions` — QUERY_ROLES gate (admin/analyst/user/viewer; unrecognized roles hard-rejected), viewer role restricted to single-table lookups (JOIN/UNION/CTE rejected); empty roles unrestricted (connector + RLS remain the hard gates) | ✅ |
+| 78 | AGE lineage parameterized: all cypher in graph_schema.py converted from f-string interpolation to inline literals + AGE `$name` parameters bound via the third `ag_catalog.cypher` argument; no behavior change (module still has zero callers — wiring is future work) | ✅ |
+
+### Verified by
+
+- 160 passed / 14 skipped (9 new tests: role matrix, feedback happy/503/422/auth);
+  ruff clean; frontend untouched
+- Live (Docker session): thumbs-up a chat response then check
+  `SELECT feedback_score FROM audit_log`; AGE statements exercise on `make
+  reset` (init graph path)
+
+### Follow-ups
+
+- Frontend thumbs up/down buttons on assistant messages (writes via the new
+  endpoint) — small UI addition, deferred
+- AGE sync scheduler (`sync_semantic_layer_to_graph` still has no caller)
