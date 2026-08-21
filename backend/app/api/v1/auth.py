@@ -76,9 +76,12 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_auth_db)) 
     rows = (
         await db.execute(
             text(
+                # CAST(... AS uuid), not ::uuid — SQLAlchemy text() treats
+                # '::' as an escaped literal colon and breaks the bind.
                 "SELECT id, tenant_id, email, hashed_password, roles "
                 "FROM users "
-                "WHERE email = :email AND (:tenant_id IS NULL OR tenant_id = :tenant_id::uuid) "
+                "WHERE email = :email "
+                "AND (CAST(:tenant_id AS uuid) IS NULL OR tenant_id = CAST(:tenant_id AS uuid)) "
                 "LIMIT 2"
             ),
             {"email": email, "tenant_id": tenant_uuid},

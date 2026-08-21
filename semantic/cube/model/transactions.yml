@@ -30,6 +30,11 @@ cubes:
           currency: USD
 
     dimensions:
+      - name: id
+        title: ID
+        sql: id
+        type: string
+        primaryKey: true
       - name: type
         title: Transaction Type
         description: Transaction type (deposit, withdrawal, transfer, payment)
@@ -48,4 +53,3 @@ cubes:
       - name: tenant_id
         sql: tenant_id
         type: string
-        visible: false

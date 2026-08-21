@@ -1,6 +1,6 @@
 # Semantic Layer
 
-> **Source of truth: Cube-native data models** (`semantic/cube/schema/*.yml`).
+> **Source of truth: Cube-native data models** (`semantic/cube/model/*.yml`).
 > See [ADR 007](../docs/adr/007-cube-native-semantic-layer.md) for why the
 > dbt MetricFlow scaffold was removed.
 

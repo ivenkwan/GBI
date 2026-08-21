@@ -23,6 +23,11 @@ cubes:
         format: number
 
     dimensions:
+      - name: id
+        title: ID
+        sql: id
+        type: string
+        primaryKey: true
       - name: event_type
         title: Event Type
         description: Engagement event type (login, query, export, dashboard_view, report_create)
@@ -36,4 +41,3 @@ cubes:
       - name: tenant_id
         sql: tenant_id
         type: string
-        visible: false

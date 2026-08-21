@@ -1,4 +1,4 @@
-// GenBI Cube project — data models live in ./schema/*.yml (10 cubes over the
+// GenBI Cube project — data models live in ./model/*.yml (10 cubes over the
 // seeded analytics tables). ADR 007 documents the pivot to Cube-native
 // models; ADR 008 documents the per-tenant data path below.
 //
@@ -29,7 +29,8 @@ function baseDbConfig() {
 
 module.exports = {
   apiSecret: process.env.CUBEJS_API_SECRET,
-  devMode: process.env.CUBEJS_DEV_MODE === "true",
+  // devMode is env-only in current Cube (CUBEJS_DEV_MODE in .env);
+  // passing it here is rejected: Invalid cube-server-core options.
 
   contextToOrchestratorId: ({ securityContext }) =>
     (securityContext && securityContext.tenantId) || "anonymous",

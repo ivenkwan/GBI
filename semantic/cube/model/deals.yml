@@ -42,6 +42,11 @@ cubes:
         format: percent
 
     dimensions:
+      - name: id
+        title: ID
+        sql: id
+        type: string
+        primaryKey: true
       - name: stage
         title: Deal Stage
         description: Pipeline stage (prospecting, negotiation, closed_won, closed_lost)
@@ -55,4 +60,3 @@ cubes:
       - name: tenant_id
         sql: tenant_id
         type: string
-        visible: false

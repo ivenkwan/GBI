@@ -1,0 +1,17 @@
+# Build context is the REPO ROOT (backend Dockerfile copies backend/ and
+# .claude/prompts) — exclude everything else, especially frontend's
+# node_modules (600MB+, and Windows file modes break the tar checksum).
+**/node_modules
+**/.next
+**/out
+**/.git
+**/.venv
+**/__pycache__
+**/.mimosa
+**/.zcode
+frontend
+infra
+docs
+scripts
+semantic
+*.md

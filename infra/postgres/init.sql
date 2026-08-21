@@ -27,6 +27,12 @@ BEGIN
         CREATE EXTENSION IF NOT EXISTS age;
         LOAD 'age';
         SET search_path = ag_catalog, "$user", public;
+        -- Create the lineage graph (guarded — create_graph raises if it exists)
+        BEGIN
+            SELECT * FROM ag_catalog.create_graph('genbi_graph');
+        EXCEPTION WHEN OTHERS THEN
+            RAISE NOTICE 'genbi_graph already exists or creation deferred.';
+        END;
         RAISE NOTICE 'Apache AGE extension enabled.';
     ELSE
         RAISE NOTICE 'Apache AGE not available — lineage graph disabled (GENBI_ENABLE_AGE controls this).';

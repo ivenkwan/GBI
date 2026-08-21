@@ -4,7 +4,7 @@
 - **Context:** Phase 9 — Real metric catalog
 - **Supersedes:** the dbt MetricFlow design described in earlier revisions of
   `docs/semantic-layer.md` and `semantic/README.md`
-- **Related:** ADR 006 (enforced RLS), `semantic/cube/schema/`,
+- **Related:** ADR 006 (enforced RLS), `semantic/cube/model/`,
   `backend/app/semantic/cube_client.py`
 
 ## Context
@@ -36,7 +36,7 @@ tenant work regardless of where metric definitions live.
 ## Decision
 
 1. **Cube-native data models are the single source of truth.** Ten cubes in
-   `semantic/cube/schema/` over the seeded analytics tables (23 measures:
+   `semantic/cube/model/` over the seeded analytics tables (23 measures:
    revenue, orders, customers, transactions, web users, activity, deals,
    reps, products, regions). Joins only where seed foreign keys are real.
    Every cube carries a hidden `tenant_id` dimension as the Phase-10 hook.

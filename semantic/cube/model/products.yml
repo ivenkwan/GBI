@@ -23,6 +23,11 @@ cubes:
           currency: USD
 
     dimensions:
+      - name: id
+        title: ID
+        sql: id
+        type: string
+        primaryKey: true
       - name: product_name
         title: Product Name
         description: Product name
@@ -36,4 +41,3 @@ cubes:
       - name: tenant_id
         sql: tenant_id
         type: string
-        visible: false

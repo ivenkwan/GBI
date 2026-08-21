@@ -38,6 +38,11 @@ cubes:
         format: number
 
     dimensions:
+      - name: id
+        title: ID
+        sql: id
+        type: string
+        primaryKey: true
       - name: region
         title: Region
         description: Sales region name
@@ -56,4 +61,3 @@ cubes:
       - name: tenant_id
         sql: tenant_id
         type: string
-        visible: false

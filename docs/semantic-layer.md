@@ -1,7 +1,7 @@
 # Semantic Layer
 
 > Single source of truth for business metric definitions:
-> **Cube-native data models** (`semantic/cube/schema/`) served by **Cube.dev**,
+> **Cube-native data models** (`semantic/cube/model/`) served by **Cube.dev**,
 > consumed by the Python **CubeClient**. See
 > [ADR 007](adr/007-cube-native-semantic-layer.md) for why the dbt tier was
 > dropped.
@@ -9,7 +9,7 @@
 ## Architecture
 
 ```
-semantic/cube/schema/*.yml   (10 cubes, 23 measures — the catalog)
+semantic/cube/model/*.yml   (10 cubes, 23 measures — the catalog)
     │
     v
 Cube.dev (cube.js, CUBEJS_DB_* env, cube_reader role)
@@ -23,7 +23,7 @@ ChatService → NL2SQLAgent prompt ("## Available Metrics") + /api/v1/metrics/li
 
 ## The Catalog
 
-**Location:** `semantic/cube/schema/` — one YAML per cube, over the ten
+**Location:** `semantic/cube/model/` — one YAML per cube, over the ten
 seeded analytics tables. Highlights:
 
 | Cube | Measures | Dimensions (non-time) |
@@ -123,7 +123,7 @@ format          # {"currency": "USD"} | {"percent": ...} | None
 
 ## Key Principle
 
-Metrics are defined ONCE in `semantic/cube/schema/`. Never re-implement
+Metrics are defined ONCE in `semantic/cube/model/`. Never re-implement
 metric logic in agent prompts or service code — always consume via
 CubeClient.
 

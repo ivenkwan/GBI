@@ -21,6 +21,11 @@ cubes:
         format: number
 
     dimensions:
+      - name: id
+        title: ID
+        sql: id
+        type: string
+        primaryKey: true
       - name: name
         title: Rep Name
         description: Sales representative full name
@@ -34,4 +39,3 @@ cubes:
       - name: tenant_id
         sql: tenant_id
         type: string
-        visible: false

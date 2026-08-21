@@ -24,6 +24,11 @@ cubes:
           - sql: "{CUBE}.status = 'active'"
 
     dimensions:
+      - name: id
+        title: ID
+        sql: id
+        type: string
+        primaryKey: true
       - name: country
         title: Country
         description: Customer country
@@ -42,4 +47,3 @@ cubes:
       - name: tenant_id
         sql: tenant_id
         type: string
-        visible: false

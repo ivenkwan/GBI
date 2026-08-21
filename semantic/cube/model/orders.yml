@@ -34,6 +34,11 @@ cubes:
           currency: USD
 
     dimensions:
+      - name: id
+        title: ID
+        sql: id
+        type: string
+        primaryKey: true
       - name: status
         title: Order Status
         description: Order fulfillment status (completed, pending, cancelled)
@@ -47,4 +52,3 @@ cubes:
       - name: tenant_id
         sql: tenant_id
         type: string
-        visible: false
