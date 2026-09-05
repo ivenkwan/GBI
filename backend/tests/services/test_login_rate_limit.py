@@ -98,26 +98,30 @@ def _patch_auth_cache(monkeypatch, failures=0):
 
 async def _post_login(json_body):
 
-    from app.db.session import get_auth_db
     from app.main import create_app
 
     app = create_app()
 
-    # Override the auth DB dependency: the failure path under test returns
+    # Login (Phase 21) queries via asyncpg on the control-plane role —
+    # patch the connection helper: the failure path under test returns
     # zero rows without needing a live database.
-    session = MagicMock()
-    query_result = MagicMock()
-    query_result.all = MagicMock(return_value=[])
-    session.execute = AsyncMock(return_value=query_result)
+    fake_conn = MagicMock()
+    fake_conn.fetch = AsyncMock(return_value=[])
+    fake_conn.close = AsyncMock()
 
-    async def fake_db():
-        yield session
+    async def fake_connect(_dsn):
+        return fake_conn
 
-    app.dependency_overrides[get_auth_db] = fake_db
+    import app.api.v1.auth as auth_module
 
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        return await client.post("/api/v1/auth/login", json=json_body)
+    monkeypatch_connect = fake_connect
+
+    from unittest.mock import patch
+
+    with patch.object(auth_module.asyncpg, "connect", monkeypatch_connect):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            return await client.post("/api/v1/auth/login", json=json_body)
 
 
 async def test_login_returns_429_at_threshold(monkeypatch):

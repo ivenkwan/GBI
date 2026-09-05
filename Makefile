@@ -48,6 +48,9 @@ lineage-setup: ## (Re)apply the AGE lineage functions (fresh volumes get this at
 	@docker exec -i genbi-postgres psql -q -U genbi -d genbi < infra/postgres/age-lineage.sql
 	@echo "AGE lineage functions ensured (run 'make migrate' first for the tables)."
 
+admin-create: ## Grant platform-superuser: EMAIL=you@x make admin-create (password via GENBI_SUPERUSER_PASSWORD or prompt)
+	@$(COMPOSE_DEV) exec -T -e PYTHONPATH=/app -e GENBI_SUPERUSER_PASSWORD backend uv run python scripts/create_admin.py --email "$${EMAIL:-$${GENBI_SUPERUSER_EMAIL}}"
+
 seed: ## Load synthetic test data (requires `make migrate` first — tables come from Alembic 0003)
 	@$(COMPOSE_DEV) exec -T -e PYTHONPATH=/app backend uv run python scripts/seed_test_data.py
 

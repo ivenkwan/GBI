@@ -361,13 +361,13 @@ paths:
         "503":
           description: LINEAGE_UNAVAILABLE
 
-  # ---- Planned: multi-tenancy control plane + knowledge base -------------
-  # DESIGN ONLY (ADRs 009/010, Phases 21-24) — not yet implemented.
+  # ---- Multi-tenancy control plane (Phase 21 built: /admin/* live; the
+  # /users, /auth/me, /wiki and /settings/llm paths below remain planned) --
 
   /admin/stats:
     get:
       operationId: admin_platform_stats
-      summary: "(planned) Platform counters — superuser only"
+      summary: "(Platform counters — superuser only"
       security:
         - BearerAuth: []
       responses:
@@ -379,7 +379,7 @@ paths:
   /admin/tenants:
     get:
       operationId: admin_list_tenants
-      summary: "(planned) Tenant list with counters — superuser only"
+      summary: "(Tenant list with counters — superuser only"
       security:
         - BearerAuth: []
       responses:
@@ -387,7 +387,7 @@ paths:
           description: Tenant list
     post:
       operationId: admin_provision_tenant
-      summary: "(planned) Provision tenant + initial admin user (transactional)"
+      summary: "(Provision tenant + initial admin user (transactional)"
       security:
         - BearerAuth: []
       responses:
@@ -399,7 +399,7 @@ paths:
   /admin/tenants/{tenant_id}:
     get:
       operationId: admin_get_tenant
-      summary: "(planned) Tenant detail (users, schedules, counts, audit)"
+      summary: "(Tenant detail (users, schedules, counts, audit)"
       security:
         - BearerAuth: []
       parameters:
@@ -416,7 +416,7 @@ paths:
           description: TENANT_NOT_FOUND
     patch:
       operationId: admin_update_tenant
-      summary: "(planned) Rename / suspend / activate / settings"
+      summary: "(Rename / suspend / activate / settings"
       security:
         - BearerAuth: []
       parameters:
@@ -431,7 +431,7 @@ paths:
           description: Updated tenant
     delete:
       operationId: admin_delete_tenant
-      summary: "(planned) Decommission — guarded, refuses non-empty tenants without force"
+      summary: "(Decommission — guarded, refuses non-empty tenants without force"
       security:
         - BearerAuth: []
       parameters:
@@ -460,7 +460,7 @@ paths:
   /admin/admins:
     get:
       operationId: admin_list_superusers
-      summary: "(planned) Active superusers + grant history"
+      summary: "(Active superusers + grant history"
       security:
         - BearerAuth: []
       responses:
@@ -468,7 +468,7 @@ paths:
           description: Superuser list
     post:
       operationId: admin_grant_superuser
-      summary: "(planned) Grant platform-superuser (by user id or email)"
+      summary: "(Grant platform-superuser (by user id or email)"
       security:
         - BearerAuth: []
       responses:
@@ -476,7 +476,7 @@ paths:
           description: Granted
     delete:
       operationId: admin_revoke_superuser
-      summary: "(planned) Revoke — effective within ~60s (cached re-check)"
+      summary: "(Revoke — effective within ~60s (cached re-check)"
       security:
         - BearerAuth: []
       responses:
@@ -486,7 +486,7 @@ paths:
   /admin/audit:
     get:
       operationId: admin_audit_feed
-      summary: "(planned) Admin-action feed (actor/target/tenant filters)"
+      summary: "(Admin-action feed (actor/target/tenant filters)"
       security:
         - BearerAuth: []
       responses:
@@ -550,7 +550,7 @@ paths:
   /users/{user_id}/reset-password:
     post:
       operationId: admin_reset_user_password
-      summary: "(planned) Admin sets a new password for a tenant user"
+      summary: "(Admin sets a new password for a tenant user"
       security:
         - BearerAuth: []
       parameters:
@@ -771,7 +771,7 @@ paths:
   /admin/tenants/{tenant_id}/llm:
     get:
       operationId: admin_get_tenant_llm
-      summary: "(planned) Masked tenant BYOK config + usage-by-model — superuser"
+      summary: "(Masked tenant BYOK config + usage-by-model — superuser"
       security:
         - BearerAuth: []
       parameters:
@@ -788,7 +788,7 @@ paths:
           description: TENANT_NOT_FOUND
     put:
       operationId: admin_set_tenant_llm
-      summary: "(planned) Force-set BYOK config on behalf of a tenant — superuser"
+      summary: "(Force-set BYOK config on behalf of a tenant — superuser"
       security:
         - BearerAuth: []
       parameters:

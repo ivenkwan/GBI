@@ -33,10 +33,19 @@ def app_role_dsn() -> str:
 
 
 def auth_role_dsn() -> str:
-    """DSN for the login-only role (created by Alembic 0002)."""
+    """DSN for the retired genbi_auth role (kept for its removal-verification
+    tests; Phase 21 dropped the role's grants)."""
     return role_dsn(
         os.environ.get("GENBI_AUTH_DB_USER", "genbi_auth"),
         os.environ.get("GENBI_AUTH_DB_PASSWORD", "genbi_auth"),
+    )
+
+
+def admin_role_dsn() -> str:
+    """DSN for the control-plane genbi_admin role (created by the 0008 RLS file)."""
+    return role_dsn(
+        os.environ.get("GENBI_ADMIN_DB_USER", "genbi_admin"),
+        os.environ.get("GENBI_ADMIN_DB_PASSWORD", "genbi_admin"),
     )
 
 

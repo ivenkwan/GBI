@@ -1,6 +1,8 @@
 # ADR 009: Platform admin plane — superusers, tenant lifecycle, and the control/data plane split
 
-- **Status:** Proposed (2026-09-05, design phase — not yet built)
+- **Status:** Accepted (2026-09-05) — Phase 21 (this ADR's backend:
+  grants, lifecycle, guards, audit, genbi_admin) BUILT and verified;
+  the /admin portal UX (Phase 22) and user management (Phase 23) build on it
 - **Context:** Multi-tenancy hardening — admin portal, superuser model, tenant provisioning
 - **Related:** ADR 006 (enforced RLS roles), ADR 008 (per-tenant Cube data path),
   `infra/postgres/init.sql`, `backend/app/core/auth.py`, `backend/app/api/v1/auth.py`,

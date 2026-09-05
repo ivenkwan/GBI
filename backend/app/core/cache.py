@@ -63,6 +63,9 @@ class CacheTTL:
     RATE_LIMIT = 60  # 1 minute window
     SESSION_STATE = 1_800  # 30 minutes
     CHART_SPEC = 3_600  # 1 hour
+    # Control plane (ADR 009): revocation/suspension must take effect well
+    # inside a token lifetime, not at expiry.
+    CONTROL_PLANE = 60  # 1 minute
 
 
 # ---------------------------------------------------------------------------
@@ -668,6 +671,51 @@ class CacheService:
 
         with contextlib.suppress(Exception):
             await self._l2._redis.delete(f"genbi:loginfail:{email.strip().lower()}")
+
+    # ------------------------------------------------------------------
+    # Control plane (ADR 009): tenant status + platform-admin grants,
+    # 60-second TTL so suspension/revocation binds within a minute.
+    # ------------------------------------------------------------------
+
+    async def get_tenant_status(self, tenant_id: str) -> str | None:
+        """Cached tenant status ('active'|'suspended'), None on miss."""
+        key = _key(tenant_id, "tenant_status", "v1")
+        value = self._l1.get(key, CacheTTL.CONTROL_PLANE)
+        if value is not None:
+            self._stats.l1_hits += 1
+            return value
+        value = await self._l2.get(key)
+        if value is not None:
+            self._stats.l2_hits += 1
+            self._l1.set(key, value)
+            return value
+        self._stats.l2_misses += 1
+        return None
+
+    async def set_tenant_status(self, tenant_id: str, status: str) -> None:
+        key = _key(tenant_id, "tenant_status", "v1")
+        self._l1.set(key, status)
+        await self._l2.set(key, status, ttl=CacheTTL.CONTROL_PLANE)
+
+    async def get_platform_admin(self, user_id: str) -> bool | None:
+        """Cached active-grant flag, None on miss."""
+        key = _key(user_id, "platform_admin", "v1")
+        value = self._l1.get(key, CacheTTL.CONTROL_PLANE)
+        if value is not None:
+            self._stats.l1_hits += 1
+            return value
+        value = await self._l2.get(key)
+        if value is not None:
+            self._stats.l2_hits += 1
+            self._l1.set(key, value)
+            return value
+        self._stats.l2_misses += 1
+        return None
+
+    async def set_platform_admin(self, user_id: str, active: bool) -> None:
+        key = _key(user_id, "platform_admin", "v1")
+        self._l1.set(key, active)
+        await self._l2.set(key, active, ttl=CacheTTL.CONTROL_PLANE)
 
     # ------------------------------------------------------------------
     # Invalidation

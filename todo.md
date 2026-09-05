@@ -1,6 +1,6 @@
 # GenBI Platform — Build Progress
 
-> **Last updated:** 2026-09-05 | **Stack tier:** Enterprise | **101/101 shipped (Phases 1–20) · Phases 21–26 planned (multi-tenancy control plane, knowledge base, tenant BYOK LLM — ADRs 009/010/011, design approved, not built)**
+> **Last updated:** 2026-09-05 | **Stack tier:** Enterprise | **108/138 shipped (Phases 1–21) · Phases 22–26 planned (admin portal UX, user management, knowledge base, tenant BYOK LLM — ADRs 009/010/011)**
 
 ---
 
@@ -1384,13 +1384,13 @@ validation permissions (user_roles plumbing exists, unused).
 
 | # | Task | Status |
 |---|---|---|
-| 102 | Migration `0008_control_plane` (structured ops): `platform_admins` (user_id PK → users, granted_by/at, revoked_by/at), `admin_audit` (actor_user_id, action, target_type, target_id, detail JSONB, created_at); `tenants` gains `slug` (unique), `status` (`active`/`suspended`, CHECK + default active), `settings` JSONB; backfill slugs from names | ⬜ |
-| 103 | `genbi_admin` role: `DATABASE_URL_ADMIN` setting (derive-from-main like `database_url_auth`), role + grants in the paired `rls/0008_control_plane_rls.sql` — DML on `tenants`/`users`/`platform_admins`/`admin_audit` + SELECT on `audit_log`, permissive policies scoped `TO genbi_admin`; **retire `genbi_auth`** in the same file (login moves to `genbi_admin` which supersedes its scope); env templates + init.sql parity | ⬜ |
-| 104 | Auth core: `platform_admins` lookup at login → `platform_admin: true` JWT claim; `require_platform_admin` dependency (claim check + 60s L1/L2-cached grant re-check → 403 NOT_PLATFORM_ADMIN); `get_current_user` gains cached `tenant:{id}:status` check → 403 TENANT_SUSPENDED; login rejects suspended tenants with the same code | ⬜ |
-| 105 | `app/services/tenants.py` (GUC-writer pattern on `genbi_admin`): provision (transactional tenant + initial admin user + optional sample-data flag), list/detail with per-tenant counters (GUC-scoped connections per tenant for business counts), rename/suspend/activate/update-settings, guarded decommission (refuse non-empty without force; cascade FKs; audit retained); every mutation writes `admin_audit` (fail-open write, raise-on-read list) | ⬜ |
-| 106 | `app/services/platform_admins.py`: grant/revoke/list with history; revoke sets revoked_by/at (append-only semantics); bootstrap script `scripts/create_admin.py` (owner DSN, idempotent) + `GENBI_SUPERUSER_EMAIL`/`GENBI_SUPERUSER_PASSWORD` env for first-boot dev bootstrap | ⬜ |
-| 107 | API `app/api/v1/admin.py`: GET /admin/stats, GET+POST /admin/tenants, GET+PATCH+DELETE /admin/tenants/{id} (confirm/force guards), GET+POST /admin/admins, DELETE /admin/admins/{user_id}, GET /admin/audit (actor/target/tenant filters); error codes per api-reference; router registration | ⬜ |
-| 108 | Tests: 20+ — grant/revoke lifecycle (claim minting, ≤60s revocation semantics via cache TTL), suspended-tenant enforcement on authenticated endpoints, provisioning transactionality (partial failure rolls back tenant+user), decommission guards (non-empty refusal, force cascade, audit survival), admin_audit written per mutation, API matrix (403/404/409/422 paths); live-stack verification recorded in VERIFICATION.md | ⬜ |
+| 102 | Migration `0008_control_plane` (structured ops): `platform_admins` (user_id PK → users, granted_by/at, revoked_by/at), `admin_audit` (actor_user_id, action, target_type, target_id, detail JSONB, created_at); `tenants` gains `slug` (unique), `status` (`active`/`suspended`, CHECK + default active), `settings` JSONB; backfill slugs from names | ✅ |
+| 103 | `genbi_admin` role: `DATABASE_URL_ADMIN` setting (derive-from-main like `database_url_auth`), role + grants in the paired `rls/0008_control_plane_rls.sql` — DML on `tenants`/`users`/`platform_admins`/`admin_audit` + SELECT on `audit_log`, permissive policies scoped `TO genbi_admin`; **retire `genbi_auth`** in the same file (login moves to `genbi_admin` which supersedes its scope); env templates + init.sql parity | ✅ |
+| 104 | Auth core: `platform_admins` lookup at login → `platform_admin: true` JWT claim; `require_platform_admin` dependency (claim check + 60s L1/L2-cached grant re-check → 403 NOT_PLATFORM_ADMIN); `get_current_user` gains cached `tenant:{id}:status` check → 403 TENANT_SUSPENDED; login rejects suspended tenants with the same code | ✅ |
+| 105 | `app/services/tenants.py` (GUC-writer pattern on `genbi_admin`): provision (transactional tenant + initial admin user + optional sample-data flag), list/detail with per-tenant counters (GUC-scoped connections per tenant for business counts), rename/suspend/activate/update-settings, guarded decommission (refuse non-empty without force; cascade FKs; audit retained); every mutation writes `admin_audit` (fail-open write, raise-on-read list) | ✅ |
+| 106 | `app/services/platform_admins.py`: grant/revoke/list with history; revoke sets revoked_by/at (append-only semantics); bootstrap script `scripts/create_admin.py` (owner DSN, idempotent) + `GENBI_SUPERUSER_EMAIL`/`GENBI_SUPERUSER_PASSWORD` env for first-boot dev bootstrap | ✅ |
+| 107 | API `app/api/v1/admin.py`: GET /admin/stats, GET+POST /admin/tenants, GET+PATCH+DELETE /admin/tenants/{id} (confirm/force guards), GET+POST /admin/admins, DELETE /admin/admins/{user_id}, GET /admin/audit (actor/target/tenant filters); error codes per api-reference; router registration | ✅ |
+| 108 | Tests: 20+ — grant/revoke lifecycle (claim minting, ≤60s revocation semantics via cache TTL), suspended-tenant enforcement on authenticated endpoints, provisioning transactionality (partial failure rolls back tenant+user), decommission guards (non-empty refusal, force cascade, audit survival), admin_audit written per mutation, API matrix (403/404/409/422 paths); live-stack verification recorded in VERIFICATION.md | ✅ |
 
 ## Phase 22 — Admin Portal Frontend (Tasks 109–113)
 
@@ -1465,3 +1465,28 @@ validation permissions (user_roles plumbing exists, unused).
 | 136 | Admin portal integration: tenant detail gains an LLM panel (masked config, status toggle, spend-by-model sparktable, force-set with validation) | ⬜ |
 | 137 | Docs flip: api-reference ✅ statuses for /settings/llm + admin LLM; openapi planned markers removed; core-services §3 and infrastructure env notes updated to implemented; ADR 011 status → Accepted | ⬜ |
 | 138 | Live-stack verification (VERIFICATION.md): configure a tenant with an OpenAI-format key → chat pipeline runs end-to-end on the tenant key (audit rows show provider/key_source=tenant); rotate → 60s invalidation; break the key → LLM_BYOK_MISCONFIGURED with no platform fallback; unset TENANT_ENCRYPTION_KEY → fail-fast | ⬜ |
+
+### Phase 21 — verified by (2026-09-05)
+
+- 26 new tests (grant/revoke lifecycle + cache refresh, suspended-tenant
+  enforcement on ordinary endpoints, ≤60s revocation semantics against the
+  REAL cache, provisioning bcrypt/transaction/audit contract, unique-violation
+  mapping, decommission guards + per-table fail-open analytics cleanup,
+  API matrix incl. 400/404/409/422, JWT claim roundtrip); full suite
+  281 passed / 1 pre-existing failure (test_login_success's /datasources
+  200 assertion needs a live Cube — reproduced on pristine HEAD)
+- Live stack (dev DB, real login + real cache): superuser grant mints the
+  `platform_admin` claim at login; provision → tenant + admin user + sample
+  sales rows + audit row (201, generated password never echoed); tenant
+  admin authenticated but 403 on /admin/stats; suspend → login AND
+  authenticated requests 403 TENANT_SUSPENDED; decommission gates
+  (no-confirm 400 / non-empty 422 / force 200 with user cascade to 0);
+  audit feed lists every action; revoke → immediate 403 (service refreshes
+  the 60s cache)
+- Chain verified → 0008_control_plane + paired rls file (genbi_admin role,
+  control-plane policies, genbi_auth retired incl. schema-privilege revoke,
+  slug backfill) applied to dev + test DBs
+- Drive-by fixes surfaced by the phase: asyncpg 0.31 removed the
+  `InsufficientPrivilege` alias (tests updated to `…Error`, un-breaking 3
+  long-failing isolation tests); raw-asyncpg JSONB results parse as text
+  (login + tenant detail now decode roles)

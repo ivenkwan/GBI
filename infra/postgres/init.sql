@@ -60,8 +60,12 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO cube_reader;
 
 -- Application runtime roles (see docs/adr/006-enforced-rls-roles.md and
 -- Alembic revision 0002_app_roles — the authoritative mirror of this block).
---   genbi_app  — backend runtime (ORM + query connector); bound by RLS.
---   genbi_auth — login endpoint only; reads `users` across tenants.
+--   genbi_app   — backend runtime (ORM + query connector); bound by RLS.
+--   genbi_auth  — legacy login role; retired by the 0008 RLS file
+--                 (login + control plane moved to genbi_admin, ADR 009).
+--   genbi_admin — control-plane role (Phase 21): login endpoint + admin
+--                 services. DML on tenants/users/platform_admins/admin_audit
+--                 + SELECT on audit_log; no business data.
 -- Passwords are fixed dev defaults — rotate in production.
 DO $$
 BEGIN
@@ -70,6 +74,9 @@ BEGIN
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'genbi_auth') THEN
         CREATE ROLE genbi_auth LOGIN PASSWORD 'genbi_auth';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'genbi_admin') THEN
+        CREATE ROLE genbi_admin LOGIN PASSWORD 'genbi_admin';
     END IF;
 END $$;
 

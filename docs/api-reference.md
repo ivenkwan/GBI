@@ -430,13 +430,16 @@ class ChartRenderRequest(BaseModel):
 
 # Planned API — Multi-Tenancy Control Plane & Knowledge Base
 
-> **Status: DESIGN ONLY (ADRs 009/010, Phases 21–24 in todo.md) — not yet built.**
-> Contracts below are the agreed design target for implementation.
+> **Implementation status:** Admin (Phase 21) ✅ built. Tenant Users
+> (Phase 23), Wiki (Phase 24), and BYOK (Phases 25–26) remain planned —
+> their contracts below are the agreed design targets.
 
-## Admin (platform superuser) — ADR 009
+## Admin (platform superuser) — ADR 009 ✅ (Phase 21)
 
-Guard: `require_platform_admin` (JWT claim + cached grant-table check).
-Every mutation writes an `admin_audit` row.
+Guard: `require_platform_admin` (JWT `platform_admin` claim + 60s-cached
+grant-table re-check → 403 NOT_PLATFORM_ADMIN; fails open on outage).
+Every mutation writes an `admin_audit` row. Suspension is enforced at
+request time the same way (403 TENANT_SUSPENDED).
 
 | Method + Path | Purpose |
 |---|---|

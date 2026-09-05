@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 
 from app.api.v1 import (
+    admin,
     auth,
     charts,
     chat,
@@ -26,4 +27,5 @@ api_router.include_router(reports.router, prefix="/reports", tags=["reports"])
 api_router.include_router(metrics.router, prefix="/metrics", tags=["metrics"])
 api_router.include_router(dashboards.router, prefix="/dashboards", tags=["dashboards"])
 api_router.include_router(lineage.router, prefix="/lineage", tags=["lineage"])
+api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
 api_router.include_router(datasources.router, prefix="/datasources", tags=["datasources"])

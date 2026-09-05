@@ -18,18 +18,19 @@ async_session = async_sessionmaker(
     expire_on_commit=False,
 )
 
-# Login-path engine: genbi_auth role — SELECT on `users` across tenants
-# (users_login_lookup policy) and nothing else. See ADR 006.
-auth_engine = create_async_engine(
-    settings.database_url_auth,
+# Control-plane engine: genbi_admin role (ADR 009) — the login endpoint
+# (reads users across tenants + platform_admins + tenants.status) and the
+# admin-plane services. It can read no business data.
+admin_engine = create_async_engine(
+    settings.database_url_admin,
     echo=settings.DEBUG,
     pool_size=5,
     max_overflow=2,
     pool_pre_ping=True,
 )
 
-auth_session = async_sessionmaker(
-    auth_engine,
+admin_session = async_sessionmaker(
+    admin_engine,
     class_=AsyncSession,
     expire_on_commit=False,
 )
@@ -46,9 +47,9 @@ async def get_db() -> AsyncSession:
             raise
 
 
-async def get_auth_db() -> AsyncSession:
-    """FastAPI dependency: session on the login-only genbi_auth role."""
-    async with auth_session() as session:
+async def get_admin_db() -> AsyncSession:
+    """FastAPI dependency: session on the control-plane genbi_admin role."""
+    async with admin_session() as session:
         try:
             yield session
             await session.commit()

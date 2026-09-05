@@ -18,7 +18,7 @@ import pytest
 import pytest_asyncio
 
 from app.core.security import hash_password
-from tests.conftest import app_role_dsn, auth_role_dsn, db_reachable, owner_dsn
+from tests.conftest import admin_role_dsn, app_role_dsn, auth_role_dsn, db_reachable, owner_dsn
 
 TENANT_A = str(uuid.uuid4())
 TENANT_B = str(uuid.uuid4())
@@ -126,7 +126,7 @@ async def test_app_role_cannot_insert_cross_tenant_rows():
     conn = await asyncpg.connect(app_role_dsn())
     try:
         await _set_guc(conn, TENANT_A)
-        with pytest.raises(asyncpg.exceptions.InsufficientPrivilege) as exc_info:
+        with pytest.raises(asyncpg.exceptions.InsufficientPrivilegeError) as exc_info:
             await conn.execute(
                 "INSERT INTO users (id, tenant_id, email, hashed_password, roles) "
                 "VALUES ($1, $2, $3, $4, $5::jsonb)",
@@ -164,12 +164,13 @@ async def test_analytics_without_guc_sees_nothing():
 
 
 # ---------------------------------------------------------------------------
-# genbi_auth: login-lookup carve-out and nothing more
+# genbi_admin: control-plane role (Phase 21 / ADR 009) — users + control
+# tables across tenants, and NO business data.
 # ---------------------------------------------------------------------------
 
 
-async def test_auth_role_reads_users_across_tenants():
-    conn = await asyncpg.connect(auth_role_dsn())
+async def test_admin_role_reads_users_across_tenants():
+    conn = await asyncpg.connect(admin_role_dsn())
     try:
         visible = await conn.fetchval(
             "SELECT count(*) FROM users WHERE email IN ($1, $2)",
@@ -181,29 +182,46 @@ async def test_auth_role_reads_users_across_tenants():
         await conn.close()
 
 
-async def test_auth_role_cannot_read_other_tables():
-    conn = await asyncpg.connect(auth_role_dsn())
+async def test_admin_role_can_read_audit_log():
+    # The one business-adjacent read granted to the control plane (SELECT only).
+    conn = await asyncpg.connect(admin_role_dsn())
     try:
-        with pytest.raises(asyncpg.exceptions.InsufficientPrivilege) as exc_info:
-            await conn.fetchval("SELECT count(*) FROM audit_log")
+        await conn.fetchval("SELECT count(*) FROM audit_log")
+    finally:
+        await conn.close()
+
+
+async def test_admin_role_cannot_read_business_tables():
+    conn = await asyncpg.connect(admin_role_dsn())
+    try:
+        with pytest.raises(asyncpg.exceptions.InsufficientPrivilegeError) as exc_info:
+            await conn.fetchval("SELECT count(*) FROM conversations")
         assert "permission denied" in str(exc_info.value)
     finally:
         await conn.close()
 
 
-async def test_auth_role_cannot_write():
-    conn = await asyncpg.connect(auth_role_dsn())
+async def test_admin_role_cannot_write_business_tables():
+    conn = await asyncpg.connect(admin_role_dsn())
     try:
-        with pytest.raises(asyncpg.exceptions.InsufficientPrivilege) as exc_info:
+        with pytest.raises(asyncpg.exceptions.InsufficientPrivilegeError) as exc_info:
             await conn.execute(
-                "INSERT INTO users (id, tenant_id, email, hashed_password, roles) "
-                "VALUES ($1, $2, $3, $4, $5::jsonb)",
+                "INSERT INTO conversations (id, tenant_id, title) VALUES ($1::uuid, $2::uuid, $3)",
                 str(uuid.uuid4()),
                 TENANT_A,
-                f"iso-authwrite-{uuid.uuid4()}@genbi.local",
-                hash_password("irrelevant"),
-                json.dumps(["user"]),
+                "should be denied",
             )
         assert "permission denied" in str(exc_info.value)
     finally:
         await conn.close()
+
+
+async def test_retired_auth_role_is_gone():
+    # Phase 21 retired genbi_auth: its grants were revoked and the role
+    # dropped by the 0008 RLS file. Connecting as it must fail.
+    with pytest.raises((ConnectionError, asyncpg.exceptions.PostgresError)):
+        conn = await asyncpg.connect(auth_role_dsn())
+        try:
+            await conn.fetchval("SELECT count(*) FROM users")
+        finally:
+            await conn.close()

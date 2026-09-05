@@ -157,3 +157,47 @@ cd frontend && pnpm typecheck && pnpm lint && pnpm build
   test_tenant_isolation ×2) fail identically on pristine HEAD against the
   local AGE-image Postgres; CI's pgvector service container is the authority
   for those.
+
+---
+
+# Phase 21 verification (2026-09-05) — control plane foundations
+
+> Verified live against the dev stack (postgres + redis containers) plus the
+> full offline suite. Everything below was executed and passed.
+
+## What was verified live (real login, real cache, real DB)
+
+1. **Superuser model** — `grant_superadmin` → login mints `platform_admin:
+   True`; the tenant admin of a freshly provisioned tenant authenticates
+   fine but gets `403 NOT_PLATFORM_ADMIN` on `/admin/stats`; revoke
+   (which refreshes the 60-second cache) flips an unexpired superuser
+   token to `403` immediately.
+2. **Provisioning** — `POST /admin/tenants` (transactional): tenant +
+   initial admin user + 3 sample sales rows + `admin_audit` row; generated
+   password returned exactly once and never echoed when caller-set.
+3. **Suspension** — `PATCH /admin/tenants/{id} {"status": "suspended"}` →
+   login rejected `403 TENANT_SUSPENDED` AND already-minted tokens rejected
+   on ordinary endpoints (request-time cached check, fail-open on outage).
+4. **Decommission guards** — no `confirm=yes` → 400; users present without
+   `force` → 422; `confirm=yes&force=true` → tenant + users cascade to
+   zero, analytics cleanup fail-opens per table (databases without the
+   0003 analytics tables still decommission), `audit_log` history retained.
+5. **Audit + stats** — every mutation landed in `admin_audit`;
+   `/admin/stats` counts tenants by status, users, 24h LLM calls, active
+   superusers.
+
+## Test suite
+
+- 26 new offline tests across services + API; full run: **281 passed,
+  1 pre-existing failure** (`test_login_success…` asserts `/datasources`
+  200, which needs a live Cube — reproduced identically on pristine HEAD).
+- The build also un-broke three long-failing isolation tests: asyncpg 0.31
+  removed the `InsufficientPrivilege` alias the tests relied on.
+
+## Re-verify
+
+```bash
+make migrate          # 0008 + paired rls (genbi_admin, genbi_auth retired)
+docker compose -f infra/docker-compose.dev.yml exec backend \
+  uv run pytest tests/ -q -m "not e2e"
+```

@@ -82,7 +82,7 @@ jobs:
         # owner role for test fixtures that need admin cleanup.
         env:
           DATABASE_URL: postgresql+asyncpg://genbi_app:genbi_app@localhost:5432/genbi_test
-          DATABASE_URL_AUTH: postgresql+asyncpg://genbi_auth:genbi_auth@localhost:5432/genbi_test
+          DATABASE_URL_ADMIN: postgresql+asyncpg://genbi_admin:genbi_admin@localhost:5432/genbi_test
           DATABASE_URL_SYNC: postgresql://genbi:genbi@localhost:5432/genbi_test
           REDIS_URL: redis://localhost:6379/0
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

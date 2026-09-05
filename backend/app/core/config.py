@@ -67,19 +67,20 @@ class Settings(BaseSettings):
     # DATABASE_URL_SYNC for Alembic and admin scripts only.
     DATABASE_URL: str = "postgresql+asyncpg://genbi_app:genbi_app@localhost:5432/genbi"
     DATABASE_URL_SYNC: str = "postgresql://genbi:genbi@localhost:5432/genbi"
-    # Login endpoint role (reads `users` across tenants). Blank = derive from
-    # DATABASE_URL by swapping credentials, so host/database follow the main
-    # URL in every environment.
-    DATABASE_URL_AUTH: str = ""
+    # Login endpoint + control-plane role (ADR 009): DML on control-plane
+    # tables (tenants/users/platform_admins/admin_audit) + SELECT on
+    # audit_log. Retired genbi_auth's scope when Phase 21 landed. Blank =
+    # derive from DATABASE_URL by swapping credentials.
+    DATABASE_URL_ADMIN: str = ""
 
     @property
-    def database_url_auth(self) -> str:
-        """Auth-engine URL: explicit override, or DATABASE_URL with genbi_auth creds."""
-        if self.DATABASE_URL_AUTH:
-            return self.DATABASE_URL_AUTH
+    def database_url_admin(self) -> str:
+        """Control-plane URL: explicit override, or DATABASE_URL with genbi_admin creds."""
+        if self.DATABASE_URL_ADMIN:
+            return self.DATABASE_URL_ADMIN
         from sqlalchemy.engine import make_url
 
-        return str(make_url(self.DATABASE_URL).set(username="genbi_auth", password="genbi_auth"))
+        return str(make_url(self.DATABASE_URL).set(username="genbi_admin", password="genbi_admin"))
 
     # --- Redis ---
     REDIS_URL: str = "redis://localhost:6379/0"
