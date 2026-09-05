@@ -343,3 +343,40 @@ docker compose -f infra/docker-compose.dev.yml exec backend \
 - Docs: api-reference + openapi flipped to built (incl. the new PATCH
   status endpoints and spend fields), core-services §3 and
   infrastructure env notes → implemented, ADR 011 → Accepted.
+
+---
+
+# Security audit (2026-09-05, post-Phase 26)
+
+- **Mimosa deep scan** (scan `scan-2026-09-05T12-53-48.174Z-d241bceb168a`,
+  seal `sha256:445cac59…a3f35`, depth=deep): **0 findings** (high/medium/
+  low/info/business-logic all zero). Source coverage complete — 190/190
+  files selected and parsed, no truncation/read/parse failures (the
+  earlier `library_source_limit_exceeded` condition did not recur).
+  Threat model: 52 entry points, 30 principals, 14 authorization surfaces;
+  path analysis: 394 functions, 539 call edges. One residual coverage gap
+  is inherent to the tool, not the code: some calls are dynamically
+  dispatched (FastAPI dependencies, asyncpg, langchain adapters) and
+  cannot be statically resolved, so cross-file reachability is partial —
+  the run is therefore stamped `inconclusive` despite zero findings.
+  Evidence boundary: static analysis only, no runtime execution.
+- **Dependency audit (remediated)**
+  - Backend `pip-audit` against the frozen lock: nltk 3.10.2 carried 18
+    advisories (all fixed in 3.10.3) via llama-index → **bumped to 3.10.3**
+    (`uv lock --upgrade-package nltk`); full suite unchanged (374 passed /
+    same pre-existing failures).
+  - Frontend `pnpm audit --prod`: 5 advisories, all transitive through
+    next (sharp <0.35.0 libvips CVEs — high; postcss multiple — moderate/
+    high) → **pnpm-workspace.yaml overrides** (sharp ^0.35.0 → resolved
+    0.35.4; postcss ^8.5.23 → resolved 8.5.26); audit now reports **no
+    known vulnerabilities**. The stale package.json `pnpm` field (ignored
+    by pnpm 10/11) was replaced by the workspace file, which also
+    approves the sharp/unrs-resolver build scripts. Gates re-run green:
+    tsc 0 errors / eslint 0 errors / next build 15/15 routes.
+  - **Remaining, no released fix (accepted with rationale):**
+    `ecdsa 0.19.2` PYSEC-2026-1325 (via python-jose, which is itself
+    unmaintained) — the backend signs and verifies JWTs with HS256 only,
+    so ecdsa's EC code paths are not exercised; recommended follow-up is
+    migrating `python-jose` → PyJWT (already in the tree via mcp).
+    `nltk 3.10.3` PYSEC-2026-3740 — 3.10.3 is the latest release; no
+    fixed version exists yet.

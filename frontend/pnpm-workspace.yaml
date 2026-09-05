@@ -1,0 +1,13 @@
+# pnpm 10 reads settings here (the package.json "pnpm" field is no longer
+# honored). overrides close the pnpm audit --prod advisories that arrive
+# transitively through next: sharp <0.35.0 (libvips CVEs) and postcss
+# (multiple, fixed >=8.5.23). allowBuilds approves the two packages with
+# postinstall scripts (sharp native bindings; unrs-resolver native
+# resolver used by eslint-config-next).
+overrides:
+  sharp: ^0.35.0
+  postcss: ^8.5.23
+
+allowBuilds:
+  sharp: true
+  unrs-resolver: true

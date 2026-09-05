@@ -1606,3 +1606,11 @@ validation permissions (user_roles plumbing exists, unused).
 - Docs: api-reference + openapi flipped to built (incl. new PATCH
   status endpoints), core-services §3 + infrastructure env notes →
   implemented, ADR 011 → Accepted.
+
+## Post-roadmap follow-ups (2026-09-05 security audit)
+
+- Migrate `python-jose` → PyJWT (already in the tree via mcp) to retire
+  `ecdsa` (PYSEC-2026-1325, no upstream fix; python-jose is unmaintained).
+  Mitigated today: JWTs are HS256-only, so ecdsa's EC paths are unused.
+  Touches `app/core/auth.py`, `app/semantic/cube_client.py`, and the two
+  jose-importing test files.

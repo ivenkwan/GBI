@@ -43,11 +43,5 @@
     "prettier": "^3.4",
     "eslint": "^9.17",
     "eslint-config-next": "^15.1"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "sharp",
-      "unrs-resolver"
-    ]
   }
 }
