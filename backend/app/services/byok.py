@@ -147,6 +147,16 @@ async def delete_provider_config(tenant_id: str, actor_user_id: str | None = Non
     finally:
         await conn.close()
     invalidate_resolution(tenant_id)
+    if deleted == "DELETE 1":
+        from app.services.admin_audit import record_admin_action
+
+        await record_admin_action(
+            actor_user_id=actor_user_id or tenant_id,
+            action="byok.delete",
+            target_type="tenant",
+            target_id=tenant_id,
+            detail={"reverted_to": "platform"},
+        )
     return deleted == "DELETE 1"
 
 
@@ -163,7 +173,51 @@ async def set_status(tenant_id: str, status: str, actor_user_id: str | None = No
     finally:
         await conn.close()
     invalidate_resolution(tenant_id)
+    if updated == "UPDATE 1":
+        from app.services.admin_audit import record_admin_action
+
+        await record_admin_action(
+            actor_user_id=actor_user_id or tenant_id,
+            action="byok.set_status",
+            target_type="tenant",
+            target_id=tenant_id,
+            detail={"status": status},
+        )
     return updated == "UPDATE 1"
+
+
+async def tenant_llm_usage(tenant_id: str, days: int = 7) -> list[dict]:
+    """Per-tenant spend attribution from the audit trail (ADR 011 §8).
+
+    Groups the tenant's audit_log rows by day x provider x key_source x
+    model — token totals and call counts with no new metering
+    infrastructure. Reads run on the control-plane role (SELECT on
+    audit_log only) and are explicitly tenant-filtered.
+    """
+    from app.core.auth import _admin_dsn
+
+    window = max(1, min(int(days), 90))
+    conn = await asyncpg.connect(_admin_dsn())
+    try:
+        rows = await conn.fetch(
+            "SELECT provider, key_source, model_name, created_at::date AS day, count(*) AS calls, COALESCE(sum(input_tokens), 0) AS input_tokens, COALESCE(sum(output_tokens), 0) AS output_tokens FROM audit_log WHERE tenant_id = $1::uuid AND created_at > NOW() - ($2::int * INTERVAL '1 day') GROUP BY provider, key_source, model_name, day ORDER BY day DESC, calls DESC LIMIT 200",
+            tenant_id,
+            window,
+        )
+    finally:
+        await conn.close()
+    return [
+        {
+            "day": row["day"].isoformat(),
+            "provider": row["provider"],
+            "key_source": row["key_source"],
+            "model_name": row["model_name"],
+            "calls": row["calls"],
+            "input_tokens": row["input_tokens"],
+            "output_tokens": row["output_tokens"],
+        }
+        for row in rows
+    ]
 
 
 def _masked(row) -> dict:

@@ -279,3 +279,67 @@ docker compose -f infra/docker-compose.dev.yml exec backend \
 - 20 new offline tests + updated audit/embeddings tests; full suite
   **349 passed / 1 pre-existing** (Cube-dependent `/datasources`
   assertion).
+
+---
+
+# Phase 26 verification (2026-09-05) — BYOK APIs, admin/settings UX & spend attribution
+
+- Live, end-to-end against the dev stack (Postgres + Redis up, the real
+  API surface via ASGI + the real service layer, runtime-generated
+  throwaway credentials, and a local mock OpenAI-format endpoint as the
+  provider gateway — no real keys involved): **26/26 checks green**.
+  - Tenant surface: GET unconfigured → `configured=false`; validate →
+    the live 1-token ping hit the gateway carrying the TENANT key and
+    saved nothing; PUT → masked v1 (last4 only — the plaintext key
+    never appears in any response); resolver → tenant/openai with the
+    correctly decrypted key.
+  - Chat path: a pipeline `LLMClient.invoke` ran on the tenant key with
+    the tenant's reasoning model, and the audit row landed attributed
+    `provider=openai` / `key_source=tenant`.
+  - Spend attribution: `GET /admin/tenants/{id}/llm` returns usage rows
+    (day × provider × key_source × model, tokens + calls) computed from
+    `audit_log`; `/admin/stats` reports `llm_byok_calls_24h ≥ 1` and
+    `llm_tokens_24h ≥ 4`; both responses masked.
+  - Rotation: second PUT → v2 with the new last4; the resolution cache
+    invalidates immediately (fresh plaintext, no 60s wait).
+  - No-fallback: with the gateway returning 401, invoke raises
+    `LLMBYOKMisconfiguredError` and every failing call hit the TENANT
+    endpoint with the TENANT key — the platform key is never touched.
+  - Kill switches: PATCH disabled → resolver returns platform; DELETE →
+    reverted; unsetting `TENANT_ENCRYPTION_KEY` with a configured tenant
+    → resolver raises `BYOKNotConfiguredError` and the API returns 503
+    `BYOK_NOT_CONFIGURED` (fail-fast, never a platform fallback).
+  - Guards: plain-user PUT → 403 NOT_TENANT_ADMIN; non-superuser admin
+    GET → 403 NOT_PLATFORM_ADMIN. Every effective mutation audited
+    (`byok.set_provider` rows observed in `admin_audit`).
+  - Cleanup leaves zero rows (tenant, provider config, audit_log,
+    admin_audit).
+- Drive-by fix with live impact: `database_url_admin` derived its DSN
+  via `str(URL)`, which MASKS the password as `***` — every
+  control-plane call on a machine without `DATABASE_URL_ADMIN` set
+  (local dev outside Docker) failed auth invisibly (the audit logger's
+  %-style message hid the cause). Fixed with
+  `render_as_string(hide_password=False)`; 4 of the 5 long-failing
+  local `test_auth` failures (previously written off as "local-env
+  divergence") now pass.
+- 25 new offline tests (API guard matrix, masked responses with a
+  recursive key-absence sweep, error mapping 400/404/503/422, admin
+  force-set actor/tenant threading, spend SQL contract incl. window
+  clamping and bind discipline, /admin/stats fields); Phase 25's
+  set_status/delete contract test extended for audit-writes-on-
+  effective-mutations; 2 latent ruff violations in `test_byok.py`
+  fixed (the CI gate runs `ruff check .`). Full suite: **374 passed /
+  1 pre-existing Cube-dependent failure** (`/datasources` 200 in
+  `test_login_success`) **/ 10 pre-existing `test_tenant_isolation`
+  errors** — both classes reproduced on pristine HEAD before this
+  phase began.
+- Frontend: `/settings` gains the "AI Provider" section (provider
+  select, base URL, model names, write-only key field showing last4
+  once saved, Validate / Save / Disable / Revert-to-platform); the
+  admin tenant detail gains the LLM panel (masked config, status
+  toggle, spend-by-model table, force-set with validation); the admin
+  overview shows token + BYOK-call counters. tsc 0 errors / eslint 0
+  errors (1 pre-existing img warning) / next build compiles all routes.
+- Docs: api-reference + openapi flipped to built (incl. the new PATCH
+  status endpoints and spend fields), core-services §3 and
+  infrastructure env notes → implemented, ADR 011 → Accepted.

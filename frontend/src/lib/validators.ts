@@ -191,3 +191,20 @@ export const LoginResponseSchema = z.object({
 });
 
 export type LoginResponse = z.infer<typeof LoginResponseSchema>;
+
+/** BYOK LLM provider config (Phase 26, ADR 011) */
+export const LLMConfigSchema = z.object({
+  provider: z.enum(["anthropic", "openai"]),
+  api_key: z.string().min(8, "API key looks too short").max(512),
+  base_url: z
+    .string()
+    .url("Base URL must be a valid URL (OpenAI-compatible gateways)")
+    .max(512)
+    .optional()
+    .or(z.literal("")),
+  reasoning_model: z.string().min(1, "Reasoning model is required").max(100),
+  fast_model: z.string().min(1, "Fast model is required").max(100),
+  embedding_model: z.string().max(100).optional().or(z.literal("")),
+});
+
+export type LLMConfigForm = z.infer<typeof LLMConfigSchema>;

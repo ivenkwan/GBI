@@ -163,7 +163,7 @@ scrape_configs:
 | **Auth** | `JWT_SECRET_KEY` | `change-me` (override in production!) |
 | | `JWT_ALGORITHM` | `HS256` |
 | | `JWT_EXPIRE_MINUTES` | `60` |
-| **Tenant** | `TENANT_ENCRYPTION_KEY` | Currently a placeholder. **Required when tenant BYOK is in use (ADR 011, planned Phases 25–26):** encrypts per-tenant LLM API keys at rest via pgcrypto (`app_crypto` functions; the key rides as a bind parameter and never enters SQL text or logs). BYOK writes and tenant-routed calls fail fast with `BYOK_NOT_CONFIGURED` if unset |
+| **Tenant** | `TENANT_ENCRYPTION_KEY` | **Required when tenant BYOK is in use (ADR 011, built Phases 25–26):** encrypts per-tenant LLM API keys at rest via pgcrypto (`app_crypto` functions; the key rides as a bind parameter and never enters SQL text or logs). BYOK writes and tenant-routed calls fail fast with `BYOK_NOT_CONFIGURED` if unset |
 | **Flint** | `FLINT_MCP_BACKENDS` | `vegalite,echarts,chartjs` |
 | | `FLINT_MCP_DATA_ROOTS` | `/tmp/genbi-charts` |
 | **App** | `APP_ENV` | `development` |

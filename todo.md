@@ -1,6 +1,6 @@
 # GenBI Platform — Build Progress
 
-> **Last updated:** 2026-09-05 | **Stack tier:** Enterprise | **132/138 shipped (Phases 1–25) · Phase 26 planned (BYOK APIs/UX — ADR 011)**
+> **Last updated:** 2026-09-05 | **Stack tier:** Enterprise | **138/138 shipped (Phases 1–26) · roadmap complete**
 
 ---
 
@@ -1359,13 +1359,17 @@ validation permissions (user_roles plumbing exists, unused).
   assumption predates caching)
 - Frontend typecheck/lint/build clean (0 errors; 1 pre-existing img warning)
 
-### Full-suite status (2026-09-05)
+### Full-suite status (2026-09-05, post-Phase 26)
 
-- Backend: 307 passed / 6 failed — the 6 (test_auth ×4, test_tenant_isolation
-  ×2) reproduce identically on pristine HEAD against the local AGE-image
-  Postgres, i.e. a pre-existing local-env divergence from CI's service
-  container, not a regression; ruff check + format clean
-- Frontend: tsc 0, eslint 0 errors (1 pre-existing warning), next build 9/9
+- Backend: 374 passed / 1 failed / 10 errors. The failure
+  (test_login_success's `/datasources` 200 assertion) needs a live Cube;
+  the 10 tenant-isolation errors reproduce identically on pristine HEAD
+  against the local AGE-image Postgres — a pre-existing local-env
+  divergence from CI's service container, not a regression. 4 of the 5
+  formerly failing test_auth tests now pass thanks to the Phase 26
+  `database_url_admin` password-masking fix; ruff check + format clean
+- Frontend: tsc 0, eslint 0 errors (1 pre-existing warning), next build
+  all routes
 
 ---
 
@@ -1433,15 +1437,11 @@ validation permissions (user_roles plumbing exists, unused).
 
 ---
 
-# Phases 25–26 — Tenant BYOK LLM Architecture (PLANNED)
+# Phases 25–26 — Tenant BYOK LLM Architecture
 
-> **Status: DESIGN APPROVED, NOT YET BUILT** (2026-09-05). Design authority:
-> ADR 011 (per-tenant LLM providers — Anthropic-native + OpenAI-format
-> endpoints, tenant-held keys, pgcrypto at rest, no silent platform fallback).
-> Depends on: Phase 21's role guards for the admin/settings write paths
-> (until then, a local tenant-`admin` role check suffices); Phase 22/23
-> portals are where the UX lands. Contracts: docs/api-reference.md §BYOK +
-> docs/api/openapi.yaml.
+> **Status: BUILT (2026-09-05)** — foundations (storage, crypto, adapters,
+> resolver, no-fallback) in Phase 25; APIs, spend attribution, and
+> settings/admin UX in Phase 26. Design authority: ADR 011 (Accepted).
 
 ## Phase 25 — BYOK Foundations: Storage, Crypto, Adapters, Routing (Tasks 126–132)
 
@@ -1459,12 +1459,12 @@ validation permissions (user_roles plumbing exists, unused).
 
 | # | Task | Status |
 |---|---|---|
-| 133 | API `app/api/v1/byok.py`: GET/PUT/DELETE `/settings/llm`, POST `/settings/llm/validate` (live 1-token provider ping, sanitized errors), GET/PUT `/admin/tenants/{id}/llm` (ADR 009 guards); every response masked (key_last4 only); every mutation audited (actor, tenant, action, key_version) | ⬜ |
-| 134 | Spend attribution queries: per-tenant usage by provider/model/day from `audit_log` (tokens + call counts); surfaced via GET /admin/tenants/{id}/llm and /admin/stats | ⬜ |
-| 135 | Frontend settings page "AI Provider" section (extends the Phase 23 `/settings` page): provider select, base URL, model names, key input (password field, shows last4 once saved), Validate + Save + Revert-to-platform actions | ⬜ |
-| 136 | Admin portal integration: tenant detail gains an LLM panel (masked config, status toggle, spend-by-model sparktable, force-set with validation) | ⬜ |
-| 137 | Docs flip: api-reference ✅ statuses for /settings/llm + admin LLM; openapi planned markers removed; core-services §3 and infrastructure env notes updated to implemented; ADR 011 status → Accepted | ⬜ |
-| 138 | Live-stack verification (VERIFICATION.md): configure a tenant with an OpenAI-format key → chat pipeline runs end-to-end on the tenant key (audit rows show provider/key_source=tenant); rotate → 60s invalidation; break the key → LLM_BYOK_MISCONFIGURED with no platform fallback; unset TENANT_ENCRYPTION_KEY → fail-fast | ⬜ |
+| 133 | API `app/api/v1/byok.py`: GET/PUT/DELETE `/settings/llm`, POST `/settings/llm/validate` (live 1-token provider ping, sanitized errors), GET/PUT `/admin/tenants/{id}/llm` (ADR 009 guards); every response masked (key_last4 only); every mutation audited (actor, tenant, action, key_version) | ✅ |
+| 134 | Spend attribution queries: per-tenant usage by provider/model/day from `audit_log` (tokens + call counts); surfaced via GET /admin/tenants/{id}/llm and /admin/stats | ✅ |
+| 135 | Frontend settings page "AI Provider" section (extends the Phase 23 `/settings` page): provider select, base URL, model names, key input (password field, shows last4 once saved), Validate + Save + Revert-to-platform actions | ✅ |
+| 136 | Admin portal integration: tenant detail gains an LLM panel (masked config, status toggle, spend-by-model sparktable, force-set with validation) | ✅ |
+| 137 | Docs flip: api-reference ✅ statuses for /settings/llm + admin LLM; openapi planned markers removed; core-services §3 and infrastructure env notes updated to implemented; ADR 011 status → Accepted | ✅ |
+| 138 | Live-stack verification (VERIFICATION.md): configure a tenant with an OpenAI-format key → chat pipeline runs end-to-end on the tenant key (audit rows show provider/key_source=tenant); rotate → 60s invalidation; break the key → LLM_BYOK_MISCONFIGURED with no platform fallback; unset TENANT_ENCRYPTION_KEY → fail-fast | ✅ |
 
 ### Phase 21 — verified by (2026-09-05)
 
@@ -1567,3 +1567,42 @@ validation permissions (user_roles plumbing exists, unused).
 - Migration 0012 + paired rls (pgcrypto app_crypto SECURITY DEFINER
   encrypt/decrypt with key-as-bind, tenant recipe on
   tenant_llm_providers, genbi_app schema USAGE) applied to dev + test DBs
+
+### Phase 26 — verified by (2026-09-05)
+
+- 25 new offline tests (API guard matrix incl. superuser-through-
+  tenant-guard, masked responses with a recursive key-absence sweep,
+  error mapping 400/404/503/422, admin force-set actor/tenant
+  threading + days-window bounds, spend SQL contract incl. clamping
+  and bind discipline, /admin/stats spend fields); Phase 25's
+  set_status/delete contract test extended for audit-on-effective-
+  mutation; 2 latent ruff violations in test_byok.py fixed. Full
+  suite: **374 passed / 1 pre-existing Cube-dependent failure /
+  10 pre-existing tenant-isolation errors** (both classes reproduce
+  on pristine HEAD).
+- Live stack, 26/26 checks (real API surface via ASGI + real services,
+  runtime-generated throwaway credentials, local mock OpenAI-format
+  gateway — no real keys): validate ping carried the tenant key and
+  saved nothing; PUT → masked v1; resolver → tenant/openai; a
+  pipeline LLMClient.invoke ran on the tenant key and its audit row
+  landed provider=openai/key_source=tenant; admin GET returned usage
+  rows and /admin/stats rolled up byok calls + tokens; rotation → v2
+  with immediate cache invalidation; gateway 401 →
+  LLMBYOKMisconfiguredError with every failing call on the TENANT
+  endpoint (no platform fallback); disabled/delete → platform; unset
+  encryption key → resolver BYOKNotConfiguredError + API 503
+  BYOK_NOT_CONFIGURED; guards 403 both directions; cleanup left zero
+  rows.
+- Drive-by fix with live impact: `database_url_admin` used `str(URL)`
+  which masks the password as `***` — control-plane calls failed
+  auth invisibly on any host without DATABASE_URL_ADMIN (local dev
+  outside Docker); fixed via `render_as_string(hide_password=False)`,
+  which also un-broke 4 of the 5 long-failing local test_auth tests.
+- Frontend: /settings "AI Provider" section (provider select, base
+  URL, models, write-only key field, Validate/Save/Disable/Revert);
+  admin tenant-detail LLM panel (masked config, status toggle,
+  spend-by-model table, force-set with validation); admin overview
+  token + BYOK counters. tsc 0 / eslint 0 errors / build all routes.
+- Docs: api-reference + openapi flipped to built (incl. new PATCH
+  status endpoints), core-services §3 + infrastructure env notes →
+  implemented, ADR 011 → Accepted.

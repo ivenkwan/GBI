@@ -361,8 +361,8 @@ paths:
         "503":
           description: LINEAGE_UNAVAILABLE
 
-  # ---- Multi-tenancy control plane (Phase 21 built: /admin/* live; the
-  # /users, /auth/me, /wiki and /settings/llm paths below remain planned) --
+  # ---- Multi-tenancy control plane (Phase 21 built: /admin/* live; /users,
+  # /auth/me and /wiki built in Phases 23-24; /settings/llm built in 26) --
 
   /admin/stats:
     get:
@@ -698,17 +698,33 @@ paths:
   /settings/llm:
     get:
       operationId: get_tenant_llm_config
-      summary: "(planned, ADR 011) Tenant BYOK config — masked, key never returned"
+      summary: "Tenant BYOK config — masked, key never returned (built, Phase 26)"
       security:
         - BearerAuth: []
       responses:
         "200":
-          description: Masked config (provider, models, key_last4, key_version, status)
-        "404":
-          description: NO_TENANT_CONFIG (platform key in use)
+          description: Masked config (configured flag; provider, models, key_last4, key_version, status, updated_at — configured=false when the platform key is in use)
     put:
       operationId: set_tenant_llm_config
-      summary: "(planned) Create/replace BYOK config — live 1-token validation ping"
+      summary: "Create/replace BYOK config — live 1-token validation ping (built)"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TenantLLMConfigInput"
+      responses:
+        "200":
+          description: Saved (masked view)
+        "400":
+          description: BYOK_VALIDATION_FAILED (sanitized provider message)
+        "503":
+          description: BYOK_NOT_CONFIGURED (platform encryption key missing)
+    patch:
+      operationId: patch_tenant_llm_status
+      summary: "active/disabled kill switch — disabled is the explicit revert (built)"
       security:
         - BearerAuth: []
       requestBody:
@@ -717,43 +733,31 @@ paths:
           application/json:
             schema:
               type: object
-              required: [provider, api_key, reasoning_model, fast_model]
+              required: [status]
               properties:
-                provider:
+                status:
                   type: string
-                  enum: [anthropic, openai]
-                api_key:
-                  type: string
-                  format: password
-                base_url:
-                  type: string
-                  format: uri
-                reasoning_model:
-                  type: string
-                fast_model:
-                  type: string
-                embedding_model:
-                  type: string
+                  enum: [active, disabled]
       responses:
         "200":
-          description: Saved (masked view)
-        "400":
-          description: BYOK_VALIDATION_FAILED
-        "503":
-          description: BYOK_NOT_CONFIGURED (platform encryption key missing)
+          description: Toggled (masked view)
+        "404":
+          description: NO_LLM_CONFIG
     delete:
       operationId: delete_tenant_llm_config
-      summary: "(planned) Remove config — revert to the platform key"
+      summary: "Remove config — revert to the platform key (built)"
       security:
         - BearerAuth: []
       responses:
         "200":
           description: Removed
+        "404":
+          description: NO_LLM_CONFIG
 
   /settings/llm/validate:
     post:
       operationId: validate_tenant_llm_config
-      summary: "(planned) Test a candidate config without saving"
+      summary: "Test a candidate config without saving (built)"
       security:
         - BearerAuth: []
       requestBody:
@@ -764,14 +768,14 @@ paths:
               $ref: "#/components/schemas/TenantLLMConfigInput"
       responses:
         "200":
-          description: Validation result
+          description: "Validation result ({status: ok, provider})"
         "400":
           description: BYOK_VALIDATION_FAILED
 
   /admin/tenants/{tenant_id}/llm:
     get:
       operationId: admin_get_tenant_llm
-      summary: "(Masked tenant BYOK config + usage-by-model — superuser"
+      summary: "Masked tenant BYOK config + spend attribution by day x model — superuser (built)"
       security:
         - BearerAuth: []
       parameters:
@@ -781,14 +785,23 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: days
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 7
+            minimum: 1
+            maximum: 90
+          description: "Spend attribution window (audit_log grain: day x provider x key_source x model)"
       responses:
         "200":
-          description: Config + usage
-        "404":
-          description: TENANT_NOT_FOUND
+          description: "{config (masked), usage[] — tokens + call counts from the audit trail}"
+        "400":
+          description: INVALID_TENANT
     put:
       operationId: admin_set_tenant_llm
-      summary: "(Force-set BYOK config on behalf of a tenant — superuser"
+      summary: "Force-set BYOK config on behalf of a tenant — superuser, validated + audited (built)"
       security:
         - BearerAuth: []
       parameters:
@@ -807,6 +820,36 @@ paths:
       responses:
         "200":
           description: Saved (masked view)
+        "400":
+          description: BYOK_VALIDATION_FAILED | INVALID_TENANT
+    patch:
+      operationId: admin_patch_tenant_llm_status
+      summary: "Superuser status toggle — disabled reverts the tenant to the platform key (built)"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: tenant_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [active, disabled]
+      responses:
+        "200":
+          description: Toggled (masked view)
+        "404":
+          description: NO_LLM_CONFIG
 
 components:
   securitySchemes:

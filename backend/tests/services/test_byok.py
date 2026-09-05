@@ -116,9 +116,11 @@ def test_anthropic_adapter_auth_error_mapping():
         def invoke(self, messages, system=""):
             raise RuntimeError("Error code: 401 - authentication_error invalid x-api-key")
 
-    with patch("langchain_anthropic.ChatAnthropic", FakeChatAnthropic):
-        with pytest.raises(ProviderAuthError):
-            AnthropicAdapter(api_key=secrets.token_urlsafe(8)).invoke(_call())
+    with (
+        patch("langchain_anthropic.ChatAnthropic", FakeChatAnthropic),
+        pytest.raises(ProviderAuthError),
+    ):
+        AnthropicAdapter(api_key=secrets.token_urlsafe(8)).invoke(_call())
 
 
 def test_openai_adapter_contract():
@@ -445,7 +447,7 @@ async def test_embeddings_anthropic_tenant_stays_platform(monkeypatch):
     monkeypatch.setattr("app.llm.resolver.resolve_llm", fake_resolve)
 
     captured = {}
-    factory = _fake_openai_module(monkeypatch, captured)
+    _fake_openai_module(monkeypatch, captured)
 
     with patch.object(emb.settings, "OPENAI_API_KEY", ""), pytest.raises(RuntimeError):
         await emb.embed_text("hello", tenant_id=TENANT)
@@ -652,17 +654,24 @@ async def test_set_status_and_delete_contracts(monkeypatch):
     monkeypatch.setattr(byok.asyncpg, "connect", fake_connect)
 
     assert await byok.set_status(TENANT, "disabled") is True
-    status_call = conn.execute.call_args_list[-1]
-    assert "UPDATE tenant_llm_providers SET status" in status_call.args[0]
-    assert status_call.args[1:] == (TENANT, "disabled", None)
+    calls = conn.execute.call_args_list  # [GUC set_config, UPDATE, admin_audit]
+    assert "UPDATE tenant_llm_providers SET status" in calls[1].args[0]
+    assert calls[1].args[1:] == (TENANT, "disabled", None)
+    # Phase 26: effective mutations append an admin_audit row (same conn).
+    assert "INSERT INTO admin_audit" in calls[2].args[0]
+    assert calls[2].args[2] == "byok.set_status"
 
     conn.execute = AsyncMock(return_value="DELETE 1")
     assert await byok.delete_provider_config(TENANT) is True
-    delete_call = conn.execute.call_args_list[-1]
-    assert "DELETE FROM tenant_llm_providers WHERE tenant_id = $1::uuid" in delete_call.args[0]
+    calls = conn.execute.call_args_list
+    assert "DELETE FROM tenant_llm_providers WHERE tenant_id = $1::uuid" in calls[1].args[0]
+    assert "INSERT INTO admin_audit" in calls[2].args[0]
+    assert calls[2].args[2] == "byok.delete"
 
     conn.execute = AsyncMock(return_value="UPDATE 0")
     assert await byok.set_status(TENANT, "active") is False
+    # A no-op update (no config row) is not audited.
+    assert len(conn.execute.call_args_list) == 2  # GUC + UPDATE only
 
 
 async def test_get_provider_config_masked_only(monkeypatch):

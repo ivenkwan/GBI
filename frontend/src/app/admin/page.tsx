@@ -70,7 +70,12 @@ export default function AdminOverviewPage() {
             <StatCard
               label="LLM calls (24h)"
               value={stats.llm_calls_24h}
-              hint="audited invocations"
+              hint={`${stats.llm_byok_calls_24h} on tenant keys`}
+            />
+            <StatCard
+              label="LLM tokens (24h)"
+              value={stats.llm_tokens_24h}
+              hint="input + output, from the audit trail"
             />
           </div>
 

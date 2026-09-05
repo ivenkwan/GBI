@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TenantLLMPanel } from "@/components/admin/tenant-llm-panel";
 import { UsersAdmin } from "@/components/settings/users-admin";
 import { AlertTriangle, ArrowLeft, RefreshCw, Trash2 } from "lucide-react";
 
@@ -207,6 +208,10 @@ export default function TenantDetailPage() {
       {/* User management (Phase 23): superusers administer this tenant's
           users through the ?tenant_id= superuser path. */}
       <UsersAdmin tenantId={tenant.id} currentUserId="none" />
+
+      {/* LLM provider panel (Phase 26): masked config, status toggle,
+          spend attribution, force-set. */}
+      <TenantLLMPanel tenantId={tenant.id} />
 
       {/* Settings editor */}
       <section className="bg-white border border-gray-200 rounded-xl p-5 space-y-3">

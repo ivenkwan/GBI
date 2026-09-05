@@ -75,12 +75,21 @@ class Settings(BaseSettings):
 
     @property
     def database_url_admin(self) -> str:
-        """Control-plane URL: explicit override, or DATABASE_URL with genbi_admin creds."""
+        """Control-plane URL: explicit override, or DATABASE_URL with genbi_admin creds.
+
+        ``render_as_string(hide_password=False)`` is required — plain
+        ``str(url)`` masks the password as ``***`` and the masked literal
+        would leak into the DSN (str(URL) never round-trips credentials).
+        """
         if self.DATABASE_URL_ADMIN:
             return self.DATABASE_URL_ADMIN
         from sqlalchemy.engine import make_url
 
-        return str(make_url(self.DATABASE_URL).set(username="genbi_admin", password="genbi_admin"))
+        return str(
+            make_url(self.DATABASE_URL)
+            .set(username="genbi_admin", password="genbi_admin")
+            .render_as_string(hide_password=False)
+        )
 
     # --- Redis ---
     REDIS_URL: str = "redis://localhost:6379/0"

@@ -96,6 +96,8 @@ class PlatformStatsOut(BaseModel):
     tenants_suspended: int
     users_total: int
     llm_calls_24h: int
+    llm_tokens_24h: int = 0
+    llm_byok_calls_24h: int = 0
     platform_admins_active: int
 
 

@@ -295,12 +295,13 @@ async def platform_stats() -> dict:
             await conn.fetchval("SELECT count(*) FROM tenants WHERE status = 'active'") or 0
         )
         users_total = await conn.fetchval("SELECT count(*) FROM users") or 0
-        llm_calls_24h = (
-            await conn.fetchval(
-                "SELECT count(*) FROM audit_log WHERE created_at > NOW() - INTERVAL '24 hours'"
-            )
-            or 0
+        # One pass over the 24h audit window: call count (as before), token
+        # total, and the BYOK share — spend attribution lives in audit_log
+        # (ADR 011 §8), no separate metering table.
+        usage = await conn.fetchrow(
+            "SELECT count(*) AS calls, COALESCE(sum(input_tokens + output_tokens), 0) AS tokens, count(*) FILTER (WHERE key_source = 'tenant') AS byok_calls FROM audit_log WHERE created_at > NOW() - INTERVAL '24 hours'"
         )
+        llm_calls_24h = (usage["calls"] if usage else 0) or 0
         platform_admins_active = (
             await conn.fetchval("SELECT count(*) FROM platform_admins WHERE revoked_at IS NULL")
             or 0
@@ -313,6 +314,8 @@ async def platform_stats() -> dict:
         "tenants_suspended": tenants_total - tenants_active,
         "users_total": users_total,
         "llm_calls_24h": llm_calls_24h,
+        "llm_tokens_24h": (usage["tokens"] if usage else 0) or 0,
+        "llm_byok_calls_24h": (usage["byok_calls"] if usage else 0) or 0,
         "platform_admins_active": platform_admins_active,
     }
 

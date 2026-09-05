@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from app.api.v1 import (
     admin,
     auth,
+    byok,
     charts,
     chat,
     conversations,
@@ -33,3 +34,4 @@ api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(wiki.router, prefix="/wiki", tags=["wiki"])
 api_router.include_router(datasources.router, prefix="/datasources", tags=["datasources"])
+api_router.include_router(byok.router, tags=["byok"])

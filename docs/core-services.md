@@ -61,8 +61,7 @@ logger.info("LLM call complete", model="claude-opus-4", latency_ms=1200)
 
 All agent LLM calls route through `get_llm_client()`.
 
-> **Tenant BYOK (ADR 011): foundations BUILT (Phase 25); settings/admin
-> APIs + UX land in Phase 26.**
+> **Tenant BYOK (ADR 011): BUILT (Phases 25–26).**
 > `invoke()` keeps its signature but first resolves the tenant's effective
 > LLM config (`resolve_llm(tenant_id)` → provider/base_url/key/models or
 > platform defaults, L1-cached 60s keyed by `key_version`). Provider
@@ -72,7 +71,10 @@ All agent LLM calls route through `get_llm_client()`.
 > tenant key surfaces `LLM_BYOK_MISCONFIGURED` — no silent fallback to the
 > platform key. `audit_log` gains `provider`/`key_source`/`key_version`
 > for per-tenant spend attribution. Embeddings may ride a tenant's OpenAI
-> key when `provider=openai` and `embedding_model` is set.
+> key when `provider=openai` and `embedding_model` is set. The API surface
+> (`/settings/llm` + `/admin/tenants/{id}/llm`, Phase 26) is masked and
+> audited; spend roll-ups come from `audit_log` via
+> `services/byok.py:tenant_llm_usage` (admin view) and `/admin/stats`.
 
 **Primary method:**
 ```python

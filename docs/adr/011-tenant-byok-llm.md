@@ -1,6 +1,8 @@
 # ADR 011: Tenant BYOK — per-tenant LLM providers with tenant-held API keys
 
-- **Status:** Proposed (2026-09-05, design phase — not yet built)
+- **Status:** Accepted (2026-09-05 — built in Phases 25–26: storage/crypto/
+  adapters/resolver/no-fallback in Phase 25; API surface, spend attribution,
+  and settings/admin UX in Phase 26)
 - **Context:** Bring-your-own-key LLM access per tenant, supporting both the
   Anthropic native endpoint format and the OpenAI API format
 - **Related:** ADR 009 (admin plane — where BYOK is configured and audited),

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { changePassword, getMe } from "@/lib/api-client";
 import { useAuth } from "@/components/auth/auth-provider";
+import { LLMProviderSettings } from "@/components/settings/llm-provider";
 import { UsersAdmin } from "@/components/settings/users-admin";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -67,7 +68,7 @@ export function SettingsView() {
               </div>
               <div>
                 <h1 className="text-xl font-semibold text-gray-900">Settings</h1>
-                <p className="text-sm text-gray-500">Profile, security, and tenant users</p>
+                <p className="text-sm text-gray-500">Profile, security, AI provider, and users</p>
               </div>
             </div>
             <Link
@@ -157,6 +158,9 @@ export function SettingsView() {
               A wrong current password counts toward the login lockout.
             </p>
           </section>
+
+          {/* AI provider / BYOK (admins only, Phase 26) */}
+          {isTenantAdmin && <LLMProviderSettings />}
 
           {/* Tenant users (admins only) */}
           {isTenantAdmin ? (

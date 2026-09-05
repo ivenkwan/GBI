@@ -24,7 +24,7 @@ The token is obtained via `POST /auth/login` (below).
 }
 ```
 
-`platform_admin: true` (planned, ADR 009 / Phase 21) marks an active
+`platform_admin: true` (ADR 009 / Phase 21, built) marks an active
 platform-superuser grant; the `require_platform_admin` guard re-verifies the
 grant table behind a 60-second cache, so revocation takes effect within a
 minute rather than at token expiry.
@@ -428,11 +428,10 @@ class ChartRenderRequest(BaseModel):
 
 ---
 
-# Planned API — Multi-Tenancy Control Plane & Knowledge Base
+# Multi-Tenancy Control Plane, Knowledge Base & BYOK
 
-> **Implementation status:** Admin (Phase 21) ✅ built. Tenant Users
-> (Phase 23), Wiki (Phase 24), and BYOK (Phases 25–26) remain planned —
-> their contracts below are the agreed design targets.
+> **Implementation status:** all built — Admin (Phase 21), Tenant Users
+> (Phase 23), Wiki (Phase 24), BYOK (Phases 25–26).
 
 ## Admin (platform superuser) — ADR 009 ✅ (Phase 21)
 
@@ -500,23 +499,31 @@ Agent integration (same phase): retrieved wiki chunks feed a
 `## Tenant Knowledge` section of the NL2SQL prompt, and the router's
 `chat_knowledge` intent answers from wiki search directly.
 
-## BYOK LLM Providers (tenant + admin) — ADR 011 (planned, Phases 25–26)
+## BYOK LLM Providers (tenant + admin) — ADR 011 ✅ (built, Phases 25–26)
 
-> Planned (Phases 25–26 — not yet built). Writes validate the candidate
-> config with a live 1-token provider ping; reads are always masked — the
-> API key is write-only and never returned (only `key_last4`).
+> Writes validate the candidate config with a live 1-token provider ping;
+> reads are always masked — the API key is write-only and never returned
+> (only `key_last4`). Every effective mutation is audited (actor, tenant,
+> action, key_version). Spend attribution (tokens + call counts by day ×
+> provider × key_source × model) is computed from the existing `audit_log`
+> trail — no separate metering.
 
 | Method + Path | Guard | Purpose |
 |---|---|---|
-| `GET /settings/llm` | tenant user | Own config, masked: provider, base_url, models, key_last4, key_version, status, updated_at |
+| `GET /settings/llm` | tenant user | Own config, masked (`configured` + provider, base_url, models, key_last4, key_version, status, updated_at) |
 | `PUT /settings/llm` | tenant `admin` \| superuser | Create/replace `{provider, api_key, base_url?, reasoning_model, fast_model, embedding_model?}` — validates, bumps key_version, audits |
 | `POST /settings/llm/validate` | tenant `admin` \| superuser | Test a candidate config without saving |
+| `PATCH /settings/llm` | tenant `admin` \| superuser | `{status: active\|disabled}` kill switch — disabled is the explicit revert |
 | `DELETE /settings/llm` | tenant `admin` \| superuser | Remove the config — LLM calls revert to the platform key |
-| `GET /admin/tenants/{id}/llm` | platform superuser | Masked tenant config + usage-by-model/provider (from audit_log) |
+| `GET /admin/tenants/{id}/llm` | platform superuser | Masked tenant config + usage-by-model/provider (`?days=1..90`, default 7, from audit_log) |
 | `PUT /admin/tenants/{id}/llm` | platform superuser | Force-set on behalf of a tenant (same validation + audit) |
+| `PATCH /admin/tenants/{id}/llm` | platform superuser | Superuser status toggle |
 
 Errors: `400 BYOK_VALIDATION_FAILED` (sanitized provider message),
+`400 INVALID_TENANT`, `404 NO_LLM_CONFIG` (patch/delete with no config),
 `503 BYOK_NOT_CONFIGURED` (platform `TENANT_ENCRYPTION_KEY` missing),
 `LLM_BYOK_MISCONFIGURED` warning on chat degradation when a configured
 tenant key fails auth — by design there is **no silent fallback** to the
-platform key for configured tenants (ADR 011 §5).
+platform key for configured tenants (ADR 011 §5). `/admin/stats` carries
+the platform roll-up: `llm_calls_24h`, `llm_tokens_24h`, and
+`llm_byok_calls_24h`.

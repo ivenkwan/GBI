@@ -441,6 +441,10 @@ export interface PlatformStats {
   tenants_suspended: number;
   users_total: number;
   llm_calls_24h: number;
+  /** Total tokens (in+out) over the same 24h audit window (Phase 26). */
+  llm_tokens_24h: number;
+  /** 24h calls that ran on a tenant-held key (BYOK), not the platform key. */
+  llm_byok_calls_24h: number;
   platform_admins_active: number;
 }
 
@@ -712,6 +716,93 @@ export function searchWiki(
   topK = 5,
 ): Promise<WikiSearchHit[]> {
   return request<WikiSearchHit[]>(`/wiki/search?q=${encodeURIComponent(q)}&top_k=${topK}`);
+}
+
+// --- BYOK LLM providers (Phase 26, ADR 011) ---
+
+/** Masked BYOK config — the key itself is write-only (key_last4 display). */
+export interface LLMProviderConfig {
+  configured: boolean;
+  provider?: "anthropic" | "openai" | null;
+  base_url?: string | null;
+  reasoning_model?: string | null;
+  fast_model?: string | null;
+  embedding_model?: string | null;
+  key_last4?: string | null;
+  key_version?: number | null;
+  status?: "active" | "disabled" | null;
+  updated_at?: string | null;
+}
+
+export interface LLMConfigInput {
+  provider: "anthropic" | "openai";
+  api_key: string;
+  base_url?: string;
+  reasoning_model: string;
+  fast_model: string;
+  embedding_model?: string;
+}
+
+/** One spend-attribution row from the audit trail (day × model grain). */
+export interface LLMUsageRow {
+  day: string;
+  provider: string | null;
+  key_source: string | null;
+  model_name: string;
+  calls: number;
+  input_tokens: number;
+  output_tokens: number;
+}
+
+export interface TenantLLM {
+  config: LLMProviderConfig;
+  usage: LLMUsageRow[];
+}
+
+export function getLLMConfig(): Promise<LLMProviderConfig> {
+  return request<LLMProviderConfig>("/settings/llm");
+}
+
+export function saveLLMConfig(body: LLMConfigInput): Promise<LLMProviderConfig> {
+  return request<LLMProviderConfig>("/settings/llm", { method: "PUT", body });
+}
+
+/** Live 1-token provider ping — tests a candidate config without saving. */
+export function validateLLMConfig(
+  body: LLMConfigInput,
+): Promise<{ status: string; provider: string }> {
+  return request("/settings/llm/validate", { method: "POST", body });
+}
+
+/** active/disabled kill switch — disabled is the explicit revert. */
+export function setLLMStatus(status: "active" | "disabled"): Promise<LLMProviderConfig> {
+  return request<LLMProviderConfig>("/settings/llm", { method: "PATCH", body: { status } });
+}
+
+/** Remove the config — LLM calls revert to the platform key. */
+export function deleteLLMConfig(): Promise<{ status: string; provider: string }> {
+  return request("/settings/llm", { method: "DELETE" });
+}
+
+export function getTenantLLM(tenantId: string, days = 7): Promise<TenantLLM> {
+  return request<TenantLLM>(`/admin/tenants/${tenantId}/llm?days=${days}`);
+}
+
+export function putTenantLLM(
+  tenantId: string,
+  body: LLMConfigInput,
+): Promise<LLMProviderConfig> {
+  return request<LLMProviderConfig>(`/admin/tenants/${tenantId}/llm`, { method: "PUT", body });
+}
+
+export function patchTenantLLMStatus(
+  tenantId: string,
+  status: "active" | "disabled",
+): Promise<LLMProviderConfig> {
+  return request<LLMProviderConfig>(`/admin/tenants/${tenantId}/llm`, {
+    method: "PATCH",
+    body: { status },
+  });
 }
 
 // --- Health ---
