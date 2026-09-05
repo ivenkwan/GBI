@@ -523,3 +523,241 @@ async def test_validation_failure_sanitized(monkeypatch):
     with pytest.raises(byok.BYOKValidationError) as exc_info:
         await byok.set_provider_config(TENANT, "openai", TENANT_KEY, "m1", "m2")
     assert "raw provider" not in str(exc_info.value)  # message sanitized
+
+
+# ---------------------------------------------------------------------------
+# Supplementary matrix (task 132): dispatch, disabled-status routing,
+# cache contracts, status/delete storage paths, audit key-absence
+# ---------------------------------------------------------------------------
+
+
+def test_base_invoke_dispatches_by_provider():
+    """The module-level dispatch picks the right adapter per provider."""
+    from app.llm.providers import base as base_module
+
+    calls = []
+
+    class FakeOpenAI:
+        def __init__(self, api_key, base_url):
+            calls.append(("openai", api_key, base_url))
+
+        def invoke(self, call):
+            return MagicMock(content="via-openai")
+
+    class FakeAnthropic:
+        def __init__(self, api_key, base_url):
+            calls.append(("anthropic", api_key, base_url))
+
+        def invoke(self, call):
+            return MagicMock(content="via-anthropic")
+
+    key = secrets.token_urlsafe(8)
+    with patch("app.llm.providers.openai_provider.OpenAIAdapter", FakeOpenAI):
+        result = base_module.invoke("openai", key, _call(), base_url="https://gw/v1")
+    assert result.content == "via-openai"
+    assert calls[-1] == ("openai", key, "https://gw/v1")
+
+    with patch("app.llm.providers.anthropic_provider.AnthropicAdapter", FakeAnthropic):
+        result = base_module.invoke("anthropic", key, _call())
+    assert result.content == "via-anthropic"
+    assert calls[-1] == ("anthropic", key, None)
+
+
+async def test_resolve_disabled_row_falls_to_platform(monkeypatch):
+    """status=disabled is the explicit revert switch (offline proof).
+
+    The resolver's query filters status='active', so a disabled row never
+    reaches resolution — modeled here by _load returning None."""
+    import app.llm.resolver as resolver_module
+
+    _fake_cache(monkeypatch)
+
+    async def fake_load(tenant_id):
+        return None
+
+    monkeypatch.setattr(resolver_module, "_load", fake_load)
+    resolved = await resolve_llm(TENANT)
+    assert resolved.source == "platform"
+
+
+async def test_platform_resolution_is_cached_for_tenant(monkeypatch):
+    """A platform resolution for a tenant caches under version 0 and is
+    reused (no repeated loads)."""
+    import app.llm.resolver as resolver_module
+
+    cache = _fake_cache(monkeypatch)
+
+    async def fake_load(tenant_id):
+        return None
+
+    load = AsyncMock(side_effect=fake_load)
+    monkeypatch.setattr(resolver_module, "_load", load)
+
+    first = await resolve_llm(TENANT)
+    assert first.source == "platform"
+    cache.set_byok_version.assert_awaited_once_with(TENANT, 0)
+
+    cache.get_byok_version = AsyncMock(return_value=0)
+    second = await resolve_llm(TENANT)
+    assert second.source == "platform"
+    load.assert_awaited_once()  # second call was cache-served
+
+
+async def test_cache_byok_version_roundtrip():
+    from app.core.cache import CacheService
+
+    cache = CacheService()
+    await cache.set_byok_version(TENANT, 7)
+    assert await cache.get_byok_version(TENANT) == 7
+
+
+def test_require_encryption_key_rejects_placeholders(monkeypatch):
+    from app.llm.resolver import _require_encryption_key
+
+    monkeypatch.setattr(settings, "TENANT_ENCRYPTION_KEY", "")
+    with pytest.raises(BYOKNotConfiguredError):
+        _require_encryption_key()
+
+    monkeypatch.setattr(settings, "TENANT_ENCRYPTION_KEY", "change-me-in-production")
+    with pytest.raises(BYOKNotConfiguredError):
+        _require_encryption_key()
+
+    real = secrets.token_urlsafe(24)
+    monkeypatch.setattr(settings, "TENANT_ENCRYPTION_KEY", real)
+    assert _require_encryption_key() == real
+
+
+def test_platform_default_shape():
+    from app.llm.resolver import platform_default
+
+    resolved = platform_default()
+    assert resolved.provider == "anthropic"
+    assert resolved.source == "platform"
+    assert resolved.key_version is None
+    assert resolved.reasoning_model == settings.LLM_REASONING_MODEL
+    assert resolved.fast_model == settings.LLM_FAST_MODEL
+
+
+async def test_set_status_and_delete_contracts(monkeypatch):
+    import app.services.byok as byok
+
+    conn = MagicMock()
+    conn.close = AsyncMock()
+    conn.execute = AsyncMock(return_value="UPDATE 1")
+    conn.fetchrow = AsyncMock(return_value=None)
+
+    async def fake_connect(_dsn):
+        return conn
+
+    monkeypatch.setattr(byok.asyncpg, "connect", fake_connect)
+
+    assert await byok.set_status(TENANT, "disabled") is True
+    status_call = conn.execute.call_args_list[-1]
+    assert "UPDATE tenant_llm_providers SET status" in status_call.args[0]
+    assert status_call.args[1:] == (TENANT, "disabled", None)
+
+    conn.execute = AsyncMock(return_value="DELETE 1")
+    assert await byok.delete_provider_config(TENANT) is True
+    delete_call = conn.execute.call_args_list[-1]
+    assert "DELETE FROM tenant_llm_providers WHERE tenant_id = $1::uuid" in delete_call.args[0]
+
+    conn.execute = AsyncMock(return_value="UPDATE 0")
+    assert await byok.set_status(TENANT, "active") is False
+
+
+async def test_get_provider_config_masked_only(monkeypatch):
+    import app.services.byok as byok
+
+    conn = MagicMock()
+    conn.close = AsyncMock()
+    conn.execute = AsyncMock(return_value="SET")
+    row = {
+        "provider": "anthropic",
+        "base_url": None,
+        "reasoning_model": "claude-opus-4",
+        "fast_model": "claude-haiku-4",
+        "embedding_model": None,
+        "key_last4": "wxyz",
+        "key_version": 1,
+        "status": "active",
+        "updated_at": __import__("datetime").datetime(
+            2026, 9, 5, tzinfo=__import__("datetime").UTC
+        ),
+    }
+    conn.fetchrow = AsyncMock(return_value=row)
+
+    async def fake_connect(_dsn):
+        return conn
+
+    monkeypatch.setattr(byok.asyncpg, "connect", fake_connect)
+    masked = await byok.get_provider_config(TENANT)
+    assert set(masked) == {
+        "provider",
+        "base_url",
+        "reasoning_model",
+        "fast_model",
+        "embedding_model",
+        "key_last4",
+        "key_version",
+        "status",
+        "updated_at",
+    }  # no api_key / api_key_enc anywhere
+
+    sql = conn.fetchrow.call_args.args[0]
+    assert "api_key_enc" not in sql  # the read never even selects the ciphertext
+
+
+async def test_audit_payload_never_contains_key_material(monkeypatch):
+    from app.core.llm_client import get_llm_client
+
+    _patch_resolve(monkeypatch, TENANT_CFG)
+    client = get_llm_client()
+
+    good = MagicMock()
+
+    async def good_ainvoke(messages, system=""):
+        return MagicMock(content="ok", usage_metadata={"input_tokens": 1, "output_tokens": 1})
+
+    good.ainvoke = good_ainvoke
+    monkeypatch.setattr(type(client), "_build_llm", lambda self, *a, **k: good, raising=False)
+
+    captured = {}
+
+    async def fake_audit(**kwargs):
+        captured.update(kwargs)
+
+    monkeypatch.setattr(client, "_audit", fake_audit)
+    await client.invoke(messages="q", tenant_id=TENANT)
+
+    serialized = repr(captured)
+    assert TENANT_KEY not in serialized  # key material never reaches audit
+
+
+async def test_validate_provider_builds_ping_call(monkeypatch):
+    import app.services.byok as byok
+
+    captured = {}
+
+    def fake_invoke(provider, api_key, call, base_url=None):
+        captured.update(
+            provider=provider,
+            api_key=api_key,
+            model=call.model,
+            max_tokens=call.max_tokens,
+            messages=call.messages,
+            base_url=base_url,
+        )
+        return MagicMock(content="ok")
+
+    import app.llm.providers.base as base_module
+
+    monkeypatch.setattr(base_module, "invoke", fake_invoke)
+    key = secrets.token_urlsafe(10)
+    await byok.validate_provider("openai", key, "https://gw/v1", "gpt-5-mini")
+
+    assert captured["provider"] == "openai"
+    assert captured["api_key"] == key
+    assert captured["model"] == "gpt-5-mini"
+    assert captured["max_tokens"] == 1  # the 1-token ping
+    assert captured["messages"] == "ping"
+    assert captured["base_url"] == "https://gw/v1"

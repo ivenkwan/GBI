@@ -1545,16 +1545,19 @@ validation permissions (user_roles plumbing exists, unused).
 
 ### Phase 25 — verified by (2026-09-05)
 
-- 20 new offline tests (adapter parity matrix with mocked SDKs incl.
+- 30 offline tests (adapter parity matrix with mocked SDKs incl.
   gateway base_url + json_object mapping + auth-error classification,
   resolver routing tenant/platform/rotation/cache-hit, missing-encryption-
   key raises instead of falling back, control-plane outage fails open to
   platform, no-fallback policy (tenant auth error → LLMBYOKMisconfigured,
   platform auth error → raw), audit attribution fidelity, embeddings
   platform/tenant/anthropic-tenant routing, storage contract incl.
-  crypto-in-SQL binding and masked reads, validation sanitization);
-  updated audit + embeddings tests for the new columns/kwarg. Full suite:
-  349 passed / 1 pre-existing (Cube-dependent, long-verified on HEAD)
+  crypto-in-SQL binding and masked reads, validation sanitization,
+  provider dispatch, disabled-row routing, cache version roundtrip,
+  placeholder-key rejection, status/delete contracts, audit
+  key-absence, validation ping shape); updated audit + embeddings tests
+  for the new columns/kwarg. Full suite: 359 passed / 1 pre-existing
+  (Cube-dependent, long-verified on HEAD)
 - Live stack (dev DB, genbi_app role): app_crypto encrypt→decrypt roundtrip
   exact; set_provider_config → masked row (v2, last4, api_key never
   present) with ciphertext opaque; resolver → tenant/openai with decrypted
