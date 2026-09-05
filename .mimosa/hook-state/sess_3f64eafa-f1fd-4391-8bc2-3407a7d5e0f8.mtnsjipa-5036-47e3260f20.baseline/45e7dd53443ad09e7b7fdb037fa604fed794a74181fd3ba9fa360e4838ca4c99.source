@@ -20,8 +20,9 @@ Usage:
 
 from typing import Any
 
-from sqlalchemy import text
+from sqlalchemy import Select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.sql.elements import TextClause
 
 from app.connectors.base import BaseConnector
 from app.core.logging import logger
@@ -113,11 +114,16 @@ class PostgreSQLConnector(BaseConnector):
         self._connected = True
         logger.info("PostgreSQL connected successfully")
 
-    async def execute(self, sql: str, params: dict[str, Any] | None = None) -> list[dict]:
+    async def execute(
+        self,
+        sql: str | TextClause | Select,
+        params: dict[str, Any] | None = None,
+    ) -> list[dict]:
         """Execute a read-only SQL query and return results as dicts.
 
         Args:
-            sql: SQL query string (parameterized with :param placeholders).
+            sql: SQL query string (parameterized with :param placeholders) or
+                a SQLAlchemy statement construct built from ``select()``.
             params: Query parameters for parameterized queries.
 
         Returns:
@@ -130,13 +136,15 @@ class PostgreSQLConnector(BaseConnector):
         if not self._connected:
             raise ConnectionError("Not connected. Call connect() first.")
 
-        # Sanity check — must be SELECT
-        sql_stripped = sql.strip().upper()
-        if not sql_stripped.startswith(("SELECT", "WITH", "EXPLAIN", "SHOW", "DESCRIBE")):
-            raise ValueError(
-                f"Only SELECT/WITH/EXPLAIN queries are allowed through this connector. "
-                f"Received: {sql[:100]}"
-            )
+        # Sanity check — must be SELECT. Statement constructs are compiled
+        # from select() internally, so they are read-only by construction.
+        if isinstance(sql, str):
+            sql_stripped = sql.strip().upper()
+            if not sql_stripped.startswith(("SELECT", "WITH", "EXPLAIN", "SHOW", "DESCRIBE")):
+                raise ValueError(
+                    f"Only SELECT/WITH/EXPLAIN queries are allowed through this connector. "
+                    f"Received: {sql[:100]}"
+                )
 
         # Read-only enforcement + timeout — each SET must be its own execute()
         # because the asyncpg extended (prepared-statement) protocol does not
@@ -159,7 +167,7 @@ class PostgreSQLConnector(BaseConnector):
                 )
 
             result = await session.execute(
-                text(sql),
+                text(sql) if isinstance(sql, str) else sql,
                 params or {},
             )
 
@@ -300,24 +308,6 @@ class PostgreSQLConnector(BaseConnector):
             "tables": list(tables.values()),
             "table_count": len(tables),
         }
-
-    async def get_sample_rows(
-        self, table_name: str, schema: str | None = None, limit: int = 5
-    ) -> list[dict]:
-        """Get a sample of rows from a table for schema context building.
-
-        Args:
-            table_name: Name of the table.
-            schema: Schema override (uses configured schema if None).
-            limit: Number of sample rows.
-
-        Returns:
-            List of dicts representing sample rows.
-        """
-        schema = schema or self.schema
-        # Use parameterized identifiers
-        query = f'SELECT * FROM "{schema}"."{table_name}" LIMIT {limit}'
-        return await self.execute(query)
 
     async def disconnect(self) -> None:
         """Close connection pool."""

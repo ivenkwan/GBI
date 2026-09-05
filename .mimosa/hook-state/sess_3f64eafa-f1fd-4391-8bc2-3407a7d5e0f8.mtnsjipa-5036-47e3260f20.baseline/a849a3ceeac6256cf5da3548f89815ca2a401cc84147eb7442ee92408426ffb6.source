@@ -1,5 +1,7 @@
 """Tests for the Cube.dev semantic layer client."""
 
+import os
+
 import pytest
 
 from app.semantic.cube_client import (
@@ -15,10 +17,14 @@ from app.semantic.cube_client import (
 
 @pytest.fixture
 def cube_client():
-    """CubeClient with a fake API URL — all tests mock the HTTP layer."""
+    """CubeClient with a fake API URL — all tests mock the HTTP layer.
+
+    The secret is env-overridable but defaults to a clearly fake value; no
+    real credential is ever exercised here.
+    """
     return CubeClient(
         api_url="http://fake-cube:4000/cubejs-api/v1",
-        api_secret="test-secret",
+        api_secret=os.environ.get("CUBEJS_TEST_API_SECRET", "test-secret"),
         cache_ttl_seconds=60,
     )
 

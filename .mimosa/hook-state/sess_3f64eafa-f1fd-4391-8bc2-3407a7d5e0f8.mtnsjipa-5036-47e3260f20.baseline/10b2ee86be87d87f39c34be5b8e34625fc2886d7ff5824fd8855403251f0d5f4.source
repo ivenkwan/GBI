@@ -7,7 +7,28 @@
 import type { ChartAssemblyInput } from "@/types/chart";
 import { getStoredToken } from "@/lib/auth-storage";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+// Normalized to a trailing slash so relative paths resolve against the base
+// path (e.g. "chat" against "http://host:8000/api/v1/" keeps /api/v1).
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1").replace(
+  /\/?$/,
+  "/",
+);
+
+// Every request URL must resolve to exactly this origin, http(s) only — a
+// path can never redirect the client to another host, scheme, or port.
+const API_ORIGIN = new URL(API_BASE).origin;
+
+function apiUrl(path: string): string {
+  const url = new URL(path.replace(/^\//, ""), API_BASE);
+  if (url.origin !== API_ORIGIN || !url.protocol.startsWith("http")) {
+    throw new Error(`Refusing URL outside the configured API origin: ${url.origin}`);
+  }
+  return url.toString();
+}
+
+// Fixed relative route resolved against the configured base at module load —
+// no runtime string can influence scheme, host, or port here.
+const CHAT_STREAM_URL = new URL("/chat/stream", API_BASE).toString();
 
 interface RequestOptions {
   method?: string;
@@ -24,7 +45,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(apiUrl(path), {
     method: options.method ?? "GET",
     headers,
     body: options.body ? JSON.stringify(options.body) : undefined,
@@ -83,7 +104,7 @@ export function streamChat(
   const controller = new AbortController();
   const token = getStoredToken();
 
-  fetch(`${API_BASE}/chat/stream`, {
+  fetch(CHAT_STREAM_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
