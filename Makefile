@@ -36,8 +36,17 @@ verify: ## Run smoke checks against the running stack
 secrets: ## Regenerate .env files with fresh random secrets
 	@scripts/gen-env.sh --force
 
-migrate: ## Apply Alembic migrations inside the backend container
+migrate: ## Apply Alembic migrations + paired RLS SQL inside the containers
 	@$(COMPOSE_DEV) exec -T backend uv run alembic upgrade head
+	@for f in infra/postgres/rls/*.sql; do \
+		echo "  applying $$f"; \
+		docker exec -i genbi-postgres psql -q -U genbi -d genbi < "$$f" || exit 1; \
+	done
+	@echo "Migrations + RLS policies applied."
+
+lineage-setup: ## (Re)apply the AGE lineage functions (fresh volumes get this at init)
+	@docker exec -i genbi-postgres psql -q -U genbi -d genbi < infra/postgres/age-lineage.sql
+	@echo "AGE lineage functions ensured (run 'make migrate' first for the tables)."
 
 seed: ## Load synthetic test data (requires `make migrate` first — tables come from Alembic 0003)
 	@$(COMPOSE_DEV) exec -T -e PYTHONPATH=/app backend uv run python scripts/seed_test_data.py

@@ -2,7 +2,18 @@
 
 from fastapi import APIRouter
 
-from app.api.v1 import auth, charts, chat, conversations, datasources, health, metrics, reports
+from app.api.v1 import (
+    auth,
+    charts,
+    chat,
+    conversations,
+    dashboards,
+    datasources,
+    health,
+    lineage,
+    metrics,
+    reports,
+)
 
 api_router = APIRouter()
 
@@ -13,4 +24,6 @@ api_router.include_router(conversations.router, prefix="/conversations", tags=["
 api_router.include_router(charts.router, prefix="/charts", tags=["charts"])
 api_router.include_router(reports.router, prefix="/reports", tags=["reports"])
 api_router.include_router(metrics.router, prefix="/metrics", tags=["metrics"])
+api_router.include_router(dashboards.router, prefix="/dashboards", tags=["dashboards"])
+api_router.include_router(lineage.router, prefix="/lineage", tags=["lineage"])
 api_router.include_router(datasources.router, prefix="/datasources", tags=["datasources"])

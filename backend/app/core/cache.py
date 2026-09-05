@@ -439,6 +439,31 @@ class CacheService:
         await self._l2.set(key, metrics, ttl=CacheTTL.METRIC_DEFINITIONS)
         self._stats.writes += 1
 
+    async def get_metric_catalog(self, tenant_id: str) -> list | None:
+        """Get the cached /metrics/list catalog (Phase 20)."""
+        key = _key(tenant_id, "metric_catalog", "all")
+
+        value = self._l1.get(key, CacheTTL.METRIC_DEFINITIONS)
+        if value is not None:
+            self._stats.l1_hits += 1
+            return value
+
+        value = await self._l2.get(key)
+        if value is not None:
+            self._stats.l2_hits += 1
+            self._l1.set(key, value)
+            return value
+
+        self._stats.l2_misses += 1
+        return None
+
+    async def set_metric_catalog(self, tenant_id: str, catalog: list) -> None:
+        """Cache the /metrics/list catalog (Phase 20)."""
+        key = _key(tenant_id, "metric_catalog", "all")
+        self._l1.set(key, catalog)
+        await self._l2.set(key, catalog, ttl=CacheTTL.METRIC_DEFINITIONS)
+        self._stats.writes += 1
+
     # ------------------------------------------------------------------
     # Query result cache
     # ------------------------------------------------------------------

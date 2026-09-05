@@ -149,6 +149,9 @@ class ChatService:
                     warnings=warnings + ["Query execution returned no data"],
                 )
 
+            # Lineage (Phase 17): record the tables this query read. Fail-open.
+            await self._record_query_lineage(sql, user_id, roles)
+
             # Step 5: Chart -- generate spec + validate + render
             chart_output = await self._step_chart(
                 data=data,
@@ -328,6 +331,9 @@ class ChatService:
                 yield _emit("done", {"status": "no_data", "warnings": warnings})
                 return
 
+            # Lineage (Phase 17): record the tables this query read. Fail-open.
+            await self._record_query_lineage(sql, user_id, roles)
+
             # Step 5: Chart (with hallucination detection)
             chart_output = await self._step_chart(data=data, query=query, user_id=user_id)
             warnings.extend(chart_output.get("warnings", []))
@@ -417,6 +423,17 @@ class ChatService:
             content=content,
             generated_sql=generated_sql,
         )
+
+    async def _record_query_lineage(self, sql: str, user_id: str, roles: list[str]) -> None:
+        """Record AGE lineage for an executed query (Phase 17). Fail-open."""
+        try:
+            from app.services.lineage import record_query_lineage
+
+            await record_query_lineage(
+                tenant_id=self.tenant_id, user_id=user_id, roles=roles, sql=sql
+            )
+        except Exception as e:
+            logger.warning("Query lineage recording failed (non-fatal): %s", e)
 
     async def _step_route(self, query: str) -> tuple[str, list[dict]]:
         """Step 1: Classify query intent."""
@@ -827,6 +844,7 @@ class ChatService:
         """Build a ChatResponse-compatible dict."""
         return {
             "conversation_id": conversation_id,
+            "session_id": self.session_id,
             "query": query,
             "sql": sql,
             "sql_explanation": sql_explanation,

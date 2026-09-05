@@ -3,17 +3,23 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
+  exportReportPdf,
   generateReport,
   getReport,
+  getReportSchedule,
   listReports,
+  regenerateReport,
+  scheduleReport,
+  unscheduleReport,
   type Report,
+  type ReportSchedule,
   type ReportSummary,
 } from "@/lib/api-client";
 import { ChartCard, type ChartAssemblyInput } from "@/components/charts/chart-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, FileText, Play } from "lucide-react";
+import { ArrowLeft, CalendarClock, Download, FileText, LayoutDashboard, Play, RefreshCw } from "lucide-react";
 
 export function ReportsView() {
   const [reports, setReports] = useState<ReportSummary[]>([]);
@@ -23,6 +29,9 @@ export function ReportsView() {
   const [error, setError] = useState("");
   const [active, setActive] = useState<Report | null>(null);
   const [loadingReport, setLoadingReport] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+  const [schedule, setSchedule] = useState<ReportSchedule | null>(null);
+  const [scheduling, setScheduling] = useState(false);
 
   const loadReports = useCallback(async () => {
     try {
@@ -59,10 +68,59 @@ export function ReportsView() {
     setError("");
     try {
       setActive(await getReport(id));
+      setSchedule(null);
+      getReportSchedule(id).then(setSchedule).catch(() => setSchedule(null));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load report");
     } finally {
       setLoadingReport(false);
+    }
+  };
+
+  const handleRegenerate = async () => {
+    if (!active || regenerating) return;
+    setRegenerating(true);
+    setError("");
+    try {
+      setActive(await regenerateReport(active.report_id));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Regeneration failed");
+    } finally {
+      setRegenerating(false);
+    }
+  };
+
+  const handleExportPdf = async () => {
+    if (!active) return;
+    setError("");
+    try {
+      const blob = await exportReportPdf(active.report_id);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `genbi-report-${active.report_id}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "PDF export failed");
+    }
+  };
+
+  const handleSchedule = async (frequency: ReportSchedule["frequency"] | "off") => {
+    if (!active || scheduling) return;
+    setScheduling(true);
+    setError("");
+    try {
+      if (frequency === "off") {
+        await unscheduleReport(active.report_id);
+        setSchedule(null);
+      } else {
+        setSchedule(await scheduleReport(active.report_id, frequency));
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Schedule update failed");
+    } finally {
+      setScheduling(false);
     }
   };
 
@@ -110,13 +168,22 @@ export function ReportsView() {
               <p className="text-[11px] text-gray-500">Multi-chart reports from a prompt</p>
             </div>
           </div>
-          <Link
-            href="/chat"
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to chat
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/dashboards"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              Dashboards
+            </Link>
+            <Link
+              href="/chat"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to chat
+            </Link>
+          </div>
         </header>
 
         <main className="flex-1 overflow-y-auto">
@@ -175,9 +242,48 @@ export function ReportsView() {
                   {active.summary && (
                     <p className="text-sm text-gray-600 mt-2 leading-relaxed">{active.summary}</p>
                   )}
-                  <div className="flex gap-2 mt-2">
+                  <div className="flex flex-wrap gap-2 mt-2">
                     <Badge variant="secondary">{active.sections.length} sections</Badge>
                     <Badge variant="outline">{new Date(active.created_at).toLocaleString()}</Badge>
+                  </div>
+
+                  {/* Report actions (Phase 19) */}
+                  <div className="flex flex-wrap items-center gap-2 mt-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRegenerate}
+                      disabled={regenerating}
+                    >
+                      <RefreshCw className={`w-4 h-4 mr-1 ${regenerating ? "animate-spin" : ""}`} />
+                      {regenerating ? "Regenerating…" : "Regenerate"}
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={handleExportPdf}>
+                      <Download className="w-4 h-4 mr-1" />
+                      Export PDF
+                    </Button>
+                    <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                      <CalendarClock className="w-4 h-4" />
+                      <select
+                        value={schedule?.frequency ?? "off"}
+                        disabled={scheduling}
+                        onChange={(e) =>
+                          handleSchedule(e.target.value as ReportSchedule["frequency"] | "off")
+                        }
+                        className="px-2 py-1 border border-gray-300 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-brand-600"
+                      >
+                        <option value="off">No schedule</option>
+                        <option value="hourly">Hourly</option>
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                      </select>
+                      {schedule && (
+                        <span className="text-[10px] text-gray-400">
+                          next run {new Date(schedule.next_run_at).toLocaleString()}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 

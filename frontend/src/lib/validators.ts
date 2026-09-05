@@ -12,6 +12,7 @@ export type ChatRequest = z.infer<typeof ChatRequestSchema>;
 /** Chat response validation */
 export const ChatResponseSchema = z.object({
   conversation_id: z.string(),
+  session_id: z.string().optional(),
   query: z.string(),
   sql: z.string().optional(),
   sql_explanation: z.string().optional(),

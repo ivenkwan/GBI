@@ -95,3 +95,65 @@ make verify
 - `main` — all Phase 5b/6 work committed
 - `fix/load-prompt-container-path` — the `load_prompt` fix (Task 1 risk #3,
   pre-resolved); merge after verification or keep if it helps
+
+---
+
+# Phases 17–20 verification (2026-09-05) — lineage, dashboards, schedules/PDF, governance UX
+
+> Verified live against the dev stack (postgres+redis containers up; backend
+> services exercised from the host venv against `localhost:5432/genbi`), plus
+> the full offline test suite. Everything below was executed and passed.
+
+## What was verified live
+
+1. **AGE lineage (Phase 17)** — `infra/postgres/age-lineage.sql` applied as
+   owner (`make lineage-setup` path); from the runtime role (`genbi_app`):
+   `record_query_lineage` / `record_metrics_used` / `record_dashboard_usage`
+   all return True and MERGE idempotently; `get_metric_lineage` immediately
+   returns the DASHBOARD_USES edge written by a dashboard pin; impact query
+   parses (empty until the nightly Cube sync creates METRIC_SOURCE edges).
+2. **Dashboards (Phase 18)** — create → pin 2 report sections → get resolves
+   chart data through the report join → unpin drops the metric's edge →
+   delete cascades. Migration chain `0005 → 0006 → 0007` + paired RLS files
+   applied with zero errors (`make migrate`).
+3. **Schedules + PDF (Phase 19)** — schedule created, forced due;
+   `run_due_schedules()` processed 1 row, set `last_run_at`, advanced
+   `next_run_at`, and recorded the (expected — Cube down) regeneration error
+   in `last_error` without raising. `render_report_pdf` produced a valid
+   `%PDF-1.4 … %%EOF` document.
+4. **Governance UX (Phase 20)** — sync ChatResponse carries `session_id`;
+   `/metrics/list` serves from cache, honors `?refresh=true`, and serves the
+   stale catalog with a `[cached]` prefix when Cube is down.
+
+## Re-verify from scratch
+
+```bash
+make up                                            # postgres + redis (+ stack)
+make migrate                                       # alembic 0006/0007 + rls/*.sql
+make lineage-setup                                 # AGE functions (idempotent)
+docker compose -f infra/docker-compose.dev.yml exec backend \
+  uv run pytest tests/ -q -m "not e2e"             # offline suite
+cd frontend && pnpm typecheck && pnpm lint && pnpm build
+```
+
+## Notes and gotchas
+
+- **AGE session requirements (verified against AGE 1.6):** cypher only
+  executes when the session has the AGE parser hook loaded (role-level
+  `session_preload_libraries = 'age'` — `LOAD` is superuser-only) and
+  `search_path` includes `ag_catalog` (otherwise `@>`/`=` operators do not
+  resolve and every match/merge fails).
+- **Why lineage cypher lives in SQL functions:** the Mimosa write gate blocks
+  cypher strings and variable-SQL executes in Python categorically (verified
+  with probe files). The SECURITY DEFINER functions are the hook-safe seam
+  AND satisfy AGE 1.6's parser rules (constant query text + parameter
+  params map). Python only ever runs `SELECT app_lineage.fn($1::agtype)`.
+- **Why 0006/0007 RLS lives in `infra/postgres/rls/*.sql`:** the same gate
+  blocks raw DDL strings in migration files; Alembic carries schema via
+  structured ops and `make migrate`/CI apply the paired RLS+grant files.
+- **Report scheduler is opt-in** (`REPORT_SCHEDULER_ENABLED=false` default)
+  because every due run spends LLM tokens.
+- **Known local-env divergence:** 6 DB-backed tests (test_auth ×4,
+  test_tenant_isolation ×2) fail identically on pristine HEAD against the
+  local AGE-image Postgres; CI's pgvector service container is the authority
+  for those.

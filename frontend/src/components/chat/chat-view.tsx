@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   listConversationMessages,
   listConversations,
+  sendFeedback,
   type ConversationSummary,
 } from "@/lib/api-client";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -17,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { Send, BarChart3, Database, FileText, Settings, LogOut, Plus, User } from "lucide-react";
+import { Send, BarChart3, Database, FileText, LayoutDashboard, Settings, LogOut, Plus, ThumbsDown, ThumbsUp, User } from "lucide-react";
 
 interface StreamStage {
   stage: string;
@@ -36,6 +37,10 @@ interface ChatMessage {
   chartBase64?: string;
   narrative?: string;
   warnings: string[];
+  // Feedback (Phase 20): the pipeline session id lands on the completed
+  // message; thumbs up/down POST /chat/feedback with it.
+  sessionId?: string;
+  feedback?: 1 | -1 | 0;
   // Large-query confirmation (Phase 13): set when the pipeline stops with
   // status "confirmation_required"; the panel offers Confirm and run.
   needsConfirm?: boolean;
@@ -129,6 +134,7 @@ export function ChatView() {
           if (data.image_base64 && stage === "chart") updated.chartBase64 = data.image_base64;
           if (data.narrative && stage === "narrative") updated.narrative = data.narrative;
           if (data.warnings) updated.warnings = data.warnings;
+          if (data.session_id && stage === "start") updated.sessionId = data.session_id;
 
           if (stage === "done") {
             updated.streaming = false;
@@ -263,6 +269,22 @@ export function ChatView() {
     setLoading(false);
   };
 
+  // Feedback (Phase 20): thumbs up/down on a completed response. The score
+  // lands on the session's audit rows; failures degrade silently.
+  const handleFeedback = useCallback(
+    (msgId: string, score: 1 | -1) => {
+      setMessages((prev) =>
+        prev.map((m) => (m.id === msgId ? { ...m, feedback: m.feedback === score ? 0 : score } : m)),
+      );
+      const msg = messages.find((m) => m.id === msgId);
+      if (!msg?.sessionId) return;
+      sendFeedback(msg.sessionId, score).catch(() => {
+        // Best-effort: the local toggle stays even if the audit store is down.
+      });
+    },
+    [messages],
+  );
+
   // Stage badge labels
   const stageLabels: Record<string, { label: string; color: "default" | "secondary" | "success" | "warning" }> = {
     intent: { label: "Intent", color: "secondary" },
@@ -346,6 +368,20 @@ export function ChatView() {
                 </button>
               </TooltipTrigger>
               <TooltipContent>Reports</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => router.push("/dashboards")}
+                  className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+                >
+                  <LayoutDashboard className="w-5 h-5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Dashboards</TooltipContent>
             </Tooltip>
           </TooltipProvider>
 
@@ -498,6 +534,39 @@ export function ChatView() {
                           {msg.warnings.map((w, i) => (
                             <div key={i}>{w}</div>
                           ))}
+                        </div>
+                      )}
+
+                      {/* Feedback (Phase 20): thumbs on completed responses */}
+                      {!msg.streaming && msg.narrative && (
+                        <div className="flex items-center gap-1 pt-1 border-t border-gray-100">
+                          <button
+                            onClick={() => handleFeedback(msg.id, 1)}
+                            title="Helpful"
+                            className={`p-1.5 rounded-lg transition-colors ${
+                              msg.feedback === 1
+                                ? "text-green-600 bg-green-50"
+                                : "text-gray-400 hover:bg-gray-100"
+                            }`}
+                          >
+                            <ThumbsUp className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleFeedback(msg.id, -1)}
+                            title="Not helpful"
+                            className={`p-1.5 rounded-lg transition-colors ${
+                              msg.feedback === -1
+                                ? "text-red-500 bg-red-50"
+                                : "text-gray-400 hover:bg-gray-100"
+                            }`}
+                          >
+                            <ThumbsDown className="w-3.5 h-3.5" />
+                          </button>
+                          {msg.feedback !== undefined && msg.feedback !== 0 && (
+                            <span className="text-[10px] text-gray-400 ml-1">
+                              Feedback recorded
+                            </span>
+                          )}
                         </div>
                       )}
 

@@ -109,6 +109,12 @@ class Settings(BaseSettings):
     FLINT_MCP_BACKENDS: str = "vegalite,echarts,chartjs"
     FLINT_MCP_DATA_ROOTS: str = "/tmp/genbi-charts"
 
+    # --- Report scheduler (Phase 19) ---
+    # Off by default: scheduled regeneration spends real LLM tokens every
+    # interval. Enable explicitly per environment.
+    REPORT_SCHEDULER_ENABLED: bool = False
+    REPORT_SCHEDULER_INTERVAL_SECONDS: int = 60
+
     # --- Prompts ---
     # Directory holding versioned prompt templates (loaded by llm_client.load_prompt).
     # Defaults to the repo's .claude/prompts/ on host runs; override for containers

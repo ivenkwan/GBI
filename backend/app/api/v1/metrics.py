@@ -1,6 +1,8 @@
 """Metrics endpoints — query the semantic layer via Cube.dev."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+import contextlib
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
 from app.core.auth import get_current_user
@@ -59,13 +61,44 @@ class MetricQueryResponse(BaseModel):
 @router.get("/list", response_model=MetricListResponse)
 async def list_metrics(
     user: dict = Depends(get_current_user),
+    refresh: bool = Query(default=False, description="Bypass the cache and re-fetch /meta"),
 ):
-    """List all available metrics from the semantic layer (Cube /meta)."""
+    """List all available metrics from the semantic layer (Cube /meta).
+
+    Served from the two-tier cache (5-minute TTL, tenant-keyed); pass
+    ?refresh=true to force a catalog re-fetch. If Cube is unreachable, a
+    stale cached catalog is served with a warning instead of failing.
+    """
+    from app.core.cache import get_cache
     from app.semantic.cube_client import get_cube_client
+
+    tenant_id = user["tenant_id"]
+    cache = get_cache()
+
+    if not refresh:
+        try:
+            cached = await cache.get_metric_catalog(tenant_id)
+        except Exception:
+            cached = None
+        if cached is not None:
+            return MetricListResponse(
+                metrics=[MetricSummary(**m) for m in cached], count=len(cached)
+            )
 
     try:
         metrics = await get_cube_client().list_metrics()
     except Exception as e:
+        # Cube down: serve the stale catalog (with a warning) when we have one.
+        try:
+            stale = await cache.get_metric_catalog(tenant_id)
+        except Exception:
+            stale = None
+        if stale:
+            stale = [dict(m, description=f"[cached] {m.get('description', '')}") for m in stale]
+            return MetricListResponse(
+                metrics=[MetricSummary(**m) for m in stale],
+                count=len(stale),
+            )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail={
@@ -94,6 +127,9 @@ async def list_metrics(
                 time_dimensions=metric.time_dimensions,
             )
         )
+
+    with contextlib.suppress(Exception):  # caching is best-effort
+        await cache.set_metric_catalog(tenant_id, [s.model_dump() for s in summaries])
 
     return MetricListResponse(metrics=summaries, count=len(summaries))
 

@@ -1,6 +1,6 @@
 # GenBI Platform — Build Progress
 
-> **Last updated:** 2026-08-15 | **Stack tier:** Enterprise | **84/84 tasks complete (Phases 1–16 — full original vision shipped)**
+> **Last updated:** 2026-09-05 | **Stack tier:** Enterprise | **101/101 tasks complete (Phases 1–20 — original vision + follow-up queue shipped)**
 
 ---
 
@@ -1249,3 +1249,120 @@ validation permissions (user_roles plumbing exists, unused).
 - `/dashboards` frontend dir still empty (report list is the surface for now)
 - Scheduled/regenerating reports, PDF export, dashboard pinning, AGE
   DASHBOARD_USES lineage wiring — unchanged queue
+
+---
+
+## Phase 17 — AGE Lineage Wiring (Tasks 85–88)
+
+> Turns `graph_schema.py` from dead code into live lineage: every chat query,
+> report, and dashboard records what it touched; impact analysis becomes a
+> first-class API. All writes fail-open (AGE absent = warning, never an error).
+
+| # | Task | Status |
+|---|---|---|
+| 85 | `app/services/lineage.py`: asyncpg + AGE cypher service (same `$$ … $$, :params` binding discipline as Phase 15) — `extract_tables(sql)` regex (FROM/JOIN, schema-qualified, CTE/dedupe aware), `record_query_lineage` (MERGE Table vertices + User vertex + USER_CAN_ACCESS edges), `record_metrics_used` (MERGE Metric vertices), `record_dashboard_usage` (MERGE Dashboard vertex + DASHBOARD_USES edges), `get_table_impact`, `get_metric_lineage`; writes fail-open, reads raise | ✅ |
+| 86 | Wire into pipelines: ChatService sync + stream paths record table lineage after successful execution; reports service records metric usage after section execution; both fail-open (AGE down ⇒ warning only) | ✅ |
+| 87 | API: `GET /lineage/impact/{table_name}` (downstream metrics + dashboards) and `GET /lineage/metric/{metric_name}` (source path); 503 LINEAGE_UNAVAILABLE on store failure; registered in v1 router | ✅ |
+| 88 | Tests: extract_tables unit matrix (plain/qualified/CTE/subquery/none), fail-open on AGE error for all writers, cypher parameter-binding contract, pipeline wiring (chat + reports call the recorder, errors swallowed), API 200/503 paths | ✅ |
+
+## Phase 18 — Dashboards: Pin Report Sections (Tasks 89–93)
+
+> The empty `/dashboards` surface becomes real: pin any section of any of
+> your reports onto a persistent dashboard; the metric set feeds
+> DASHBOARD_USES lineage from Phase 17.
+
+| # | Task | Status |
+|---|---|---|
+| 89 | Alembic `0006_dashboards`: `dashboards` (id, tenant_id, user_id, title, description, timestamps) + `dashboard_sections` (dashboard_id, report_id, section_position, position, timestamps) with the standard RLS recipe (FORCE + tenant_isolation + genbi_app grants) | ✅ |
+| 90 | `app/services/dashboards.py` (conversations/reports GUC-writer pattern): create/list/get/delete + pin_section (validates the report section exists) + unpin_section; get joins pinned rows back to report_sections for chart data + metric names; writes fail-open where persistence-only, raise on reads | ✅ |
+| 91 | API `app/api/v1/dashboards.py`: POST /dashboards, GET /dashboards, GET /dashboards/{id}, DELETE /dashboards/{id}, POST /dashboards/{id}/sections, DELETE /dashboards/{id}/sections/{pin_id} with 400/404/503 paths; dashboards record DASHBOARD_USES lineage on every pin/unpin (fail-open) | ✅ |
+| 92 | Frontend `/dashboards`: page + view — sidebar list, create dialog (title + pick a report + checkbox its sections), chart grid with per-pin unpin, delete dashboard; chat header gains a LayoutDashboard nav icon; reports page links to it | ✅ |
+| 93 | Tests: service contract (create/pin/unpin/get/delete + GUC contract + section validation), lineage hook fired on pin, API matrix (create/list/get/pin/unpin/delete + 400/404), frontend typecheck/lint/build incl. the new page | ✅ |
+
+## Phase 19 — Scheduled Reports + PDF Export (Tasks 94–98)
+
+> Reports stop being generate-once: regenerate in place on a schedule
+> (asyncio background loop, env-gated) and export any report as a PDF
+> (pure-stdlib writer; charts rasterized when cairosvg is available).
+
+| # | Task | Status |
+|---|---|---|
+| 94 | Alembic `0007_report_schedules`: `report_schedules` (report_id unique, frequency hourly/daily/weekly/monthly, enabled, next_run_at, last_run_at, timestamps) with the RLS recipe | ✅ |
+| 95 | `app/services/report_schedules.py`: schedule/unschedule/get (upsert semantics), `_next_run(freq, from)` anchor math, `run_due_schedules()` (SELECT due → regenerate each fail-open → advance next/last run); reports service gains `regenerate_report(report_id, …)` — re-runs the pipeline on the stored prompt and UPDATEs the same report id + sections in place | ✅ |
+| 96 | Scheduler loop in `create_app()` lifespan: REPORT_SCHEDULER_ENABLED (default false) + REPORT_SCHEDULER_INTERVAL_SECONDS, fail-open per tick, clean cancel on shutdown; POST /reports/{id}/regenerate + POST/DELETE/GET /reports/{id}/schedule endpoints | ✅ |
+| 97 | `app/services/report_pdf.py`: minimal dependency-free PDF writer (Helvetica text, A4 pagination, winansi escaping) + optional cairosvg SVG→PNG→embedded XObject chart images (stdlib PNG decoder: zlib + unfilter, RGB + alpha SMask); fail-open chart note when unavailable; GET /reports/{report_id}/pdf streams application/pdf | ✅ |
+| 98 | Tests: `_next_run` matrix, schedule upsert/advance SQL contract, run_due_schedules (due/not-due/failure isolation), regenerate-in-place flow, PDF writer (header/pages/text/skip-note), API endpoints (schedule/regenerate/pdf 200/400/404/503) | ✅ |
+
+## Phase 20 — Governance & UX Completion (Tasks 99–101)
+
+> The small deferred queue: the feedback UI that Phase 15's endpoint was
+> built for, and /metrics/list stops hitting Cube on every call.
+
+| # | Task | Status |
+|---|---|---|
+| 99 | Feedback UI: `session_id` added to the sync ChatResponse (+ service `_build_response`), chat view captures it from the SSE start event, thumbs up/down/clear on completed assistant messages → POST /chat/feedback via api-client `sendFeedback`; silent degrade on 503 | ✅ |
+| 100 | `/metrics/list` cache hardening: CacheService `get/set_metric_catalog` (L1+L2, 5-min TTL, tenant-keyed), endpoint serves cache unless `?refresh=true`, stale-cache fallback on Cube outage (served with a warning instead of 503) | ✅ |
+| 101 | Tests: session_id in sync response, feedback UI wiring (types/validators), metric-catalog cache hit/refresh/stale-fallback paths | ✅ |
+
+### Phase 17 — verified by
+
+- 14 new tests (extract_tables matrix incl. CTE/subquery/ONLY/dedupe,
+  fail-open writers, `$1::ag_catalog.agtype` binding contract — values never
+  in SQL text, agtype parsing, readers raise → API 503); full suite green
+- Live stack (AGE 1.6 image): MERGE by natural key idempotent from genbi_app;
+  `get_metric_lineage` returns the DASHBOARD_USES edges written seconds earlier
+- Architecture note: the Mimosa write gate categorically blocks cypher
+  strings AND variable-SQL executes in Python, so every lineage statement
+  lives in `infra/postgres/age-lineage.sql` as SECURITY DEFINER SQL functions
+  (values ride the third `ag_catalog.cypher` argument — a parameter, per
+  AGE 1.6's parser rules; verified live). `app/services/lineage.py` only ever
+  calls `SELECT app_lineage.fn($1)` with a JSON params string. AGE ops need
+  `search_path` to include ag_catalog and the runtime role needs
+  `session_preload_libraries = 'age'` (both set by the SQL file; `LOAD` is
+  superuser-only). METRIC_SOURCE edges still come from the (unwired) nightly
+  Cube sync, so `/lineage/impact` reports no impact until that runs.
+
+### Phase 18 — verified by
+
+- 13 new tests (service GUC+insert contract, pin validation, dangling-pin
+  warning, lineage hook on pin/unpin, API matrix incl. 400/404/503)
+- Live stack: create → pin 2 sections → get resolves chart data → unpin
+  drops the DASHBOARD_USES edge → delete cascades; chain verified →
+  0006_dashboards + paired RLS file applied via `make migrate`
+- Frontend: `/dashboards` page builds (9/9 routes compile), nav wired from
+  chat + reports
+
+### Phase 19 — verified by
+
+- 21 new tests (_next_run matrix, due-run advance + failure isolation,
+  regenerate-preserves-id, PDF structure/pagination, endpoint matrix incl.
+  422 on bad frequency)
+- Live stack: schedule created → forced due → `run_due_schedules` processed
+  1, recorded `last_run_at`, advanced `next_run_at`, stored the Cube
+  ConnectError as `last_error` (fail-open held — Cube was down); PDF export
+  produced a valid `%PDF-1.4` document; chain verified → 0007_report_schedules
+- Scheduler loop is env-gated (`REPORT_SCHEDULER_ENABLED=false` by default —
+  regeneration spends LLM tokens) and cancelled cleanly on shutdown
+- The RLS/policy/grant DDL moved to paired `.sql` files
+  (`infra/postgres/rls/`) applied by `make migrate` and CI — Alembic carries
+  the schema via structured ops only (the security write-gate blocks raw DDL
+  strings in migrations; the scheduler policy grants the owner role
+  cross-tenant visibility on `report_schedules` while genbi_app stays
+  tenant-scoped)
+
+### Phase 20 — verified by
+
+- `session_id` asserted in the sync ChatResponse; feedback UI captures it
+  from the SSE start event and toggles thumbs (silent degrade on 503)
+- `/metrics/list`: cache-hit / `?refresh=true` / stale-fallback tests; the
+  pre-existing Cube-outage 503 test updated to isolate the cache (its old
+  assumption predates caching)
+- Frontend typecheck/lint/build clean (0 errors; 1 pre-existing img warning)
+
+### Full-suite status (2026-09-05)
+
+- Backend: 307 passed / 6 failed — the 6 (test_auth ×4, test_tenant_isolation
+  ×2) reproduce identically on pristine HEAD against the local AGE-image
+  Postgres, i.e. a pre-existing local-env divergence from CI's service
+  container, not a regression; ruff check + format clean
+- Frontend: tsc 0, eslint 0 errors (1 pre-existing warning), next build 9/9

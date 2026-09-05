@@ -66,7 +66,14 @@ jobs:
         env:
           DATABASE_URL: postgresql+asyncpg://genbi:genbi@localhost:5432/genbi_test
           DATABASE_URL_SYNC: postgresql://genbi:genbi@localhost:5432/genbi_test
-        run: uv run alembic upgrade head
+        run: |
+          uv run alembic upgrade head
+          # Paired RLS/grant SQL for the 0006+ migrations (same files `make
+          # migrate` applies in dev). No AGE image in CI — the AGE lineage
+          # functions are covered by the live-stack verification instead.
+          for f in infra/postgres/rls/*.sql; do
+            psql "$DATABASE_URL_SYNC" -q -f "$f"
+          done
 
       - name: Run unit & integration tests
         # Test step connects as the RLS-bound roles (created by the migration

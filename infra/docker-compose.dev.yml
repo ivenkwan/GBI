@@ -19,6 +19,9 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+      # 99- prefix keeps it after init.sql (alphabetical apply order): the AGE
+      # lineage functions need the roles/grants init.sql creates (Phase 17).
+      - ./postgres/age-lineage.sql:/docker-entrypoint-initdb.d/99-age-lineage.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U genbi"]
       interval: 5s

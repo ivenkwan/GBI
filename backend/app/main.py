@@ -1,5 +1,6 @@
 """GenBI application factory and server entry point."""
 
+import asyncio
 from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI, Response
@@ -30,7 +31,20 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Observability init skipped (non-fatal): {e}")
 
+    # Report scheduler (Phase 19): opt-in background loop that regenerates
+    # due scheduled reports. Each tick fails open inside the loop.
+    scheduler_task = None
+    if settings.REPORT_SCHEDULER_ENABLED:
+        from app.services.report_schedules import scheduler_loop
+
+        scheduler_task = asyncio.create_task(scheduler_loop())
+
     yield
+
+    if scheduler_task is not None:
+        scheduler_task.cancel()
+        with suppress(Exception):
+            await scheduler_task
 
     # Shutdown: flush traces and shut down providers cleanly.
     try:

@@ -23,6 +23,10 @@ class ChatResponse(BaseModel):
     """Response from the NL → SQL → Chart → Narrative pipeline."""
 
     conversation_id: str
+    session_id: str | None = Field(
+        None,
+        description="Pipeline session id — the feedback API's key (also in the SSE start event)",
+    )
     query: str
     sql: str | None = None
     sql_explanation: str | None = None

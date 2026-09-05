@@ -205,9 +205,12 @@ async def _summarize_report(prompt: str, title: str, sections: list[dict], tenan
     return result.content
 
 
-async def generate_report(prompt: str, tenant_id: str, user_id: str, max_sections: int = 3) -> dict:
-    """Full pipeline: plan → execute sections → summarize. Returns the report
-    dict (persisted best-effort — persistence failure adds a warning)."""
+async def _run_pipeline(prompt: str, tenant_id: str, user_id: str, max_sections: int) -> dict:
+    """Shared pipeline body: plan → execute sections → summarize → lineage.
+
+    Returns the report dict WITHOUT a report_id (the caller decides whether
+    this is a fresh report or an in-place regeneration).
+    """
     plan = await _plan_report(prompt, tenant_id, user_id, max_sections)
 
     sections = []
@@ -226,14 +229,21 @@ async def generate_report(prompt: str, tenant_id: str, user_id: str, max_section
             f"{', '.join(s['metric'] for s in plan['sections'])})"
         )
 
+    # Lineage (Phase 17): record which metrics this report charts. Fail-open.
+    try:
+        from app.services.lineage import record_metrics_used
+
+        await record_metrics_used([s["metric_name"] for s in sections])
+    except Exception as e:
+        logger.warning("Report lineage recording failed (non-fatal): %s", e)
+
     summary = ""
     try:
         summary = await _summarize_report(prompt, plan["title"], sections, tenant_id)
     except Exception as e:
         logger.warning("Report summary failed (non-fatal): %s", e)
 
-    report = {
-        "report_id": str(uuid.uuid4()),
+    return {
         "title": plan["title"],
         "prompt": prompt,
         "summary": summary,
@@ -243,9 +253,43 @@ async def generate_report(prompt: str, tenant_id: str, user_id: str, max_section
         "warnings": [f"Skipped metric (no data): {m}" for m in skipped],
     }
 
+
+async def generate_report(prompt: str, tenant_id: str, user_id: str, max_sections: int = 3) -> dict:
+    """Full pipeline: plan → execute sections → summarize. Returns the report
+    dict (persisted best-effort — persistence failure adds a warning)."""
+    body = await _run_pipeline(prompt, tenant_id, user_id, max_sections)
+
+    report = {"report_id": str(uuid.uuid4()), **body}
+
     persisted = await save_report(report, tenant_id, user_id)
     if not persisted:
         report["warnings"].append("Report could not be persisted — this copy is not saved")
+
+    return report
+
+
+async def regenerate_report(
+    report_id: str, tenant_id: str, user_id: str, max_sections: int = 3
+) -> dict | None:
+    """Re-run an existing report's pipeline on its stored prompt, in place.
+
+    The report keeps its id; sections are replaced atomically and created_at
+    reflects the regeneration. None when the report does not exist.
+    """
+    existing = await get_report(report_id, tenant_id)
+    if existing is None:
+        return None
+
+    body = await _run_pipeline(existing["prompt"], tenant_id, user_id, max_sections)
+    report = {
+        "report_id": report_id,
+        "regenerated_at": datetime.now(UTC).isoformat(),
+        **body,
+    }
+
+    persisted = await update_report(report, tenant_id, user_id)
+    if not persisted:
+        report["warnings"].append("Regenerated report could not be persisted")
 
     return report
 
@@ -294,6 +338,46 @@ async def save_report(report: dict, tenant_id: str, user_id: str) -> bool:
         return True
     except Exception as e:
         logger.warning("Report persistence failed (non-fatal): %s", e)
+        return False
+
+
+async def update_report(report: dict, tenant_id: str, user_id: str) -> bool:
+    """Replace a persisted report's content in place (Phase 19 regeneration).
+    Fail-open (False on any problem)."""
+    try:
+        conn = await _connect(tenant_id)
+        try:
+            async with conn.transaction():
+                await conn.execute(
+                    "UPDATE reports SET title = $2, summary = $3, status = $4, created_at = NOW() WHERE id = $1::uuid",
+                    report["report_id"],
+                    report["title"],
+                    report.get("summary") or None,
+                    report.get("status", "complete"),
+                )
+                await conn.execute(
+                    "DELETE FROM report_sections WHERE report_id = $1::uuid",
+                    report["report_id"],
+                )
+                for section in report["sections"]:
+                    await conn.execute(
+                        "INSERT INTO report_sections (report_id, tenant_id, position, metric_name, section_title, chart_spec, chart_svg, data_total, row_count, narrative) VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6::jsonb, $7, $8, $9, $10)",
+                        report["report_id"],
+                        tenant_id,
+                        section.get("position", 0),
+                        section["metric_name"],
+                        section["section_title"],
+                        json.dumps(section["chart_spec"]),
+                        section.get("chart_svg"),
+                        section.get("data_total"),
+                        section.get("row_count", 0),
+                        section.get("narrative"),
+                    )
+        finally:
+            await conn.close()
+        return True
+    except Exception as e:
+        logger.warning("Report update failed (non-fatal): %s", e)
         return False
 
 

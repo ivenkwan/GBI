@@ -60,6 +60,307 @@ paths:
               schema:
                 $ref: "#/components/schemas/ChartRenderResponse"
 
+  /chat/feedback:
+    post:
+      operationId: chat_feedback
+      summary: Thumbs up/down on a chat response (session_id keyed)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [session_id, score]
+              properties:
+                session_id:
+                  type: string
+                  format: uuid
+                score:
+                  type: integer
+                  enum: [-1, 0, 1]
+      responses:
+        "200":
+          description: Recorded
+        "503":
+          description: FEEDBACK_UNAVAILABLE
+
+  /metrics/list:
+    get:
+      operationId: list_metrics
+      summary: Semantic-layer metric catalog (cached; ?refresh=true bypasses)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: refresh
+          in: query
+          schema:
+            type: boolean
+          description: Bypass the cache and re-fetch Cube /meta
+      responses:
+        "200":
+          description: Metric catalog
+        "503":
+          description: CUBE_UNAVAILABLE (no cached fallback available)
+
+  /reports/generate:
+    post:
+      operationId: generate_report
+      summary: LLM-planned multi-chart report from a prompt
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Generated report
+        "503":
+          description: REPORT_GENERATION_FAILED
+
+  /reports/{report_id}/regenerate:
+    post:
+      operationId: regenerate_report
+      summary: Re-run a report's pipeline on its stored prompt, in place
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: report_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Regenerated report (same id)
+        "404":
+          description: REPORT_NOT_FOUND
+        "503":
+          description: REPORT_GENERATION_FAILED
+
+  /reports/{report_id}/schedule:
+    post:
+      operationId: schedule_report
+      summary: Create/replace the regeneration schedule (hourly|daily|weekly|monthly)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: report_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Schedule state
+    get:
+      operationId: get_report_schedule
+      summary: The report's schedule, if any
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: report_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Schedule state
+        "404":
+          description: SCHEDULE_NOT_FOUND
+    delete:
+      operationId: unschedule_report
+      summary: Remove the schedule
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: report_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Removed
+
+  /reports/{report_id}/pdf:
+    get:
+      operationId: export_report_pdf
+      summary: Export a report as PDF (charts rasterize when cairosvg is present)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: report_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: PDF bytes
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: REPORT_NOT_FOUND
+
+  /dashboards:
+    post:
+      operationId: create_dashboard
+      summary: Create an empty dashboard
+      security:
+        - BearerAuth: []
+      responses:
+        "201":
+          description: Created
+    get:
+      operationId: list_dashboards
+      summary: The user's dashboards
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Dashboard list
+
+  /dashboards/{dashboard_id}:
+    get:
+      operationId: get_dashboard
+      summary: One dashboard with pinned sections resolved to chart data
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: dashboard_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Dashboard detail
+        "404":
+          description: DASHBOARD_NOT_FOUND
+    delete:
+      operationId: delete_dashboard
+      summary: Delete a dashboard (pins cascade; reports untouched)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: dashboard_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Deleted
+
+  /dashboards/{dashboard_id}/sections:
+    post:
+      operationId: pin_section
+      summary: Pin a report section onto the dashboard (refreshes DASHBOARD_USES lineage)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: dashboard_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [report_id, section_position]
+              properties:
+                report_id:
+                  type: string
+                  format: uuid
+                section_position:
+                  type: integer
+      responses:
+        "201":
+          description: Pinned
+        "404":
+          description: SECTION_NOT_FOUND
+
+  /dashboards/{dashboard_id}/sections/{pin_id}:
+    delete:
+      operationId: unpin_section
+      summary: Remove one pin
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: dashboard_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: pin_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Removed
+        "404":
+          description: PIN_NOT_FOUND
+
+  /lineage/impact/{table_name}:
+    get:
+      operationId: table_impact
+      summary: Downstream metrics + dashboards affected by a table change (AGE)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: table_name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Optionally schema-qualified relation name
+      responses:
+        "200":
+          description: Impact entries
+        "400":
+          description: INVALID_NAME
+        "503":
+          description: LINEAGE_UNAVAILABLE
+
+  /lineage/metric/{metric_name}:
+    get:
+      operationId: metric_lineage
+      summary: A metric's source columns and the dashboards pinning it (AGE)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: metric_name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Cube-qualified measure name (cube.measure)
+      responses:
+        "200":
+          description: Lineage detail
+        "400":
+          description: INVALID_NAME
+        "503":
+          description: LINEAGE_UNAVAILABLE
+
 components:
   securitySchemes:
     BearerAuth:

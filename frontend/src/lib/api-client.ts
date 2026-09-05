@@ -80,6 +80,7 @@ export interface ChatRequest {
 
 export interface ChatResponse {
   conversation_id: string;
+  session_id?: string;
   query: string;
   sql?: string;
   sql_explanation?: string;
@@ -94,6 +95,14 @@ export interface ChatResponse {
 
 export function sendChat(req: ChatRequest): Promise<ChatResponse> {
   return request<ChatResponse>("/chat", { method: "POST", body: req });
+}
+
+/** Thumbs feedback on a completed response (score: 1 up, -1 down, 0 clear). */
+export function sendFeedback(
+  sessionId: string,
+  score: 1 | -1 | 0,
+): Promise<{ status: string; session_id: string; score: number }> {
+  return request("/chat/feedback", { method: "POST", body: { session_id: sessionId, score } });
 }
 
 export function streamChat(
@@ -301,6 +310,127 @@ export function listReports(): Promise<{ reports: ReportSummary[]; count: number
 
 export function getReport(reportId: string): Promise<Report> {
   return request<Report>(`/reports/${reportId}`);
+}
+
+/** Re-run a persisted report's pipeline on its stored prompt (Phase 19). */
+export function regenerateReport(reportId: string): Promise<Report> {
+  return request<Report>(`/reports/${reportId}/regenerate`, { method: "POST" });
+}
+
+export interface ReportSchedule {
+  report_id: string;
+  frequency: "hourly" | "daily" | "weekly" | "monthly";
+  enabled: boolean;
+  next_run_at: string;
+  last_run_at?: string | null;
+  last_error?: string | null;
+}
+
+export function scheduleReport(
+  reportId: string,
+  frequency: ReportSchedule["frequency"],
+): Promise<ReportSchedule> {
+  return request<ReportSchedule>(`/reports/${reportId}/schedule`, {
+    method: "POST",
+    body: { frequency },
+  });
+}
+
+export function getReportSchedule(reportId: string): Promise<ReportSchedule> {
+  return request<ReportSchedule>(`/reports/${reportId}/schedule`);
+}
+
+export function unscheduleReport(reportId: string): Promise<{ status: string }> {
+  return request<{ status: string }>(`/reports/${reportId}/schedule`, {
+    method: "DELETE",
+  });
+}
+
+/** Download a report as PDF (returns the raw bytes). */
+export async function exportReportPdf(reportId: string): Promise<Blob> {
+  const headers: Record<string, string> = {};
+  const token = getStoredToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(apiUrl(`reports/${reportId}/pdf`), { headers });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: res.statusText }));
+    throw new ApiError(res.status, error.code ?? "UNKNOWN", error.message ?? "Export failed");
+  }
+  return res.blob();
+}
+
+// --- Dashboards (Phase 18) ---
+
+export interface DashboardSummary {
+  id: string;
+  title: string;
+  description?: string | null;
+  created_at: string;
+  section_count: number;
+}
+
+export interface DashboardSection {
+  pin_id: string;
+  position: number;
+  report_title: string;
+  metric_name: string;
+  section_title: string;
+  chart_spec: Record<string, unknown>;
+  chart_svg?: string | null;
+  data_total?: number | null;
+  row_count: number;
+  narrative?: string | null;
+}
+
+export interface DashboardDetail {
+  dashboard_id: string;
+  user_id: string;
+  title: string;
+  description?: string | null;
+  created_at: string;
+  updated_at: string;
+  sections: DashboardSection[];
+  warnings: string[];
+}
+
+export function createDashboard(
+  title: string,
+  description?: string,
+): Promise<{ dashboard_id: string; title: string; created_at: string }> {
+  return request("/dashboards", { method: "POST", body: { title, description } });
+}
+
+export function listDashboards(): Promise<{
+  dashboards: DashboardSummary[];
+  count: number;
+}> {
+  return request<{ dashboards: DashboardSummary[]; count: number }>("/dashboards");
+}
+
+export function getDashboard(dashboardId: string): Promise<DashboardDetail> {
+  return request<DashboardDetail>(`/dashboards/${dashboardId}`);
+}
+
+export function deleteDashboard(dashboardId: string): Promise<{ status: string }> {
+  return request<{ status: string }>(`/dashboards/${dashboardId}`, { method: "DELETE" });
+}
+
+export function pinSection(
+  dashboardId: string,
+  reportId: string,
+  sectionPosition: number,
+): Promise<{ pin_id: string; position: number }> {
+  return request(`/dashboards/${dashboardId}/sections`, {
+    method: "POST",
+    body: { report_id: reportId, section_position: sectionPosition },
+  });
+}
+
+export function unpinSection(
+  dashboardId: string,
+  pinId: string,
+): Promise<{ status: string }> {
+  return request(`/dashboards/${dashboardId}/sections/${pinId}`, { method: "DELETE" });
 }
 
 // --- Health ---

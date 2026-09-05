@@ -106,6 +106,15 @@ async def test_list_metrics_503_when_cube_down(api_client, auth_headers, monkeyp
     fake = FakeCubeClient(error=ConnectionError("cube refused"))
     monkeypatch.setattr("app.semantic.cube_client.get_cube_client", lambda: fake)
 
+    # No cached/stale catalog available (Phase 20 added the stale fallback —
+    # with nothing cached the outage must still surface as 503).
+    from unittest.mock import AsyncMock
+
+    empty_cache = type("Cache", (), {})()
+    empty_cache.get_metric_catalog = AsyncMock(return_value=None)
+    empty_cache.set_metric_catalog = AsyncMock()
+    monkeypatch.setattr("app.core.cache.get_cache", lambda: empty_cache)
+
     res = await api_client.get("/api/v1/metrics/list", headers=auth_headers)
     assert res.status_code == 503
     assert res.json()["detail"]["code"] == "CUBE_UNAVAILABLE"
