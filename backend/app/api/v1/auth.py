@@ -34,6 +34,8 @@ class UserOut(BaseModel):
     name: str
     tenant_id: str
     roles: list[str]
+    # Platform superuser flag (Phase 21/22): drives the admin-portal UI.
+    platform_admin: bool = False
 
 
 class LoginResponse(BaseModel):
@@ -127,5 +129,6 @@ async def login(request: LoginRequest) -> LoginResponse:
             name=user["email"].split("@")[0],
             tenant_id=str(user["tenant_id"]),
             roles=roles,
+            platform_admin=bool(user["platform_admin"]),
         ),
     )

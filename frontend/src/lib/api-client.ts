@@ -433,6 +433,144 @@ export function unpinSection(
   return request(`/dashboards/${dashboardId}/sections/${pinId}`, { method: "DELETE" });
 }
 
+// --- Admin (platform superuser — Phase 21/22, ADR 009) ---
+
+export interface PlatformStats {
+  tenants_total: number;
+  tenants_active: number;
+  tenants_suspended: number;
+  users_total: number;
+  llm_calls_24h: number;
+  platform_admins_active: number;
+}
+
+export interface TenantSummary {
+  id: string;
+  name: string;
+  slug: string | null;
+  status: "active" | "suspended";
+  created_at: string;
+  user_count: number;
+}
+
+export interface TenantUser {
+  id: string;
+  email: string;
+  roles: string[];
+  created_at: string;
+}
+
+export interface TenantAdminAction {
+  actor_user_id: string;
+  action: string;
+  target_type: string;
+  target_id: string | null;
+  created_at: string;
+}
+
+export interface TenantDetail {
+  id: string;
+  name: string;
+  slug: string | null;
+  status: "active" | "suspended";
+  settings: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  user_count: number;
+  users: TenantUser[];
+  counters: Record<string, number>;
+  recent_admin_actions: TenantAdminAction[];
+}
+
+export interface ProvisionResult {
+  tenant_id: string;
+  name: string;
+  slug: string;
+  status: string;
+  admin_user_id: string;
+  admin_email: string;
+  seeded: boolean;
+  created_at: string;
+  /** One-time generated password — displayed exactly once, never stored. */
+  temp_password?: string | null;
+}
+
+export interface SuperadminGrant {
+  user_id: string;
+  email: string | null;
+  granted_by: string | null;
+  granted_at: string;
+  revoked_by: string | null;
+  revoked_at: string | null;
+  active: boolean;
+}
+
+export interface AdminAuditEntry {
+  actor_user_id: string;
+  action: string;
+  target_type: string;
+  target_id: string | null;
+  detail: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export function getAdminStats(): Promise<PlatformStats> {
+  return request<PlatformStats>("/admin/stats");
+}
+
+export function listTenantsAdmin(): Promise<{ tenants: TenantSummary[]; count: number }> {
+  return request<{ tenants: TenantSummary[]; count: number }>("/admin/tenants");
+}
+
+export function provisionTenant(body: {
+  name: string;
+  slug: string;
+  admin_email: string;
+  admin_password?: string;
+  seed_sample_data?: boolean;
+}): Promise<ProvisionResult> {
+  return request<ProvisionResult>("/admin/tenants", { method: "POST", body });
+}
+
+export function getTenantDetail(tenantId: string): Promise<TenantDetail> {
+  return request<TenantDetail>(`/admin/tenants/${tenantId}`);
+}
+
+export function updateTenantAdmin(
+  tenantId: string,
+  body: { name?: string; status?: "active" | "suspended"; settings?: Record<string, unknown> },
+): Promise<TenantDetail> {
+  return request<TenantDetail>(`/admin/tenants/${tenantId}`, { method: "PATCH", body });
+}
+
+export function decommissionTenant(
+  tenantId: string,
+  force: boolean,
+): Promise<{ status: string }> {
+  const params = new URLSearchParams({ confirm: "yes" });
+  if (force) params.set("force", "true");
+  return request(`/admin/tenants/${tenantId}?${params.toString()}`, { method: "DELETE" });
+}
+
+export function listSuperadmins(): Promise<SuperadminGrant[]> {
+  return request<SuperadminGrant[]>("/admin/admins");
+}
+
+export function grantSuperadmin(body: {
+  user_id?: string;
+  email?: string;
+}): Promise<SuperadminGrant> {
+  return request<SuperadminGrant>("/admin/admins", { method: "POST", body });
+}
+
+export function revokeSuperadmin(userId: string): Promise<{ status: string }> {
+  return request(`/admin/admins/${userId}`, { method: "DELETE" });
+}
+
+export function listAdminAudit(limit = 50): Promise<AdminAuditEntry[]> {
+  return request<AdminAuditEntry[]>(`/admin/audit?limit=${limit}`);
+}
+
 // --- Health ---
 
 export function healthCheck(): Promise<{ status: string; version: string }> {

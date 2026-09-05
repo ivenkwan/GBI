@@ -165,6 +165,18 @@ export const LoginRequestSchema = z.object({
 
 export type LoginRequest = z.infer<typeof LoginRequestSchema>;
 
+/** Admin tenant provisioning (Phase 22) */
+export const TenantProvisionSchema = z.object({
+  name: z.string().min(1, "Name is required").max(255),
+  slug: z
+    .string()
+    .regex(/^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$/, "Slug: 3–50 lowercase letters, digits, hyphens"),
+  admin_email: z.string().email("Invalid admin email"),
+  seed_sample_data: z.boolean(),
+});
+
+export type TenantProvision = z.infer<typeof TenantProvisionSchema>;
+
 /** Login response */
 export const LoginResponseSchema = z.object({
   access_token: z.string(),

@@ -1,6 +1,6 @@
 # GenBI Platform — Build Progress
 
-> **Last updated:** 2026-09-05 | **Stack tier:** Enterprise | **108/138 shipped (Phases 1–21) · Phases 22–26 planned (admin portal UX, user management, knowledge base, tenant BYOK LLM — ADRs 009/010/011)**
+> **Last updated:** 2026-09-05 | **Stack tier:** Enterprise | **113/138 shipped (Phases 1–22) · Phases 23–26 planned (user management, knowledge base, tenant BYOK LLM — ADRs 009/010/011)**
 
 ---
 
@@ -1396,11 +1396,11 @@ validation permissions (user_roles plumbing exists, unused).
 
 | # | Task | Status |
 |---|---|---|
-| 109 | `PlatformAdminGuard` frontend component (token claim check; non-superusers see no admin UI) + Shield nav icon in chat header shown only for superusers | ⬜ |
-| 110 | `/admin` overview: platform counters (tenants by status, users, LLM calls 24h, active schedules) from GET /admin/stats | ⬜ |
-| 111 | `/admin/tenants` + `/admin/tenants/[id]`: list with counters, provision dialog (name, slug, admin email, seed toggle → one-time temp password display), detail view (users, schedules, recent audit), suspend/activate + rename + settings editor, guarded decommission flow with typed confirmation | ⬜ |
-| 112 | `/admin/admins` + `/admin/audit`: superuser grant/revoke with history; admin-action feed with actor/target/tenant filters | ⬜ |
-| 113 | api-client functions + Zod validators for the admin surface; typecheck/lint/build green incl. all new routes | ⬜ |
+| 109 | `PlatformAdminGuard` frontend component (token claim check; non-superusers see no admin UI) + Shield nav icon in chat header shown only for superusers | ✅ |
+| 110 | `/admin` overview: platform counters (tenants by status, users, LLM calls 24h, active schedules) from GET /admin/stats | ✅ |
+| 111 | `/admin/tenants` + `/admin/tenants/[id]`: list with counters, provision dialog (name, slug, admin email, seed toggle → one-time temp password display), detail view (users, schedules, recent audit), suspend/activate + rename + settings editor, guarded decommission flow with typed confirmation | ✅ |
+| 112 | `/admin/admins` + `/admin/audit`: superuser grant/revoke with history; admin-action feed with actor/target/tenant filters | ✅ |
+| 113 | api-client functions + Zod validators for the admin surface; typecheck/lint/build green incl. all new routes | ✅ |
 
 ## Phase 23 — Tenant User Management & Self-Service (Tasks 114–118)
 
@@ -1490,3 +1490,15 @@ validation permissions (user_roles plumbing exists, unused).
   `InsufficientPrivilege` alias (tests updated to `…Error`, un-breaking 3
   long-failing isolation tests); raw-asyncpg JSONB results parse as text
   (login + tenant detail now decode roles)
+
+### Phase 22 — verified by (2026-09-05)
+
+- Frontend: tsc 0 errors, eslint 0 errors (1 pre-existing img warning),
+  next build compiles all 13 routes incl. /admin, /admin/tenants,
+  /admin/tenants/[id] (dynamic), /admin/admins, /admin/audit
+- Live: login user payload carries `platform_admin` (True with an active
+  grant, False after revoke — checked both directions against the dev DB);
+  PlatformAdminGuard hides the portal for non-superusers; Shield nav icon
+  renders only for superusers
+- Backend suite still green after the additive UserOut.platform_admin
+  change (same single pre-existing Cube-dependent failure)

@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { Send, BarChart3, Database, FileText, LayoutDashboard, Settings, LogOut, Plus, ThumbsDown, ThumbsUp, User } from "lucide-react";
+import { Send, BarChart3, Database, FileText, LayoutDashboard, Settings, LogOut, Plus, Shield, ThumbsDown, ThumbsUp, User } from "lucide-react";
 
 interface StreamStage {
   stage: string;
@@ -384,6 +384,23 @@ export function ChatView() {
               <TooltipContent>Dashboards</TooltipContent>
             </Tooltip>
           </TooltipProvider>
+
+          {/* Platform admin portal (Phase 22): superusers only */}
+          {user?.platform_admin && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => router.push("/admin")}
+                    className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+                  >
+                    <Shield className="w-5 h-5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Admin portal</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
 
           <TooltipProvider>
             <Tooltip>

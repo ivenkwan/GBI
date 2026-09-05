@@ -201,3 +201,20 @@ make migrate          # 0008 + paired rls (genbi_admin, genbi_auth retired)
 docker compose -f infra/docker-compose.dev.yml exec backend \
   uv run pytest tests/ -q -m "not e2e"
 ```
+
+---
+
+# Phase 22 verification (2026-09-05) — admin portal frontend
+
+- `next build`: all 13 routes compile (5 new: /admin overview, tenants
+  list + [id] detail, admins, audit). tsc 0 errors; eslint 0 errors
+  (1 pre-existing `<img>` warning).
+- Login identity now carries `platform_admin` (UserOut, additive): verified
+  live both directions — grant → `True`, revoke → `False`.
+- Portal UX per ADR 009: `PlatformAdminGuard` (UX gate; the backend
+  re-verifies every /admin call), Shield nav icon for superusers only,
+  provision dialog with one-time password display (copy, never stored),
+  suspend/activate/rename/settings with cached-enforcement hints,
+  decommission flow requiring the tenant slug to be typed plus force,
+  superuser grant/revoke with history table, audit feed with actor/action
+  filters.

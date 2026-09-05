@@ -15,6 +15,8 @@ interface User {
   name: string;
   tenant_id: string;
   roles: string[];
+  /** Platform superuser (Phase 21/22): gates the /admin portal UI. */
+  platform_admin?: boolean;
 }
 
 interface AuthState {
@@ -138,6 +140,48 @@ export function AuthGuard({ children }: { children: ReactNode }) {
 
   if (!isAuthenticated) {
     return null; // redirect in flight
+  }
+
+  return <>{children}</>;
+}
+
+/**
+ * Platform-superuser guard (Phase 22, ADR 009): wraps the /admin routes.
+ * The user object carries the platform_admin flag minted at login; the
+ * backend re-verifies the grant on every /admin call (≤60s revocation),
+ * so this gate is UX, not security.
+ */
+export function PlatformAdminGuard({ children }: { children: ReactNode }) {
+  const { user, isAuthenticated, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      router.replace("/login");
+    }
+  }, [loading, isAuthenticated, router]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="w-3 h-3 bg-brand-600 rounded-full animate-bounce" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated || !user?.platform_admin) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center space-y-2">
+          <p className="text-lg font-medium text-gray-700">
+            Platform administrator privileges required
+          </p>
+          <p className="text-sm text-gray-400">
+            Your account does not have access to the admin portal.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return <>{children}</>;
