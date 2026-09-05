@@ -1,6 +1,6 @@
 # GenBI Platform — Build Progress
 
-> **Last updated:** 2026-09-05 | **Stack tier:** Enterprise | **118/138 shipped (Phases 1–23) · Phases 24–26 planned (knowledge base, tenant BYOK LLM — ADRs 010/011)**
+> **Last updated:** 2026-09-05 | **Stack tier:** Enterprise | **125/138 shipped (Phases 1–24) · Phases 25–26 planned (tenant BYOK LLM — ADR 011)**
 
 ---
 
@@ -1416,13 +1416,13 @@ validation permissions (user_roles plumbing exists, unused).
 
 | # | Task | Status |
 |---|---|---|
-| 119 | Migration `0009_wiki` + paired RLS sql: `wiki_pages` (tenant_id FK, slug unique per tenant, title, content_md, parent_slug NULL, created_by/updated_by, timestamps), `wiki_page_revisions` (page_id FK CASCADE, version, title+content snapshot, edited_by, created_at), `wiki_embeddings` (page_id, tenant_id, chunk, embedding VECTOR(1536)) — full tenant recipe incl. GUC grants | ⬜ |
-| 120 | `app/services/wiki.py` (GUC-writer): upsert appends revision + updates page in one transaction (version = max+1); list as tree, get, delete, history, restore-forward; search = pgvector cosine top-k on wiki_embeddings with ILIKE fallback (fail-open); write guard = tenant admin role or platform superuser | ⬜ |
-| 121 | Embedding sync: on write, chunk content (~1.5k chars), embed via existing `core/embeddings.py` (1536-dim), replace the page's chunks in wiki_embeddings (fail-open — page saves without OPENAI_API_KEY); reconciliation helper for un-embedded pages | ⬜ |
-| 122 | Agent integration: `retrieve_wiki_context(query, tenant)` (schema_retrieval contract, fail-open, L1/L2 cached per query+tenant); ChatService NL2SQL prompt gains `## Tenant Knowledge` section; `chat_knowledge` router intent answers from wiki search (retrieve → summarize, cite source slugs, no SQL path) | ⬜ |
-| 123 | API: GET /wiki, GET/PUT/DELETE /wiki/{slug}, GET /wiki/{slug}/history, POST /wiki/{slug}/restore/{version}, GET /wiki/search — registered + error codes (404 PAGE_NOT_FOUND, 403 WIKI_READ_ONLY for writers) | ⬜ |
-| 124 | Frontend `/wiki`: page tree sidebar (parent_slug), markdown viewer (react-markdown + remark-gfm — existing deps), split editor with live preview + history viewer with restore for admins, search box; chat-header BookOpen nav | ⬜ |
-| 125 | Tests: 25+ — service contract (revision append/restore atomicity, slug uniqueness per tenant, RLS cross-tenant isolation via GUC assertion), retrieval fail-open + tenant scoping, pipeline wiring (knowledge section present when retrieval returns, absent on fail), write-guard matrix, API matrix, embedding reconciliation; live-stack verification incl. cross-tenant isolation proof | ⬜ |
+| 119 | Migration `0011_wiki` (0009/0010 taken by Phases 21/23) + paired RLS sql: `wiki_pages` (tenant_id FK, slug unique per tenant, title, content_md, parent_slug NULL, created_by/updated_by, timestamps), `wiki_page_revisions` (page_id FK CASCADE, version, title+content snapshot, edited_by, created_at), `wiki_embeddings` (page_id, tenant_id, chunk, embedding VECTOR(1536)) — full tenant recipe incl. GUC grants | ✅ |
+| 120 | `app/services/wiki.py` (GUC-writer): upsert appends revision + updates page in one transaction (version = max+1); list as tree, get, delete, history, restore-forward; search = pgvector cosine top-k on wiki_embeddings with ILIKE fallback (fail-open); write guard = tenant admin role or platform superuser | ✅ |
+| 121 | Embedding sync: on write, chunk content (~1.5k chars), embed via existing `core/embeddings.py` (1536-dim), replace the page's chunks in wiki_embeddings (fail-open — page saves without OPENAI_API_KEY); reconciliation helper for un-embedded pages | ✅ |
+| 122 | Agent integration: `retrieve_wiki_context(query, tenant)` (schema_retrieval contract, fail-open, L1/L2 cached per query+tenant); ChatService NL2SQL prompt gains `## Tenant Knowledge` section; `chat_knowledge` router intent answers from wiki search (retrieve → summarize, cite source slugs, no SQL path) | ✅ |
+| 123 | API: GET /wiki, GET/PUT/DELETE /wiki/{slug}, GET /wiki/{slug}/history, POST /wiki/{slug}/restore/{version}, GET /wiki/search — registered + error codes (404 PAGE_NOT_FOUND, 403 WIKI_READ_ONLY for writers) | ✅ |
+| 124 | Frontend `/wiki`: page tree sidebar (parent_slug), markdown viewer (react-markdown + remark-gfm — existing deps), split editor with live preview + history viewer with restore for admins, search box; chat-header BookOpen nav | ✅ |
+| 125 | Tests: 25+ — service contract (revision append/restore atomicity, slug uniqueness per tenant, RLS cross-tenant isolation via GUC assertion), retrieval fail-open + tenant scoping, pipeline wiring (knowledge section present when retrieval returns, absent on fail), write-guard matrix, API matrix, embedding reconciliation; live-stack verification incl. cross-tenant isolation proof | ✅ |
 
 ## Cross-cutting (applies across Phases 21–24)
 
@@ -1524,3 +1524,21 @@ validation permissions (user_roles plumbing exists, unused).
 - Drive-by: Field(pattern=…) on Optional fields made them required — fixed
   in both /users and /admin update models (name-only PATCHes would have
   422'd)
+
+### Phase 24 — verified by (2026-09-05)
+
+- 25 new tests (chunker matrix, upsert revision-append atomicity + unique
+  mapping, embedding replace + fail-open, restore-forward, keyword fallback
+  + total-failure empty, prompt Tenant Knowledge section present/absent,
+  pipeline cache read/write + fail-open, chat_knowledge short-circuit with
+  SQL path proven dead + no-hits fall-through, API guard matrix incl.
+  WIKI_READ_ONLY/INVALID_SLUG/PAGE_NOT_FOUND/REVISION_NOT_FOUND). Full
+  suite: 329 passed / 1 pre-existing (Cube-dependent, reproduced on HEAD)
+- Live stack: create v1 (embedded=False — fail-open, no embedding key) →
+  update v2 → restore v1 forward as v3; search finds the page via keyword
+  fallback; plain-user write 403 WIKI_READ_ONLY; CROSS-TENANT ISOLATION
+  proven (owner tenant sees its page, other tenant does not — RLS via the
+  GUC); cleanup leaves no rows
+- Frontend: /wiki page builds (15/15 routes) with tree sidebar, markdown
+  viewer (react-markdown + remark-gfm), split editor with live preview,
+  history + restore, search; chat-header BookOpen nav for all users

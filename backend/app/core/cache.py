@@ -467,6 +467,28 @@ class CacheService:
         await self._l2.set(key, catalog, ttl=CacheTTL.METRIC_DEFINITIONS)
         self._stats.writes += 1
 
+    async def get_wiki_context(self, query: str, tenant_id: str) -> list | None:
+        """Cached wiki retrieval for the NL2SQL prompt (Phase 24)."""
+        key = _key(tenant_id, "wiki", _hash_query(query))
+
+        value = self._l1.get(key, CacheTTL.QUERY_RESULTS)
+        if value is not None:
+            self._stats.l1_hits += 1
+            return value
+        value = await self._l2.get(key)
+        if value is not None:
+            self._stats.l2_hits += 1
+            self._l1.set(key, value)
+            return value
+        self._stats.l2_misses += 1
+        return None
+
+    async def set_wiki_context(self, query: str, tenant_id: str, context: list) -> None:
+        key = _key(tenant_id, "wiki", _hash_query(query))
+        self._l1.set(key, context)
+        await self._l2.set(key, context, ttl=CacheTTL.QUERY_RESULTS)
+        self._stats.writes += 1
+
     # ------------------------------------------------------------------
     # Query result cache
     # ------------------------------------------------------------------

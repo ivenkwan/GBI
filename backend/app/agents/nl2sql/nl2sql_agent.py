@@ -53,6 +53,7 @@ class NL2SQLAgent(BaseAgent):
         user_id: str = "",
         session_id: str = "",
         history: list[dict] | None = None,
+        tenant_knowledge: list[dict] | None = None,
         **kwargs,
     ) -> AgentResult:
         """Generate SQL from a natural language query.
@@ -70,6 +71,9 @@ class NL2SQLAgent(BaseAgent):
             history: Prior conversation turns (Phase 14) — enables follow-up
                 queries like "now break that down by region". Each dict has
                 role/content/generated_sql keys.
+            tenant_knowledge: Wiki hits (Phase 24, ADR 010) — tenant-defined
+                definitions/rules that shape the SQL. Each dict has slug,
+                title, chunk keys.
         """
         start = time.time()
         run_id = str(uuid4())
@@ -82,6 +86,7 @@ class NL2SQLAgent(BaseAgent):
             tables=len(schema_context or []),
             examples=len(few_shot_examples or []),
             history_turns=len(history or []),
+            knowledge_hits=len(tenant_knowledge or []),
             tenant_id=tenant_id,
         )
 
@@ -94,6 +99,7 @@ class NL2SQLAgent(BaseAgent):
             metric_definitions=metric_definitions,
             tenant_id=tenant_id,
             history=history,
+            tenant_knowledge=tenant_knowledge,
         )
 
         try:
@@ -162,6 +168,7 @@ class NL2SQLAgent(BaseAgent):
         metric_definitions: list[dict] | str | None,
         tenant_id: str,
         history: list[dict] | None = None,
+        tenant_knowledge: list[dict] | None = None,
     ) -> str:
         """Build the full user message with schema context, examples, and metrics."""
         parts = []
@@ -184,7 +191,15 @@ class NL2SQLAgent(BaseAgent):
                     suffix = f" [SQL: {sql[:200]}]" if sql else ""
                     parts.append(f"Assistant: {content[:300]}{suffix}")
 
-        # 2. Schema context (compressed top-k)
+        # 2. Tenant knowledge (Phase 24, ADR 010): wiki pages the tenant
+        # wrote — definitions and rules that shape the SQL.
+        if tenant_knowledge:
+            parts.append("\n## Tenant Knowledge\n")
+            for hit in tenant_knowledge[:5]:
+                parts.append(f"### From page `{hit.get('slug', '')}` — {hit.get('title', '')}")
+                parts.append(str(hit.get("chunk", ""))[:1000])
+
+        # 3. Schema context (compressed top-k)
         if schema_context:
             parts.append("\n## Relevant Schema Context\n")
             for table in schema_context:
@@ -203,7 +218,7 @@ class NL2SQLAgent(BaseAgent):
         else:
             parts.append("\n## Schema Context\n\nNo schema context available.")
 
-        # 3. Metric definitions (from Cube.dev semantic layer)
+        # 4. Metric definitions (from Cube.dev semantic layer)
         if metric_definitions:
             if isinstance(metric_definitions, str):
                 parts.append(metric_definitions)
@@ -212,7 +227,7 @@ class NL2SQLAgent(BaseAgent):
                 for metric in metric_definitions:
                     parts.append(f"- **{metric['name']}**: {metric.get('description', '')}")
 
-        # 4. Few-shot examples
+        # 5. Few-shot examples
         if few_shot_examples:
             parts.append("\n## Example Queries\n")
             for i, example in enumerate(few_shot_examples[:5]):
@@ -220,7 +235,7 @@ class NL2SQLAgent(BaseAgent):
                 parts.append(f"Question: {example['nl_query']}")
                 parts.append(f"SQL: {example['expected_sql']}")
 
-        # 5. Tenant context
+        # 6. Tenant context
         parts.append(f"\n## Session Context\n- Tenant ID: {tenant_id}")
         parts.append("- Access: Read-only SELECT queries only")
         parts.append("- Row Limit: 1000 (unless user specifies otherwise)")

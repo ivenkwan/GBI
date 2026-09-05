@@ -477,10 +477,14 @@ Deletes keep audit history (`audit_log.user_id` has no FK by design);
 conversations/reports/dashboards owned by the user remain (tenant-owned
 assets) — documented in ADR 009.
 
-## Wiki (tenant knowledge base) — ADR 010
+## Wiki (tenant knowledge base) — ADR 010 ✅ (built, Phase 24)
 
-Read: any tenant user. Write: tenant `admin` or platform superuser.
-All reads/writes RLS-scoped via the tenant GUC.
+Read: any tenant user. Write: tenant `admin` or platform superuser (403
+WIKI_READ_ONLY). All reads/writes RLS-scoped via the tenant GUC. Writes
+append revisions atomically; restore copies an old version FORWARD. The
+`chat_knowledge` router intent answers from wiki search with slug
+citations, and retrieved chunks feed the NL2SQL prompt's Tenant Knowledge
+section (fail-open, L1/L2 cached per query+tenant).
 
 | Method + Path | Purpose |
 |---|---|

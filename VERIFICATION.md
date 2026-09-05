@@ -237,3 +237,23 @@ docker compose -f infra/docker-compose.dev.yml exec backend \
   table for tenant admins); admin portal tenant detail uses the same table
   via the superuser `?tenant_id=` path; Settings header button wired.
   tsc 0 / eslint 0 errors / build 14 routes.
+
+---
+
+# Phase 24 verification (2026-09-05) — OpenWiki tenant knowledge base
+
+- Migration `0011_wiki` + paired `rls/0011_wiki_rls.sql` (full tenant
+  recipe + ivfflat vector index) applied to dev + test DBs.
+- Live, end-to-end against the dev DB: create → v1 (embedded=false,
+  fail-open without an embedding key) → update → v2 → restore v1 FORWARD
+  as v3; keyword search finds the page; plain-user write 403
+  WIKI_READ_ONLY; **cross-tenant isolation proven** — a page written in
+  tenant A is visible to A and invisible to tenant B (RLS via the GUC).
+- Agent integration: NL2SQL prompt gains a `## Tenant Knowledge` section
+  fed by cached (query+tenant) retrieval (fail-open); the `chat_knowledge`
+  router intent short-circuits to a wiki answer with slug citations and
+  never reaches the SQL path when hits exist (asserted by making the SQL
+  path explode), falling through to the data pipeline when they don't.
+- 25 new offline tests; full suite **329 passed / 1 pre-existing**
+  (Cube-dependent `/datasources` assertion). Frontend: tsc 0, eslint 0
+  errors, build 15/15 routes incl. /wiki.

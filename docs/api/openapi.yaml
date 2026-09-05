@@ -589,7 +589,7 @@ paths:
   /wiki:
     get:
       operationId: list_wiki_pages
-      summary: "(planned) Tenant knowledge base — page tree"
+      summary: "Tenant knowledge base — page tree"
       security:
         - BearerAuth: []
       responses:
@@ -599,7 +599,7 @@ paths:
   /wiki/{slug}:
     get:
       operationId: get_wiki_page
-      summary: "(planned) Current page (markdown)"
+      summary: "Current page (markdown)"
       security:
         - BearerAuth: []
       parameters:
@@ -615,7 +615,7 @@ paths:
           description: PAGE_NOT_FOUND
     put:
       operationId: upsert_wiki_page
-      summary: "(planned) Create-or-update — appends revision atomically (admin)"
+      summary: "Create-or-update — appends revision atomically (admin)"
       security:
         - BearerAuth: []
       parameters:
@@ -629,7 +629,7 @@ paths:
           description: Saved
     delete:
       operationId: delete_wiki_page
-      summary: "(planned) Delete page + revisions (admin)"
+      summary: "Delete page + revisions (admin)"
       security:
         - BearerAuth: []
       parameters:
@@ -645,7 +645,7 @@ paths:
   /wiki/{slug}/history:
     get:
       operationId: wiki_page_history
-      summary: "(planned) Revision list"
+      summary: "Revision list"
       security:
         - BearerAuth: []
       parameters:
@@ -661,7 +661,7 @@ paths:
   /wiki/{slug}/restore/{version}:
     post:
       operationId: restore_wiki_page
-      summary: "(planned) Restore forward as a new revision (admin)"
+      summary: "Restore forward as a new revision (admin)"
       security:
         - BearerAuth: []
       parameters:
@@ -682,7 +682,7 @@ paths:
   /wiki/search:
     get:
       operationId: search_wiki
-      summary: "(planned) pgvector top-k over tenant wiki chunks (ILIKE fallback)"
+      summary: "pgvector top-k over tenant wiki chunks (keyword fallback)"
       security:
         - BearerAuth: []
       parameters:

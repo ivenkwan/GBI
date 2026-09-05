@@ -74,6 +74,19 @@ class ChatService:
             # Step 1: Route -- classify intent
             intent, plan = await self._step_route(query)
 
+            # Knowledge-first branch (Phase 24): chat_knowledge answers from
+            # the tenant wiki when it has relevant pages; no SQL path.
+            if intent == "chat_knowledge":
+                answer = await self._answer_from_wiki(query, user_id)
+                if answer is not None:
+                    await self._persist_turn(conversation_id, "assistant", answer)
+                    return self._build_response(
+                        conversation_id=conversation_id,
+                        query=query,
+                        narrative=answer,
+                        warnings=[],
+                    )
+
             # Step 2: NL2SQL -- generate query (with conversation history)
             sql, sql_warnings = await self._step_nl2sql(
                 query=query,
@@ -250,6 +263,16 @@ class ChatService:
             # Step 1: Route
             intent, plan = await self._step_route(query)
             yield _emit("intent", {"intent": intent, "plan": plan})
+
+            # Knowledge-first branch (Phase 24): chat_knowledge answers from
+            # the tenant wiki when it has relevant pages; no SQL path.
+            if intent == "chat_knowledge":
+                answer = await self._answer_from_wiki(query, user_id)
+                if answer is not None:
+                    yield _emit("narrative", {"narrative": answer, "warnings": []})
+                    await self._persist_turn(conversation_id, "assistant", answer)
+                    yield _emit("done", {"status": "complete", "warnings": []})
+                    return
 
             # Step 2: NL2SQL
             sql, sql_warnings = await self._step_nl2sql(
@@ -451,6 +474,46 @@ class ChatService:
             logger.warning(f"RouterAgent failed, defaulting to chat_data: {e}")
             return "chat_data", []
 
+    async def _answer_from_wiki(self, query: str, user_id: str) -> str | None:
+        """chat_knowledge intent (Phase 24, ADR 010): answer from the tenant's
+        wiki — retrieve top pages, summarize with slug citations, no SQL.
+
+        None when the wiki has no relevant hits (fall through to the data
+        pipeline). Fail-open by contract.
+        """
+        try:
+            from app.services.wiki import retrieve_wiki_context
+
+            hits = await retrieve_wiki_context(query, self.tenant_id, top_k=3)
+            if not hits:
+                return None
+
+            from app.core.llm_client import get_llm_client
+
+            lines = [f"Question: {query}", "", "Relevant knowledge base pages:"]
+            for hit in hits:
+                lines.append(
+                    f"- [{hit.get('slug', '')}] {hit.get('title', '')}: {hit.get('chunk', '')}"
+                )
+            result = await get_llm_client().invoke(
+                messages="\n".join(lines),
+                system=(
+                    "You answer questions strictly from the tenant knowledge base "
+                    "excerpts provided. Cite the page slug(s) you used like "
+                    "`(page: slug)`. If the excerpts do not answer the question, "
+                    "say so and suggest asking the data pipeline instead."
+                ),
+                use_reasoning=False,
+                options=None,
+                user_id=user_id,
+                tenant_id=self.tenant_id,
+                session_id=self.session_id,
+            )
+            return result.content
+        except Exception as e:  # noqa: BLE001 — fall through to the data pipeline
+            logger.warning(f"Wiki answer failed -- continuing with data pipeline: {e}")
+            return None
+
     async def _step_nl2sql(
         self,
         query: str,
@@ -528,6 +591,22 @@ class ChatService:
             except Exception as e:
                 logger.warning(f"Few-shot examples unavailable -- continuing without: {e}")
 
+            # Tenant knowledge (Phase 24, ADR 010): wiki hits for the
+            # prompt's Tenant Knowledge section. Same fail-open contract.
+            wiki_context: list[dict] = []
+            try:
+                cached_wiki = await cache.get_wiki_context(query, self.tenant_id)
+                if cached_wiki is not None:
+                    wiki_context = cached_wiki
+                else:
+                    from app.services.wiki import retrieve_wiki_context
+
+                    wiki_context = await retrieve_wiki_context(query, self.tenant_id, top_k=3)
+                    await cache.set_wiki_context(query, self.tenant_id, wiki_context)
+                    logger.info("Tenant knowledge retrieved", hits=len(wiki_context))
+            except Exception as e:
+                logger.warning(f"Tenant knowledge unavailable -- continuing without: {e}")
+
             result = await agent.execute(
                 query=query,
                 tenant_id=self.tenant_id,
@@ -537,6 +616,7 @@ class ChatService:
                 schema_context=schema_context,
                 few_shot_examples=few_shot_examples,
                 history=history,
+                tenant_knowledge=wiki_context,
             )
             sql = result.output.get("sql")
             return sql, result.warnings

@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { Send, BarChart3, Database, FileText, LayoutDashboard, Settings, LogOut, Plus, Shield, ThumbsDown, ThumbsUp, User } from "lucide-react";
+import { Send, BarChart3, BookOpen, Database, FileText, LayoutDashboard, Settings, LogOut, Plus, Shield, ThumbsDown, ThumbsUp, User } from "lucide-react";
 
 interface StreamStage {
   stage: string;
@@ -354,6 +354,20 @@ export function ChatView() {
                 </button>
               </TooltipTrigger>
               <TooltipContent>Explore metrics</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => router.push("/wiki")}
+                  className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+                >
+                  <BookOpen className="w-5 h-5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Knowledge base</TooltipContent>
             </Tooltip>
           </TooltipProvider>
 

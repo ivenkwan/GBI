@@ -645,6 +645,75 @@ export function resetUserPassword(
   });
 }
 
+// --- Wiki (tenant knowledge base — Phase 24, ADR 010) ---
+
+export interface WikiPageSummary {
+  slug: string;
+  title: string;
+  parent_slug?: string | null;
+  updated_at: string;
+}
+
+export interface WikiPage {
+  slug: string;
+  title: string;
+  content_md: string;
+  parent_slug?: string | null;
+  updated_by: string;
+  updated_at: string;
+  created_at: string;
+  version?: number | null;
+  embedded?: boolean | null;
+}
+
+export interface WikiRevision {
+  version: number;
+  title: string;
+  edited_by: string;
+  created_at: string;
+}
+
+export interface WikiSearchHit {
+  slug: string;
+  title: string;
+  chunk: string;
+  score: number;
+}
+
+export function listWikiPages(): Promise<WikiPageSummary[]> {
+  return request<WikiPageSummary[]>("/wiki");
+}
+
+export function getWikiPage(slug: string): Promise<WikiPage> {
+  return request<WikiPage>(`/wiki/${slug}`);
+}
+
+export function upsertWikiPage(
+  slug: string,
+  body: { title: string; content_md: string; parent_slug?: string | null },
+): Promise<WikiPage> {
+  return request<WikiPage>(`/wiki/${slug}`, { method: "PUT", body });
+}
+
+export function deleteWikiPage(slug: string): Promise<{ status: string }> {
+  return request(`/wiki/${slug}`, { method: "DELETE" });
+}
+
+export function getWikiHistory(slug: string): Promise<WikiRevision[]> {
+  return request<WikiRevision[]>(`/wiki/${slug}/history`);
+}
+
+export function restoreWikiPage(slug: string, version: number): Promise<WikiPage> {
+  return request<WikiPage>(`/wiki/${slug}/restore/${version}`, { method: "POST" });
+}
+
+export function searchWiki(
+  q: string,
+  topK = 5,
+): Promise<WikiSearchHit[]> {
+  return request<WikiSearchHit[]>(`/wiki/search?q=${encodeURIComponent(q)}&top_k=${topK}`);
+}
+
 // --- Health ---
 
 export function healthCheck(): Promise<{ status: string; version: string }> {
