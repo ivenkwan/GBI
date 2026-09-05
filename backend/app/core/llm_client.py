@@ -56,6 +56,16 @@ class LLMCallOptions:
     token_budget: int = 100_000
 
 
+class LLMBYOKMisconfiguredError(Exception):
+    """A configured tenant's key was rejected by their provider — surfaced
+    as LLM_BYOK_MISCONFIGURED; the platform key is never a fallback
+    (ADR 011 §5)."""
+
+
+# Backwards-friendly alias used inside the retry loop.
+BYOKMisconfiguredError = LLMBYOKMisconfiguredError
+
+
 # ---------------------------------------------------------------------------
 # Client
 # ---------------------------------------------------------------------------
@@ -121,13 +131,19 @@ class LLMClient:
             opts.thinking = True
             opts.temperature = 0.0
 
-        model_name = settings.LLM_REASONING_MODEL if use_reasoning else settings.LLM_FAST_MODEL
+        # BYOK resolution (Phase 25, ADR 011): tenant config or platform
+        # defaults. A configured tenant whose row can't be decrypted raises
+        # BYOKNotConfiguredError — never a silent fallback to the platform key.
+        from app.llm.resolver import resolve_llm
+
+        resolved = await resolve_llm(tenant_id)
+        model_name = resolved.reasoning_model if use_reasoning else resolved.fast_model
         start_time = time.time()
         last_error: Exception | None = None
 
         for attempt in range(1, opts.max_retries + 1):
             try:
-                llm = self._build_llm(model_name, opts, attempt)
+                llm = self._build_llm(model_name, opts, attempt, resolved)
                 langchain_messages = self._normalize_messages(messages)
 
                 logger.debug(
@@ -172,7 +188,7 @@ class LLMClient:
                 if opts.response_format == "json":
                     result.parsed = self._extract_json(content)
 
-                # Audit
+                # Audit (with BYOK attribution, Phase 25)
                 await self._audit(
                     result=result,
                     messages=messages,
@@ -180,6 +196,9 @@ class LLMClient:
                     tenant_id=tenant_id,
                     session_id=session_id,
                     generated_sql=generated_sql,
+                    provider=resolved.provider,
+                    key_source=resolved.source,
+                    key_version=resolved.key_version,
                 )
 
                 logger.info(
@@ -202,6 +221,23 @@ class LLMClient:
                     error=str(e),
                 )
 
+                # No-fallback policy (ADR 011 §5): a configured tenant whose
+                # key the provider rejects fails FAST — retrying or silently
+                # crossing to the platform key would mask misconfiguration
+                # and route tenant spend to the operator's account.
+                from app.llm.providers.base import ProviderAuthError
+
+                if isinstance(e, ProviderAuthError) and resolved.source == "tenant":
+                    logger.error(
+                        "BYOK key rejected — surfacing LLM_BYOK_MISCONFIGURED (no fallback)",
+                        tenant_id=tenant_id,
+                        provider=resolved.provider,
+                    )
+                    raise BYOKMisconfiguredError(
+                        f"tenant LLM key rejected by {resolved.provider} — "
+                        "fix the BYOK configuration; the platform key is not used"
+                    ) from e
+
                 if attempt < opts.max_retries:
                     backoff = min(2**attempt + (hash(str(e)) % 100) / 100, 30)
                     await self._sleep(backoff)
@@ -211,8 +247,26 @@ class LLMClient:
         logger.error("LLM call failed after all retries", error=str(last_error))
         raise last_error  # type: ignore[misc]
 
-    def _build_llm(self, model_name: str, opts: LLMCallOptions, attempt: int) -> ChatAnthropic:
-        """Build a ChatAnthropic instance with timeout and model kwargs."""
+    def _build_llm(self, model_name: str, opts: LLMCallOptions, attempt: int, resolved=None):
+        """Build the provider chat client (BYOK-aware, Phase 25).
+
+        ``resolved`` carries the tenant's provider/key/base_url or the
+        platform defaults; None falls back to the legacy platform-only
+        construction (early tests).
+        """
+        if resolved is not None and resolved.provider == "openai":
+            from app.llm.providers.openai_provider import OpenAIChat
+
+            return OpenAIChat(
+                api_key=resolved.api_key,
+                base_url=resolved.base_url,
+                model=model_name,
+                temperature=opts.temperature,
+                max_tokens=opts.max_tokens,
+                timeout=opts.timeout_seconds + (attempt * 15),
+                response_format=opts.response_format,
+            )
+
         timeout = opts.timeout_seconds + (attempt * 15)  # Scale timeout per attempt
 
         model_kwargs: dict = {}
@@ -222,15 +276,22 @@ class LLMClient:
                 "budget_tokens": min(opts.max_tokens // 2, 4096),
             }
 
-        return ChatAnthropic(
-            model=model_name,
-            temperature=opts.temperature,
-            max_tokens=opts.max_tokens,
-            api_key=settings.ANTHROPIC_API_KEY,
-            timeout=timeout,
-            max_retries=1,  # We handle retries ourselves
-            model_kwargs=model_kwargs if model_kwargs else None,
-        )
+        kwargs: dict = {
+            "model": model_name,
+            "temperature": opts.temperature,
+            "max_tokens": opts.max_tokens,
+            "timeout": timeout,
+            "max_retries": 1,  # We handle retries ourselves
+        }
+        if model_kwargs:
+            kwargs["model_kwargs"] = model_kwargs
+        if resolved is not None:
+            kwargs["api_key"] = resolved.api_key
+            if resolved.base_url:
+                kwargs["base_url"] = resolved.base_url
+        else:
+            kwargs["api_key"] = settings.ANTHROPIC_API_KEY
+        return ChatAnthropic(**kwargs)
 
     def _normalize_messages(self, messages: str | list[BaseMessage]) -> list[BaseMessage]:
         """Normalize message input to a list of BaseMessage."""
@@ -282,6 +343,9 @@ class LLMClient:
         tenant_id: str | None = None,
         session_id: str | None = None,
         generated_sql: str | None = None,
+        provider: str | None = None,
+        key_source: str | None = None,
+        key_version: int | None = None,
     ) -> None:
         """Log this LLM call to the audit trail."""
         if self._audit_callback:
@@ -301,6 +365,10 @@ class LLMClient:
                         "input_tokens": result.input_tokens,
                         "output_tokens": result.output_tokens,
                         "latency_ms": result.latency_ms,
+                        # BYOK attribution (ADR 011 §8) — never the key itself
+                        "provider": provider,
+                        "key_source": key_source,
+                        "key_version": key_version,
                     }
                 )
             except Exception as e:

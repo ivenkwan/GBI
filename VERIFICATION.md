@@ -257,3 +257,25 @@ docker compose -f infra/docker-compose.dev.yml exec backend \
 - 25 new offline tests; full suite **329 passed / 1 pre-existing**
   (Cube-dependent `/datasources` assertion). Frontend: tsc 0, eslint 0
   errors, build 15/15 routes incl. /wiki.
+
+---
+
+# Phase 25 verification (2026-09-05) — BYOK foundations
+
+- Migration `0012_tenant_llm` + paired `rls/0012_tenant_llm_rls.sql`
+  (pgcrypto `app_crypto` encrypt/decrypt SECURITY DEFINER functions with
+  the key riding as a bind parameter; tenant RLS recipe) applied to dev +
+  test DBs; `audit_log` gains provider/key_source/key_version.
+- Live, end-to-end against the dev DB as `genbi_app`: crypto roundtrip
+  exact and ciphertext opaque; config save → masked read only (last4 +
+  version, no key anywhere); resolver returns the tenant's openai config
+  with correctly decrypted plaintext; the LLM client builds the
+  OpenAI-format adapter for that tenant; wrong-key decryption fails
+  loudly; `status=disabled` and delete both revert to the platform key
+  (the explicit revert switch) and the cache drops immediately.
+- No-fallback policy: unit-proven — a tenant-source ProviderAuthError
+  raises `LLMBYOKMisconfiguredError` (never crosses to the platform key);
+  platform-source auth errors raise raw and retry normally.
+- 20 new offline tests + updated audit/embeddings tests; full suite
+  **349 passed / 1 pre-existing** (Cube-dependent `/datasources`
+  assertion).

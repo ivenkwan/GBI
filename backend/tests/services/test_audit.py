@@ -23,6 +23,10 @@ def _entry(**overrides) -> dict:
         "input_tokens": 100,
         "output_tokens": 50,
         "latency_ms": 12.5,
+        # BYOK attribution (Phase 25)
+        "provider": "anthropic",
+        "key_source": "platform",
+        "key_version": None,
     }
     entry.update(overrides)
     return entry
@@ -61,9 +65,11 @@ async def test_write_sets_guc_then_inserts(monkeypatch):
     guc_call = conn.execute.call_args_list[0]
     assert guc_call.args[1] == TENANT
 
-    # Second call: the module's exact parameterized insert, fully bound
+    # Second call: the parameterized insert (single-line literal), fully
+    # bound — including the Phase 25 BYOK attribution columns.
     insert_call = conn.execute.call_args_list[1]
-    assert insert_call.args[0] == audit_module._AUDIT_INSERT
+    sql = insert_call.args[0]
+    assert "INSERT INTO audit_log" in sql and "$13" in sql
     assert insert_call.args[1:] == (
         SESSION,
         USER,
@@ -75,6 +81,9 @@ async def test_write_sets_guc_then_inserts(monkeypatch):
         100,
         50,
         12.5,
+        "anthropic",
+        "platform",
+        None,
     )
 
 

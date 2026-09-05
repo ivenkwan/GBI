@@ -27,7 +27,7 @@ async def test_embed_text_returns_vector(monkeypatch):
     vector = [0.1] * settings.EMBEDDING_DIMS
     monkeypatch.setattr(
         "openai.AsyncOpenAI",
-        lambda api_key=None: SimpleNamespace(embeddings=_FakeEmbeddings(vector)),
+        lambda api_key=None, base_url=None: SimpleNamespace(embeddings=_FakeEmbeddings(vector)),
     )
 
     result = await embed_text("total revenue by region")
@@ -38,7 +38,7 @@ async def test_embed_text_rejects_wrong_dims(monkeypatch):
     monkeypatch.setattr(settings, "OPENAI_API_KEY", "test-key")
     monkeypatch.setattr(
         "openai.AsyncOpenAI",
-        lambda api_key=None: SimpleNamespace(embeddings=_FakeEmbeddings([0.1] * 7)),
+        lambda api_key=None, base_url=None: SimpleNamespace(embeddings=_FakeEmbeddings([0.1] * 7)),
     )
 
     with pytest.raises(RuntimeError, match="dims"):
@@ -53,7 +53,7 @@ async def test_embed_text_wraps_api_errors(monkeypatch):
             raise ValueError("api down")
 
     monkeypatch.setattr(
-        "openai.AsyncOpenAI", lambda api_key=None: SimpleNamespace(embeddings=Boom())
+        "openai.AsyncOpenAI", lambda api_key=None, base_url=None: SimpleNamespace(embeddings=Boom())
     )
 
     with pytest.raises(RuntimeError, match="embedding API call failed"):

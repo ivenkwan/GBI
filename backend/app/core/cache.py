@@ -489,6 +489,25 @@ class CacheService:
         await self._l2.set(key, context, ttl=CacheTTL.QUERY_RESULTS)
         self._stats.writes += 1
 
+    async def get_byok_version(self, tenant_id: str) -> int | None:
+        """Cached BYOK row version (cache-invalidation pointer, Phase 25)."""
+        key = _key(tenant_id, "byok_version", "v1")
+        value = self._l1.get(key, CacheTTL.CONTROL_PLANE)
+        if value is not None:
+            self._stats.l1_hits += 1
+            return int(value)
+        value = await self._l2.get(key)
+        if value is not None:
+            self._stats.l2_hits += 1
+            self._l1.set(key, value)
+            return int(value)
+        return None
+
+    async def set_byok_version(self, tenant_id: str, version: int) -> None:
+        key = _key(tenant_id, "byok_version", "v1")
+        self._l1.set(key, version)
+        await self._l2.set(key, version, ttl=CacheTTL.CONTROL_PLANE)
+
     # ------------------------------------------------------------------
     # Query result cache
     # ------------------------------------------------------------------

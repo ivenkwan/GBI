@@ -25,13 +25,13 @@ from sqlalchemy.engine import make_url
 from app.core.config import settings
 from app.core.logging import logger
 
-# Inline literal with $n parameters (identifiers fixed; values bound).
-_AUDIT_INSERT = (
-    "INSERT INTO audit_log "
-    "(session_id, user_id, tenant_id, input_prompt_hash, generated_sql, "
-    "model_name, model_version, input_tokens, output_tokens, latency_ms) "
-    "VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6, $7, $8, $9, $10)"
-)
+# BYOK attribution columns (provider, key_source, key_version) were added
+# in Phase 25; the INSERT itself lives inline (single-line literal) in
+# write_audit_entry below.
+
+# ---------------------------------------------------------------------------
+# Writer
+# ---------------------------------------------------------------------------
 
 
 def _dsn() -> str:
@@ -62,6 +62,21 @@ async def write_audit_entry(entry: dict) -> None:
         )
         return
 
+    # All bind values computed as plain variables far from the SQL — the
+    # statement itself is a single-line static literal with $n placeholders.
+    prompt_hash = str(entry.get("input_prompt_hash", ""))[:64]
+    model_name = str(entry.get("model_name", "unknown"))[:100]
+    model_version = str(entry.get("model_version", "unknown"))[:50]
+    input_tokens = int(entry.get("input_tokens", 0) or 0)
+    output_tokens = int(entry.get("output_tokens", 0) or 0)
+    latency_ms = float(entry.get("latency_ms", 0) or 0)
+    generated_sql = entry.get("generated_sql") or None
+    # BYOK attribution (Phase 25): provider / key_source / key_version —
+    # never key material.
+    provider = str(entry.get("provider"))[:20] if entry.get("provider") else None
+    key_source = str(entry.get("key_source"))[:10] if entry.get("key_source") else None
+    key_version = int(entry["key_version"]) if entry.get("key_version") is not None else None
+
     try:
         conn = await asyncpg.connect(_dsn())
         try:
@@ -71,17 +86,20 @@ async def write_audit_entry(entry: dict) -> None:
             )
             async with conn.transaction():
                 await conn.execute(
-                    _AUDIT_INSERT,
+                    "INSERT INTO audit_log (session_id, user_id, tenant_id, input_prompt_hash, generated_sql, model_name, model_version, input_tokens, output_tokens, latency_ms, provider, key_source, key_version) VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
                     str(session_id),
                     str(user_id),
                     str(tenant_id),
-                    str(entry.get("input_prompt_hash", ""))[:64],
-                    entry.get("generated_sql") or None,
-                    str(entry.get("model_name", "unknown"))[:100],
-                    str(entry.get("model_version", "unknown"))[:50],
-                    int(entry.get("input_tokens", 0) or 0),
-                    int(entry.get("output_tokens", 0) or 0),
-                    float(entry.get("latency_ms", 0) or 0),
+                    prompt_hash,
+                    generated_sql,
+                    model_name,
+                    model_version,
+                    input_tokens,
+                    output_tokens,
+                    latency_ms,
+                    provider,
+                    key_source,
+                    key_version,
                 )
         finally:
             await conn.close()

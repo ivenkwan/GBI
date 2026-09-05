@@ -1,6 +1,6 @@
 # GenBI Platform — Build Progress
 
-> **Last updated:** 2026-09-05 | **Stack tier:** Enterprise | **125/138 shipped (Phases 1–24) · Phases 25–26 planned (tenant BYOK LLM — ADR 011)**
+> **Last updated:** 2026-09-05 | **Stack tier:** Enterprise | **132/138 shipped (Phases 1–25) · Phase 26 planned (BYOK APIs/UX — ADR 011)**
 
 ---
 
@@ -1447,13 +1447,13 @@ validation permissions (user_roles plumbing exists, unused).
 
 | # | Task | Status |
 |---|---|---|
-| 126 | Migration `0010_tenant_llm` (structured ops) + paired `rls/0010_tenant_llm_rls.sql`: `tenant_llm_providers` (tenant_id PK, provider CHECK anthropic/openai, base_url, reasoning_model, fast_model, embedding_model NULL, api_key_enc, key_last4, key_version, status, updated_by, timestamps — full tenant recipe); `audit_log` gains `provider VARCHAR(20)`, `key_source VARCHAR(10)`, `key_version INTEGER NULL` | ⬜ |
-| 127 | `infra/postgres/byok-crypto.sql`: schema `app_crypto` with SECURITY DEFINER `encrypt($1, $2)` / `decrypt($1, $2)` wrapping pgcrypto `pgp_sym_*`; key rides as bind param from `TENANT_ENCRYPTION_KEY`; applied via `make migrate` + init parity; fail-fast `BYOK_NOT_CONFIGURED` when the key is unset and BYOK is used | ⬜ |
-| 128 | Provider adapters `app/llm/providers/`: `base.py` (normalized contract: content + input/output tokens + provider-typed auth errors), `anthropic_provider.py` (today's langchain-anthropic path lifted — thinking mode, max_tokens), `openai_provider.py` (openai SDK, base_url gateway override, `response_format=json_object` mapping; thinking flag = documented no-op); shared adapter parity test matrix | ⬜ |
-| 129 | Resolver + client refactor: `resolve_llm(tenant_id)` → ResolvedLLM (tenant row via decrypt, else platform defaults), L1-cached 60s keyed `byok:{tenant}:{key_version}`, explicit invalidation on write; `LLMClient.invoke()` routes model/key/adapter through the resolver — agent call sites unchanged; retry/budget/`_extract_json` untouched | ⬜ |
-| 130 | No-fallback policy: provider 401/403 on a configured tenant surfaces `LLM_BYOK_MISCONFIGURED` (chat degrades gracefully with warning; never crosses to the platform key); `status: disabled` = explicit revert switch | ⬜ |
-| 131 | Embeddings resolution: `core/embeddings.py` accepts tenant context — tenant key + `embedding_model` used when provider=openai, else platform key (fail-open unchanged); wiki/schema embedding callers thread tenant_id | ⬜ |
-| 132 | Tests 30+: adapter parity matrix (mocked HTTP for both formats incl. gateway base_url), resolver routing (tenant vs platform vs disabled), rotation invalidation (key_version cache semantics), auth-failure surfacing (no fallback), crypto roundtrip via app_crypto (encrypt→decrypt, wrong-key failure), key-absence from every API response/log/audit row, audit columns populated (provider/key_source/key_version) | ⬜ |
+| 126 | Migration `0012_tenant_llm` (0010/0011 taken) + paired `rls/0012_tenant_llm_rls.sql`: `tenant_llm_providers` (tenant_id PK, provider CHECK anthropic/openai, base_url, reasoning_model, fast_model, embedding_model NULL, api_key_enc, key_last4, key_version, status, updated_by, timestamps — full tenant recipe); `audit_log` gains `provider VARCHAR(20)`, `key_source VARCHAR(10)`, `key_version INTEGER NULL` | ✅ |
+| 127 | `infra/postgres/byok-crypto.sql`: schema `app_crypto` with SECURITY DEFINER `encrypt($1, $2)` / `decrypt($1, $2)` wrapping pgcrypto `pgp_sym_*`; key rides as bind param from `TENANT_ENCRYPTION_KEY`; applied via `make migrate` + init parity; fail-fast `BYOK_NOT_CONFIGURED` when the key is unset and BYOK is used | ✅ |
+| 128 | Provider adapters `app/llm/providers/`: `base.py` (normalized contract: content + input/output tokens + provider-typed auth errors), `anthropic_provider.py` (today's langchain-anthropic path lifted — thinking mode, max_tokens), `openai_provider.py` (openai SDK, base_url gateway override, `response_format=json_object` mapping; thinking flag = documented no-op); shared adapter parity test matrix | ✅ |
+| 129 | Resolver + client refactor: `resolve_llm(tenant_id)` → ResolvedLLM (tenant row via decrypt, else platform defaults), L1-cached 60s keyed `byok:{tenant}:{key_version}`, explicit invalidation on write; `LLMClient.invoke()` routes model/key/adapter through the resolver — agent call sites unchanged; retry/budget/`_extract_json` untouched | ✅ |
+| 130 | No-fallback policy: provider 401/403 on a configured tenant surfaces `LLM_BYOK_MISCONFIGURED` (chat degrades gracefully with warning; never crosses to the platform key); `status: disabled` = explicit revert switch | ✅ |
+| 131 | Embeddings resolution: `core/embeddings.py` accepts tenant context — tenant key + `embedding_model` used when provider=openai, else platform key (fail-open unchanged); wiki/schema embedding callers thread tenant_id | ✅ |
+| 132 | Tests 30+: adapter parity matrix (mocked HTTP for both formats incl. gateway base_url), resolver routing (tenant vs platform vs disabled), rotation invalidation (key_version cache semantics), auth-failure surfacing (no fallback), crypto roundtrip via app_crypto (encrypt→decrypt, wrong-key failure), key-absence from every API response/log/audit row, audit columns populated (provider/key_source/key_version) | ✅ |
 
 ## Phase 26 — BYOK APIs, Admin/Settings UX & Spend Attribution (Tasks 133–138)
 
@@ -1542,3 +1542,25 @@ validation permissions (user_roles plumbing exists, unused).
 - Frontend: /wiki page builds (15/15 routes) with tree sidebar, markdown
   viewer (react-markdown + remark-gfm), split editor with live preview,
   history + restore, search; chat-header BookOpen nav for all users
+
+### Phase 25 — verified by (2026-09-05)
+
+- 20 new offline tests (adapter parity matrix with mocked SDKs incl.
+  gateway base_url + json_object mapping + auth-error classification,
+  resolver routing tenant/platform/rotation/cache-hit, missing-encryption-
+  key raises instead of falling back, control-plane outage fails open to
+  platform, no-fallback policy (tenant auth error → LLMBYOKMisconfigured,
+  platform auth error → raw), audit attribution fidelity, embeddings
+  platform/tenant/anthropic-tenant routing, storage contract incl.
+  crypto-in-SQL binding and masked reads, validation sanitization);
+  updated audit + embeddings tests for the new columns/kwarg. Full suite:
+  349 passed / 1 pre-existing (Cube-dependent, long-verified on HEAD)
+- Live stack (dev DB, genbi_app role): app_crypto encrypt→decrypt roundtrip
+  exact; set_provider_config → masked row (v2, last4, api_key never
+  present) with ciphertext opaque; resolver → tenant/openai with decrypted
+  plaintext matching; LLMClient._build_llm → OpenAIChat for the tenant;
+  wrong-key decrypt fails loudly; status=disabled → platform; delete →
+  platform (the explicit revert), get → None
+- Migration 0012 + paired rls (pgcrypto app_crypto SECURITY DEFINER
+  encrypt/decrypt with key-as-bind, tenant recipe on
+  tenant_llm_providers, genbi_app schema USAGE) applied to dev + test DBs

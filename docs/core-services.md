@@ -61,7 +61,8 @@ logger.info("LLM call complete", model="claude-opus-4", latency_ms=1200)
 
 All agent LLM calls route through `get_llm_client()`.
 
-> **Planned (ADR 011, Phases 25–26 — not yet built): tenant BYOK.**
+> **Tenant BYOK (ADR 011): foundations BUILT (Phase 25); settings/admin
+> APIs + UX land in Phase 26.**
 > `invoke()` keeps its signature but first resolves the tenant's effective
 > LLM config (`resolve_llm(tenant_id)` → provider/base_url/key/models or
 > platform defaults, L1-cached 60s keyed by `key_version`). Provider
