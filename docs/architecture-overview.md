@@ -96,6 +96,50 @@ User Query (ChatView)
   → ChatView renders incrementally (stage badges, SQL block, chart card, narrative)
 ```
 
+## Multi-Tenancy Model
+
+> Design authority: [ADR 006](adr/006-enforced-rls-roles.md) (enforced RLS roles),
+> [ADR 008](adr/008-per-tenant-cube-data-path.md) (per-tenant Cube data path),
+> [ADR 009](adr/009-platform-admin-plane.md) (admin plane — **planned, Phases 21–22**),
+> [ADR 010](adr/010-tenant-knowledge-base.md) (tenant knowledge base — **planned, Phase 24**),
+> [ADR 011](adr/011-tenant-byok-llm.md) (tenant BYOK LLM — **planned, Phases 25–26**).
+
+The platform separates a **data plane** (per-tenant analytical workloads) from
+a **control plane** (tenant lifecycle, identity, platform administration):
+
+```
+                    ┌──────────────────────────────────────────┐
+                    │  Control plane (ADR 009 — planned)       │
+                    │  /admin portal · platform_admins grants  │
+                    │  tenant lifecycle · genbi_admin role     │
+                    │  admin_audit · BYOK provider config      │
+                    │  (ADR 011 — planned)                     │
+                    └───────────────┬──────────────────────────┘
+                                    │ provisions / suspends / configures
+┌────────────────────────────────────▼─────────────────────────────────────┐
+│  Data plane (per tenant, enforced)                                       │
+│  JWT (sub, tenant_id, roles[, platform_admin])                           │
+│    ├─ RLS: FORCE tenant_isolation on app.current_tenant_id GUC           │
+│    ├─ Roles: genbi_app (runtime) · genbi_auth (login)                    │
+│    │         genbi_admin (control plane, planned) · genbi (owner, DDL)   │
+│    ├─ LLM calls: per-tenant BYOK resolution (ADR 011 — planned) —        │
+│    │   Anthropic-native or OpenAI-format endpoints with tenant-held      │
+│    │   keys (pgcrypto at rest); platform key only when no tenant config  │
+│    ├─ Cube: per-tenant orchestrators via tenantId claim → driver GUC     │
+│    ├─ Tenant knowledge base (ADR 010 — planned): wiki pages +            │
+│    │   pgvector chunks feeding NL2SQL context                           │
+│    └─ Governance: audit_log per LLM call (provider + key_source,         │
+│        planned) · AGE lineage per artifact                              │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+Two scopes of authority, two mechanisms: **tenant roles** (`users.roles`
+JSONB — `user`, `admin`) govern in-tenant capabilities; **platform
+superusers** are a separate grant table (`platform_admins`) checked by a
+dedicated dependency — never a string in the tenant roles array (ADR 009 §1).
+Tenant suspension and superuser revocation are enforced via short-TTL cached
+status checks, not just at login.
+
 ## Project Structure
 
 ```
@@ -118,7 +162,8 @@ genbi/
 ├── frontend/
 │   └── src/
 │       ├── app/           ← Next.js App Router pages
-│       ├── components/    ← shadcn/ui + chat + auth + charts
+│       │   └── admin/     ← Platform admin portal (planned — ADR 009)
+│       ├── components/    ← shadcn/ui + chat + auth + charts (+ admin, wiki: planned)
 │       ├── lib/           ← api-client, validators (Zod), shadcn utils
 │       └── types/         ← TypeScript interfaces
 ├── semantic/
@@ -144,3 +189,7 @@ genbi/
 | Deterministic safety gates | N/A | SQL validation and chart validation use pure rules — zero LLM calls, zero hallucination risk |
 | Correction over rejection | N/A | Chart validator prefers fuzzy-match fix + chart-type downgrade over failing the request |
 | Read-only by default | N/A | All connectors enforce read-only; writes require explicit service methods with auth |
+| Control/data plane split | [009](adr/009-platform-admin-plane.md) | Platform administration is a separate grant scope + DB role; tenant roles stay tenant-scoped |
+| Least-privilege DB roles per purpose | [006](adr/006-enforced-rls-roles.md), [009](adr/009-platform-admin-plane.md) | genbi_app / genbi_auth / genbi_admin each get one job; owner role for migrations only |
+| Tenant knowledge as agent context | [010](adr/010-tenant-knowledge-base.md) | Wiki lives inside the tenant RLS boundary and feeds NL2SQL retrieval — not an external doc dump |
+| Per-tenant BYOK LLM providers | [011](adr/011-tenant-byok-llm.md) | One resolution layer inside the central client; Anthropic-native + OpenAI-format adapters; tenant keys pgcrypto-encrypted, never echoed; no silent fallback to the platform key |

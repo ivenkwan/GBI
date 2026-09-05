@@ -361,6 +361,453 @@ paths:
         "503":
           description: LINEAGE_UNAVAILABLE
 
+  # ---- Planned: multi-tenancy control plane + knowledge base -------------
+  # DESIGN ONLY (ADRs 009/010, Phases 21-24) — not yet implemented.
+
+  /admin/stats:
+    get:
+      operationId: admin_platform_stats
+      summary: "(planned) Platform counters — superuser only"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Platform stats
+        "403":
+          description: NOT_PLATFORM_ADMIN
+
+  /admin/tenants:
+    get:
+      operationId: admin_list_tenants
+      summary: "(planned) Tenant list with counters — superuser only"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Tenant list
+    post:
+      operationId: admin_provision_tenant
+      summary: "(planned) Provision tenant + initial admin user (transactional)"
+      security:
+        - BearerAuth: []
+      responses:
+        "201":
+          description: Tenant created
+        "409":
+          description: TENANT_EXISTS / USER_EXISTS
+
+  /admin/tenants/{tenant_id}:
+    get:
+      operationId: admin_get_tenant
+      summary: "(planned) Tenant detail (users, schedules, counts, audit)"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: tenant_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Tenant detail
+        "404":
+          description: TENANT_NOT_FOUND
+    patch:
+      operationId: admin_update_tenant
+      summary: "(planned) Rename / suspend / activate / settings"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: tenant_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Updated tenant
+    delete:
+      operationId: admin_delete_tenant
+      summary: "(planned) Decommission — guarded, refuses non-empty tenants without force"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: tenant_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: confirm
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: ["yes"]
+        - name: force
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Deleted
+        "422":
+          description: TENANT_NOT_EMPTY
+
+  /admin/admins:
+    get:
+      operationId: admin_list_superusers
+      summary: "(planned) Active superusers + grant history"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Superuser list
+    post:
+      operationId: admin_grant_superuser
+      summary: "(planned) Grant platform-superuser (by user id or email)"
+      security:
+        - BearerAuth: []
+      responses:
+        "201":
+          description: Granted
+    delete:
+      operationId: admin_revoke_superuser
+      summary: "(planned) Revoke — effective within ~60s (cached re-check)"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Revoked
+
+  /admin/audit:
+    get:
+      operationId: admin_audit_feed
+      summary: "(planned) Admin-action feed (actor/target/tenant filters)"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Audit entries
+
+  /users:
+    get:
+      operationId: list_tenant_users
+      summary: "(planned) The tenant's users — tenant admin or superuser"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: User list
+    post:
+      operationId: create_tenant_user
+      summary: "(planned) Create a user in the caller's tenant"
+      security:
+        - BearerAuth: []
+      responses:
+        "201":
+          description: Created
+        "409":
+          description: USER_EXISTS
+
+  /users/{user_id}:
+    patch:
+      operationId: update_tenant_user
+      summary: "(planned) Update email / roles / enable-disable"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Updated
+    delete:
+      operationId: delete_tenant_user
+      summary: "(planned) Hard delete — refused for the last active tenant admin"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Deleted
+        "422":
+          description: LAST_TENANT_ADMIN
+
+  /users/{user_id}/reset-password:
+    post:
+      operationId: admin_reset_user_password
+      summary: "(planned) Admin sets a new password for a tenant user"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Reset
+
+  /auth/me:
+    get:
+      operationId: whoami
+      summary: "(planned) Current identity incl. roles and platform_admin flag"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Identity
+
+  /auth/change-password:
+    post:
+      operationId: change_password
+      summary: "(planned) Self-service password change (current password required)"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Changed
+        "401":
+          description: INVALID_CREDENTIALS
+
+  /wiki:
+    get:
+      operationId: list_wiki_pages
+      summary: "(planned) Tenant knowledge base — page tree"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Page list
+
+  /wiki/{slug}:
+    get:
+      operationId: get_wiki_page
+      summary: "(planned) Current page (markdown)"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Page
+        "404":
+          description: PAGE_NOT_FOUND
+    put:
+      operationId: upsert_wiki_page
+      summary: "(planned) Create-or-update — appends revision atomically (admin)"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Saved
+    delete:
+      operationId: delete_wiki_page
+      summary: "(planned) Delete page + revisions (admin)"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+
+  /wiki/{slug}/history:
+    get:
+      operationId: wiki_page_history
+      summary: "(planned) Revision list"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Revisions
+
+  /wiki/{slug}/restore/{version}:
+    post:
+      operationId: restore_wiki_page
+      summary: "(planned) Restore forward as a new revision (admin)"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: version
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Restored
+
+  /wiki/search:
+    get:
+      operationId: search_wiki
+      summary: "(planned) pgvector top-k over tenant wiki chunks (ILIKE fallback)"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Results
+
+  /settings/llm:
+    get:
+      operationId: get_tenant_llm_config
+      summary: "(planned, ADR 011) Tenant BYOK config — masked, key never returned"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Masked config (provider, models, key_last4, key_version, status)
+        "404":
+          description: NO_TENANT_CONFIG (platform key in use)
+    put:
+      operationId: set_tenant_llm_config
+      summary: "(planned) Create/replace BYOK config — live 1-token validation ping"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [provider, api_key, reasoning_model, fast_model]
+              properties:
+                provider:
+                  type: string
+                  enum: [anthropic, openai]
+                api_key:
+                  type: string
+                  format: password
+                base_url:
+                  type: string
+                  format: uri
+                reasoning_model:
+                  type: string
+                fast_model:
+                  type: string
+                embedding_model:
+                  type: string
+      responses:
+        "200":
+          description: Saved (masked view)
+        "400":
+          description: BYOK_VALIDATION_FAILED
+        "503":
+          description: BYOK_NOT_CONFIGURED (platform encryption key missing)
+    delete:
+      operationId: delete_tenant_llm_config
+      summary: "(planned) Remove config — revert to the platform key"
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Removed
+
+  /settings/llm/validate:
+    post:
+      operationId: validate_tenant_llm_config
+      summary: "(planned) Test a candidate config without saving"
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TenantLLMConfigInput"
+      responses:
+        "200":
+          description: Validation result
+        "400":
+          description: BYOK_VALIDATION_FAILED
+
+  /admin/tenants/{tenant_id}/llm:
+    get:
+      operationId: admin_get_tenant_llm
+      summary: "(planned) Masked tenant BYOK config + usage-by-model — superuser"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: tenant_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Config + usage
+        "404":
+          description: TENANT_NOT_FOUND
+    put:
+      operationId: admin_set_tenant_llm
+      summary: "(planned) Force-set BYOK config on behalf of a tenant — superuser"
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: tenant_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TenantLLMConfigInput"
+      responses:
+        "200":
+          description: Saved (masked view)
+
 components:
   securitySchemes:
     BearerAuth:
@@ -368,6 +815,26 @@ components:
       scheme: bearer
 
   schemas:
+    TenantLLMConfigInput:
+      type: object
+      required: [provider, api_key, reasoning_model, fast_model]
+      properties:
+        provider:
+          type: string
+          enum: [anthropic, openai]
+        api_key:
+          type: string
+          format: password
+        base_url:
+          type: string
+          format: uri
+        reasoning_model:
+          type: string
+        fast_model:
+          type: string
+        embedding_model:
+          type: string
+
     HealthResponse:
       type: object
       properties:

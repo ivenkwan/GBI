@@ -19,6 +19,29 @@
 | `created_at` | `TIMESTAMPTZ` | `utcnow()` default |
 | `updated_at` | `TIMESTAMPTZ` | `utcnow()` default, onupdate |
 
+**Planned (ADR 009, Phase 21 — not yet built):** `slug VARCHAR(50)` unique
+short code; `status VARCHAR(20)` (`active` | `suspended`, default `active`,
+enforced via short-TTL cached checks on every authenticated request); and
+`settings JSONB` for per-tenant feature flags.
+
+### Planned control-plane + knowledge-base tables (ADR 009/010, Phases 21–24 — not yet built)
+
+| Table | Purpose | Tenant-scoped |
+|---|---|---|
+| `platform_admins` | Platform superuser grants with history (`user_id` PK → users, `granted_by`, `granted_at`, `revoked_by`, `revoked_at`) | No — platform scope; kept separate from the tenant `roles` JSONB by design (ADR 009 §1) |
+| `admin_audit` | Every admin mutation: `actor_user_id`, `action`, `target_type`, `target_id`, `detail JSONB` | Filterable by tenant; no tenant FK (audit outlives tenants) |
+| `wiki_pages` | Tenant knowledge base: `slug` identity (unique per tenant), `parent_slug` hierarchy, `title`, `content_md`, `created_by/updated_by` | Yes — full FORCE-RLS recipe (ADR 010) |
+| `wiki_page_revisions` | Append-only page history (`version` monotonic per page, snapshot title/content, `edited_by`); restore writes a new revision forward | Yes |
+| `wiki_embeddings` | pgvector `VECTOR(1536)` chunks of wiki content powering NL2SQL retrieval (`retrieve_wiki_context`) | Yes |
+| `tenant_llm_providers` *(ADR 011)* | Per-tenant BYOK LLM config: provider (`anthropic`\|`openai`), optional `base_url` gateway, `reasoning_model`/`fast_model`, optional `embedding_model` (openai only), `api_key_enc` (pgcrypto ciphertext), `key_last4`, `key_version` (cache-invalidation key), `status`, `updated_by` | Yes — full recipe; secrets isolated from `tenants.settings` by design |
+
+**BYOK crypto seam (ADR 011, planned):** `infra/postgres/byok-crypto.sql`
+creates schema `app_crypto` with `encrypt`/`decrypt` SECURITY DEFINER
+functions wrapping pgcrypto `pgp_sym_*`; the encryption key rides as a `$1`
+bind parameter from `TENANT_ENCRYPTION_KEY` — never in DDL, SQL literals, or
+logs, and Python never constructs ciphertext (the same DB-function seam as
+the AGE lineage functions).
+
 ### `AuditLog` (table: `audit_log`)
 
 Every LLM call writes an entry — since Phase 12 via `app/services/audit.py`
@@ -236,6 +259,27 @@ uv run alembic revision --autogenerate -m "add new column"
 # Apply migrations
 uv run alembic upgrade head
 ```
+
+Since Phase 19, migrations carry **schema** via Alembic's structured ops,
+while each migration's **RLS policies + grants** ship in a paired
+`infra/postgres/rls/NNNN_<name>_rls.sql` file applied by `make migrate`
+(and CI) right after `alembic upgrade head`. New tenant-scoped tables
+follow this same paired-file convention.
+
+---
+
+## Database Roles (purpose-scoped, least privilege)
+
+| Role | DSN setting | Used by | Scope |
+|---|---|---|---|
+| `genbi` (owner) | `DATABASE_URL_SYNC` | Alembic, admin scripts | Everything (migrations/bootstrap only — never the app runtime) |
+| `genbi_app` | `DATABASE_URL` | ORM engine, query connector, GUC-writer services | RLS-bound DML/SELECT on tenant tables; sees only rows matching the tenant GUC |
+| `genbi_auth` | `DATABASE_URL_AUTH` | Login endpoint | SELECT on `users` across tenants (the single auditable `users_login_lookup` carve-out) — nothing else |
+| `genbi_admin` *(planned, ADR 009)* | `DATABASE_URL_ADMIN` | Login (supersedes `genbi_auth`), admin-plane services | DML on control-plane tables (`tenants`, `users`, `platform_admins`, `admin_audit`) + SELECT on `audit_log`; no business-data access |
+
+Cross-tenant maintenance that genuinely needs business rows (scheduler,
+admin portal per-tenant stats) uses short-lived connections with the tenant
+GUC set explicitly per tenant — never a blanket bypass.
 
 ---
 

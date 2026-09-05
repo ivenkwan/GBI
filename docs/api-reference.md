@@ -18,10 +18,16 @@ The token is obtained via `POST /auth/login` (below).
   "sub": "<user_id>",
   "tenant_id": "<tenant_id>",
   "roles": ["user"],
+  "platform_admin": false,
   "exp": 1234567890,
   "iat": 1234567890
 }
 ```
+
+`platform_admin: true` (planned, ADR 009 / Phase 21) marks an active
+platform-superuser grant; the `require_platform_admin` guard re-verifies the
+grant table behind a 60-second cache, so revocation takes effect within a
+minute rather than at token expiry.
 
 On failure (missing, expired, or invalid token): HTTP 401 with:
 ```json
@@ -419,3 +425,91 @@ class ChartRenderRequest(BaseModel):
     backend: str = Field(default="vegalite")
     format: str = Field(default="png")
 ```
+
+---
+
+# Planned API — Multi-Tenancy Control Plane & Knowledge Base
+
+> **Status: DESIGN ONLY (ADRs 009/010, Phases 21–24 in todo.md) — not yet built.**
+> Contracts below are the agreed design target for implementation.
+
+## Admin (platform superuser) — ADR 009
+
+Guard: `require_platform_admin` (JWT claim + cached grant-table check).
+Every mutation writes an `admin_audit` row.
+
+| Method + Path | Purpose |
+|---|---|
+| `GET /admin/stats` | Platform counters: tenants by status, users, LLM calls (24h), active schedules |
+| `GET /admin/tenants` | Tenant list with per-tenant counters (users, reports, dashboards, wiki pages) |
+| `POST /admin/tenants` | Provision: `{name, slug, admin_email, temp_password?, seed_sample_data?}` → tenant + initial tenant-admin user (transactional) |
+| `GET /admin/tenants/{id}` | Detail: users, schedules, counters, recent admin audit for the tenant |
+| `PATCH /admin/tenants/{id}` | Rename / set `status: active\|suspended` / merge `settings` JSONB |
+| `DELETE /admin/tenants/{id}?confirm=yes` | Decommission — guarded; refuses while users exist unless `force=true` (cascades tenant data; audit rows retained) |
+| `GET /admin/admins` | Active platform superusers + full grant/revoke history |
+| `POST /admin/admins` | Grant superuser `{user_id \| email}` |
+| `DELETE /admin/admins/{user_id}` | Revoke (effective ≤ 60s via cached re-check) |
+| `GET /admin/audit` | Admin-action feed; filters: `actor_id`, `target_type`, `tenant_id`, time window |
+
+Errors: `403 NOT_PLATFORM_ADMIN`, `400 INVALID_SLUG`, `409 TENANT_EXISTS`,
+`409 USER_EXISTS`, `422 TENANT_NOT_EMPTY` (delete without force),
+`403 TENANT_SUSPENDED` (on any authenticated endpoint for suspended tenants).
+
+## Tenant Users — ADR 009 §6 / Phase 23
+
+Guard: tenant `admin` role or platform superuser (user management is
+in-tenant; platform admins act cross-tenant through the same endpoints).
+
+| Method + Path | Purpose |
+|---|---|
+| `GET /users` | List the tenant's users (id, email, roles, created_at, last_login_at) |
+| `POST /users` | Create user `{email, password, roles}` (roles ⊆ `user`, `admin`) |
+| `PATCH /users/{id}` | Update email / roles / enable-disable (`status`) |
+| `POST /users/{id}/reset-password` | Admin sets a new password (invalidates nothing — JWTs are short-lived) |
+| `DELETE /users/{id}` | Hard delete; refused for the last active admin of a tenant |
+| `GET /auth/me` | Current identity: id, email, tenant, roles, platform_admin |
+| `POST /auth/change-password` | Self-service password change (current password required) |
+
+Deletes keep audit history (`audit_log.user_id` has no FK by design);
+conversations/reports/dashboards owned by the user remain (tenant-owned
+assets) — documented in ADR 009.
+
+## Wiki (tenant knowledge base) — ADR 010
+
+Read: any tenant user. Write: tenant `admin` or platform superuser.
+All reads/writes RLS-scoped via the tenant GUC.
+
+| Method + Path | Purpose |
+|---|---|
+| `GET /wiki` | Page list as a tree (`parent_slug` hierarchy) |
+| `GET /wiki/{slug}` | Current page (markdown) |
+| `PUT /wiki/{slug}` | Create-or-update — appends a revision atomically |
+| `DELETE /wiki/{slug}` | Delete page + its revisions |
+| `GET /wiki/{slug}/history` | Revision list (version, editor, timestamp) |
+| `POST /wiki/{slug}/restore/{version}` | Restore forward as a new revision |
+| `GET /wiki/search?q=` | pgvector top-k over `wiki_embeddings` (ILIKE fallback on fail-open) |
+
+Agent integration (same phase): retrieved wiki chunks feed a
+`## Tenant Knowledge` section of the NL2SQL prompt, and the router's
+`chat_knowledge` intent answers from wiki search directly.
+
+## BYOK LLM Providers (tenant + admin) — ADR 011
+
+> Planned (Phases 25–26 — not yet built). Writes validate the candidate
+> config with a live 1-token provider ping; reads are always masked — the
+> API key is write-only and never returned (only `key_last4`).
+
+| Method + Path | Guard | Purpose |
+|---|---|---|
+| `GET /settings/llm` | tenant user | Own config, masked: provider, base_url, models, key_last4, key_version, status, updated_at |
+| `PUT /settings/llm` | tenant `admin` \| superuser | Create/replace `{provider, api_key, base_url?, reasoning_model, fast_model, embedding_model?}` — validates, bumps key_version, audits |
+| `POST /settings/llm/validate` | tenant `admin` \| superuser | Test a candidate config without saving |
+| `DELETE /settings/llm` | tenant `admin` \| superuser | Remove the config — LLM calls revert to the platform key |
+| `GET /admin/tenants/{id}/llm` | platform superuser | Masked tenant config + usage-by-model/provider (from audit_log) |
+| `PUT /admin/tenants/{id}/llm` | platform superuser | Force-set on behalf of a tenant (same validation + audit) |
+
+Errors: `400 BYOK_VALIDATION_FAILED` (sanitized provider message),
+`503 BYOK_NOT_CONFIGURED` (platform `TENANT_ENCRYPTION_KEY` missing),
+`LLM_BYOK_MISCONFIGURED` warning on chat degradation when a configured
+tenant key fails auth — by design there is **no silent fallback** to the
+platform key for configured tenants (ADR 011 §5).

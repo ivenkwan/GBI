@@ -381,8 +381,19 @@ parsing, and destructive-pattern detection all run for real. See
 > isolation (non-superuser roles, ADR 006), the Cube-native metric catalog
 > (ADR 007), tenant-scoped Metrics + Explore (ADR 008), NL2SQL schema
 > grounding, and governance (audit trail + login throttling).
+> Phases 13–16 shipped validation hardening, conversations, the governance
+> bundle, and reports; Phases 17–20 shipped AGE lineage wiring, dashboards,
+> scheduled reports + PDF export, and the feedback/metrics-cache UX.
+>
+> **Planned (design approved, not built): Phases 21–26** — multi-tenancy
+> control plane (admin portal, platform superusers, tenant lifecycle), the
+> per-tenant OpenWiki knowledge base, and per-tenant **BYOK LLM providers**
+> (Anthropic-native + OpenAI-format endpoints with tenant-held keys). See
+> [ADR 009](docs/adr/009-platform-admin-plane.md),
+> [ADR 010](docs/adr/010-tenant-knowledge-base.md),
+> [ADR 011](docs/adr/011-tenant-byok-llm.md), and [`todo.md`](todo.md).
 
-> See [`todo.md`](todo.md) for the phase tracker (Phases 1–12) and the
+> See [`todo.md`](todo.md) for the phase tracker (Phases 1–26) and the
 > implementation/verification history.
 
 ---

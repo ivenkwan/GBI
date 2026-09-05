@@ -61,6 +61,18 @@ logger.info("LLM call complete", model="claude-opus-4", latency_ms=1200)
 
 All agent LLM calls route through `get_llm_client()`.
 
+> **Planned (ADR 011, Phases 25–26 — not yet built): tenant BYOK.**
+> `invoke()` keeps its signature but first resolves the tenant's effective
+> LLM config (`resolve_llm(tenant_id)` → provider/base_url/key/models or
+> platform defaults, L1-cached 60s keyed by `key_version`). Provider
+> adapters under `app/llm/providers/` speak Anthropic-native and
+> OpenAI-format endpoints; tenant keys are pgcrypto-encrypted at rest
+> (`TENANT_ENCRYPTION_KEY`), never echoed by APIs or logs, and a failing
+> tenant key surfaces `LLM_BYOK_MISCONFIGURED` — no silent fallback to the
+> platform key. `audit_log` gains `provider`/`key_source`/`key_version`
+> for per-tenant spend attribution. Embeddings may ride a tenant's OpenAI
+> key when `provider=openai` and `embedding_model` is set.
+
 **Primary method:**
 ```python
 async def invoke(
@@ -165,6 +177,12 @@ token = create_access_token(
 )
 
 payload = decode_token(token)
+
+> **Planned (ADR 009, Phase 21 — not yet built):** login additionally mints a
+> `platform_admin` claim from the `platform_admins` grant table;
+> `require_platform_admin` guards the `/admin` surface and re-verifies the
+> grant behind a 60-second cache. Tenant suspension is enforced the same way
+> (cached `tenant:{id}:status` check in `get_current_user`).
 # payload = {"sub": "...", "tenant_id": "...", "roles": [...], "exp": ..., "iat": ...}
 ```
 

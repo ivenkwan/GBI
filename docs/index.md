@@ -7,9 +7,9 @@ A **Generative BI (GenBI) platform** that enables business users to query enterp
 ## Quick Links
 
 ### Architecture & Design
-- [Architecture Overview](architecture-overview.md) — Four-tier architecture, data flow, technology stack
+- [Architecture Overview](architecture-overview.md) — Four-tier architecture, multi-tenancy model, data flow, technology stack
 - [Agent System](agent-system.md) — Multi-agent LangGraph pipeline, agent roster, LLM model usage
-- [Architecture Decision Records](adr/) — ADR 001–008 covering chart stack, agent topology, Flint bridge, AGE image, enforced RLS roles, Cube-native catalog, and per-tenant Cube data path
+- [Architecture Decision Records](adr/) — ADR 001–008 covering chart stack, agent topology, Flint bridge, AGE image, enforced RLS roles, Cube-native catalog, and per-tenant Cube data path; **ADR 009 (platform admin plane), ADR 010 (tenant knowledge base), and ADR 011 (tenant BYOK LLM) proposed — Phases 21–26, design only**
 
 ### API
 - [API Reference](api-reference.md) — Complete REST API documentation, request/response schemas, SSE streaming
@@ -35,6 +35,9 @@ A **Generative BI (GenBI) platform** that enables business users to query enterp
 | Read-only SQL enforcement (Safety Gate) | [Agent System](agent-system.md#32-validationagent) |
 | Dual-tier cache (L1 LRU + L2 Redis) | [Core Services](core-services.md#4-cache-service) |
 | Multi-tenant JWT + RLS isolation | [Core Services](core-services.md#5-authentication) |
+| Control/data plane split + superuser model | [ADR 009](adr/009-platform-admin-plane.md) *(proposed)* |
+| Tenant knowledge base as agent context | [ADR 010](adr/010-tenant-knowledge-base.md) *(proposed)* |
+| Per-tenant BYOK LLM providers (Anthropic + OpenAI formats) | [ADR 011](adr/011-tenant-byok-llm.md) *(proposed)* |
 | SSE streaming from agent pipeline to chat UI | [API Reference](api-reference.md#streaming) |
 | Chart hallucination detection + auto-correction | [Agent System](agent-system.md#35-chart-validator) |
 

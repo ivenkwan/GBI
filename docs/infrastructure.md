@@ -151,6 +151,8 @@ scrape_configs:
 | **Database** | `DATABASE_URL` | `postgresql+asyncpg://genbi_app:genbi_app@localhost:5432/genbi` (RLS-bound runtime role) |
 | | `DATABASE_URL_AUTH` | (optional) `postgresql+asyncpg://genbi_auth:genbi_auth@…` — login-only role; derived from `DATABASE_URL` if unset |
 | | `DATABASE_URL_SYNC` | `postgresql://genbi:genbi@localhost:5432/genbi` (owner — Alembic + admin scripts only) |
+| | `DATABASE_URL_ADMIN` | *(planned, ADR 009)* `postgresql+asyncpg://genbi_admin:genbi_admin@…` — control-plane role (login + admin services); supersedes `DATABASE_URL_AUTH` |
+| | `GENBI_SUPERUSER_EMAIL` / `_PASSWORD` | *(planned, ADR 009)* first-boot superuser bootstrap via `scripts/create_admin.py` |
 | **Redis** | `REDIS_URL` | `redis://localhost:6379/0` |
 | **Semantic** | `CUBE_API_URL` | `http://localhost:4000/cubejs-api/v1` |
 | | `CUBE_API_SECRET` | (required) |
@@ -161,7 +163,7 @@ scrape_configs:
 | **Auth** | `JWT_SECRET_KEY` | `change-me` (override in production!) |
 | | `JWT_ALGORITHM` | `HS256` |
 | | `JWT_EXPIRE_MINUTES` | `60` |
-| **Tenant** | `TENANT_ENCRYPTION_KEY` | |
+| **Tenant** | `TENANT_ENCRYPTION_KEY` | Currently a placeholder. **Required when tenant BYOK is in use (ADR 011, planned Phases 25–26):** encrypts per-tenant LLM API keys at rest via pgcrypto (`app_crypto` functions; the key rides as a bind parameter and never enters SQL text or logs). BYOK writes and tenant-routed calls fail fast with `BYOK_NOT_CONFIGURED` if unset |
 | **Flint** | `FLINT_MCP_BACKENDS` | `vegalite,echarts,chartjs` |
 | | `FLINT_MCP_DATA_ROOTS` | `/tmp/genbi-charts` |
 | **App** | `APP_ENV` | `development` |

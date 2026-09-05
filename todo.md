@@ -1,6 +1,6 @@
 # GenBI Platform — Build Progress
 
-> **Last updated:** 2026-09-05 | **Stack tier:** Enterprise | **101/101 tasks complete (Phases 1–20 — original vision + follow-up queue shipped)**
+> **Last updated:** 2026-09-05 | **Stack tier:** Enterprise | **101/101 shipped (Phases 1–20) · Phases 21–26 planned (multi-tenancy control plane, knowledge base, tenant BYOK LLM — ADRs 009/010/011, design approved, not built)**
 
 ---
 
@@ -1366,3 +1366,102 @@ validation permissions (user_roles plumbing exists, unused).
   Postgres, i.e. a pre-existing local-env divergence from CI's service
   container, not a regression; ruff check + format clean
 - Frontend: tsc 0, eslint 0 errors (1 pre-existing warning), next build 9/9
+
+---
+
+# Phases 21–24 — Multi-Tenancy Control Plane & Knowledge Base (PLANNED)
+
+> **Status: DESIGN APPROVED, NOT YET BUILT** (2026-09-05). Design authority:
+> ADR 009 (platform admin plane — superusers, tenant lifecycle, control/data
+> plane split) and ADR 010 (tenant knowledge base / openwiki). Endpoint
+> contracts: docs/api-reference.md §Planned + docs/api/openapi.yaml.
+> Build conventions unchanged: Alembic structured ops + paired
+> `infra/postgres/rls/*.sql`, GUC-writer services on purpose-scoped roles,
+> single-line parameterized SQL, fail-open lineage/audit hooks, offline
+> tests + live-stack verification.
+
+## Phase 21 — Control Plane Foundations (Tasks 102–108)
+
+| # | Task | Status |
+|---|---|---|
+| 102 | Migration `0008_control_plane` (structured ops): `platform_admins` (user_id PK → users, granted_by/at, revoked_by/at), `admin_audit` (actor_user_id, action, target_type, target_id, detail JSONB, created_at); `tenants` gains `slug` (unique), `status` (`active`/`suspended`, CHECK + default active), `settings` JSONB; backfill slugs from names | ⬜ |
+| 103 | `genbi_admin` role: `DATABASE_URL_ADMIN` setting (derive-from-main like `database_url_auth`), role + grants in the paired `rls/0008_control_plane_rls.sql` — DML on `tenants`/`users`/`platform_admins`/`admin_audit` + SELECT on `audit_log`, permissive policies scoped `TO genbi_admin`; **retire `genbi_auth`** in the same file (login moves to `genbi_admin` which supersedes its scope); env templates + init.sql parity | ⬜ |
+| 104 | Auth core: `platform_admins` lookup at login → `platform_admin: true` JWT claim; `require_platform_admin` dependency (claim check + 60s L1/L2-cached grant re-check → 403 NOT_PLATFORM_ADMIN); `get_current_user` gains cached `tenant:{id}:status` check → 403 TENANT_SUSPENDED; login rejects suspended tenants with the same code | ⬜ |
+| 105 | `app/services/tenants.py` (GUC-writer pattern on `genbi_admin`): provision (transactional tenant + initial admin user + optional sample-data flag), list/detail with per-tenant counters (GUC-scoped connections per tenant for business counts), rename/suspend/activate/update-settings, guarded decommission (refuse non-empty without force; cascade FKs; audit retained); every mutation writes `admin_audit` (fail-open write, raise-on-read list) | ⬜ |
+| 106 | `app/services/platform_admins.py`: grant/revoke/list with history; revoke sets revoked_by/at (append-only semantics); bootstrap script `scripts/create_admin.py` (owner DSN, idempotent) + `GENBI_SUPERUSER_EMAIL`/`GENBI_SUPERUSER_PASSWORD` env for first-boot dev bootstrap | ⬜ |
+| 107 | API `app/api/v1/admin.py`: GET /admin/stats, GET+POST /admin/tenants, GET+PATCH+DELETE /admin/tenants/{id} (confirm/force guards), GET+POST /admin/admins, DELETE /admin/admins/{user_id}, GET /admin/audit (actor/target/tenant filters); error codes per api-reference; router registration | ⬜ |
+| 108 | Tests: 20+ — grant/revoke lifecycle (claim minting, ≤60s revocation semantics via cache TTL), suspended-tenant enforcement on authenticated endpoints, provisioning transactionality (partial failure rolls back tenant+user), decommission guards (non-empty refusal, force cascade, audit survival), admin_audit written per mutation, API matrix (403/404/409/422 paths); live-stack verification recorded in VERIFICATION.md | ⬜ |
+
+## Phase 22 — Admin Portal Frontend (Tasks 109–113)
+
+| # | Task | Status |
+|---|---|---|
+| 109 | `PlatformAdminGuard` frontend component (token claim check; non-superusers see no admin UI) + Shield nav icon in chat header shown only for superusers | ⬜ |
+| 110 | `/admin` overview: platform counters (tenants by status, users, LLM calls 24h, active schedules) from GET /admin/stats | ⬜ |
+| 111 | `/admin/tenants` + `/admin/tenants/[id]`: list with counters, provision dialog (name, slug, admin email, seed toggle → one-time temp password display), detail view (users, schedules, recent audit), suspend/activate + rename + settings editor, guarded decommission flow with typed confirmation | ⬜ |
+| 112 | `/admin/admins` + `/admin/audit`: superuser grant/revoke with history; admin-action feed with actor/target/tenant filters | ⬜ |
+| 113 | api-client functions + Zod validators for the admin surface; typecheck/lint/build green incl. all new routes | ⬜ |
+
+## Phase 23 — Tenant User Management & Self-Service (Tasks 114–118)
+
+| # | Task | Status |
+|---|---|---|
+| 114 | `app/services/users.py` (GUC-writer on `genbi_admin`, tenant GUC for tenant scoping beyond the permissive control-plane policy): list/create/update (email, roles ⊆ user/admin)/enable-disable, admin reset-password, hard delete with last-active-tenant-admin refusal; bcrypt via existing `security.py`; unique-email-per-tenant enforcement | ⬜ |
+| 115 | API: GET+POST /users, PATCH+DELETE /users/{id} (422 LAST_TENANT_ADMIN), POST /users/{id}/reset-password — guard = tenant `admin` role OR platform superuser; GET /auth/me (identity + roles + platform_admin); POST /auth/change-password (self-service, current-password check, reuses login throttle) | ⬜ |
+| 116 | Tests: 15+ — role guard matrix (user 403 / tenant admin 200 / superuser cross-tenant 200), last-admin refusal, email uniqueness per tenant, password reset + change-password flows (wrong current → 401), /auth/me claim fidelity; API matrix | ⬜ |
+| 117 | Frontend: `/settings` page (makes the chat-header Settings button real) — profile via /auth/me, change-password form, per-tenant user admin table for tenant admins (create/edit/disable/delete/reset) | ⬜ |
+| 118 | Docs: api-reference ✅-statuses flipped for /users + /auth additions; frontend-guide section for settings/admin-adjacent pages | ⬜ |
+
+## Phase 24 — OpenWiki: Tenant Knowledge Base (Tasks 119–125)
+
+| # | Task | Status |
+|---|---|---|
+| 119 | Migration `0009_wiki` + paired RLS sql: `wiki_pages` (tenant_id FK, slug unique per tenant, title, content_md, parent_slug NULL, created_by/updated_by, timestamps), `wiki_page_revisions` (page_id FK CASCADE, version, title+content snapshot, edited_by, created_at), `wiki_embeddings` (page_id, tenant_id, chunk, embedding VECTOR(1536)) — full tenant recipe incl. GUC grants | ⬜ |
+| 120 | `app/services/wiki.py` (GUC-writer): upsert appends revision + updates page in one transaction (version = max+1); list as tree, get, delete, history, restore-forward; search = pgvector cosine top-k on wiki_embeddings with ILIKE fallback (fail-open); write guard = tenant admin role or platform superuser | ⬜ |
+| 121 | Embedding sync: on write, chunk content (~1.5k chars), embed via existing `core/embeddings.py` (1536-dim), replace the page's chunks in wiki_embeddings (fail-open — page saves without OPENAI_API_KEY); reconciliation helper for un-embedded pages | ⬜ |
+| 122 | Agent integration: `retrieve_wiki_context(query, tenant)` (schema_retrieval contract, fail-open, L1/L2 cached per query+tenant); ChatService NL2SQL prompt gains `## Tenant Knowledge` section; `chat_knowledge` router intent answers from wiki search (retrieve → summarize, cite source slugs, no SQL path) | ⬜ |
+| 123 | API: GET /wiki, GET/PUT/DELETE /wiki/{slug}, GET /wiki/{slug}/history, POST /wiki/{slug}/restore/{version}, GET /wiki/search — registered + error codes (404 PAGE_NOT_FOUND, 403 WIKI_READ_ONLY for writers) | ⬜ |
+| 124 | Frontend `/wiki`: page tree sidebar (parent_slug), markdown viewer (react-markdown + remark-gfm — existing deps), split editor with live preview + history viewer with restore for admins, search box; chat-header BookOpen nav | ⬜ |
+| 125 | Tests: 25+ — service contract (revision append/restore atomicity, slug uniqueness per tenant, RLS cross-tenant isolation via GUC assertion), retrieval fail-open + tenant scoping, pipeline wiring (knowledge section present when retrieval returns, absent on fail), write-guard matrix, API matrix, embedding reconciliation; live-stack verification incl. cross-tenant isolation proof | ⬜ |
+
+## Cross-cutting (applies across Phases 21–24)
+
+- openapi.yaml planned-stub markers flip to implemented as each phase lands
+- Every admin/user mutation audited to `admin_audit`; lineage hooks untouched (tenant-agnostic)
+- Suspended-tenant enforcement is request-time (cached), not just login-time
+- No self-service platform signup — superuser grants only (ADR 009 §5)
+
+---
+
+# Phases 25–26 — Tenant BYOK LLM Architecture (PLANNED)
+
+> **Status: DESIGN APPROVED, NOT YET BUILT** (2026-09-05). Design authority:
+> ADR 011 (per-tenant LLM providers — Anthropic-native + OpenAI-format
+> endpoints, tenant-held keys, pgcrypto at rest, no silent platform fallback).
+> Depends on: Phase 21's role guards for the admin/settings write paths
+> (until then, a local tenant-`admin` role check suffices); Phase 22/23
+> portals are where the UX lands. Contracts: docs/api-reference.md §BYOK +
+> docs/api/openapi.yaml.
+
+## Phase 25 — BYOK Foundations: Storage, Crypto, Adapters, Routing (Tasks 126–132)
+
+| # | Task | Status |
+|---|---|---|
+| 126 | Migration `0010_tenant_llm` (structured ops) + paired `rls/0010_tenant_llm_rls.sql`: `tenant_llm_providers` (tenant_id PK, provider CHECK anthropic/openai, base_url, reasoning_model, fast_model, embedding_model NULL, api_key_enc, key_last4, key_version, status, updated_by, timestamps — full tenant recipe); `audit_log` gains `provider VARCHAR(20)`, `key_source VARCHAR(10)`, `key_version INTEGER NULL` | ⬜ |
+| 127 | `infra/postgres/byok-crypto.sql`: schema `app_crypto` with SECURITY DEFINER `encrypt($1, $2)` / `decrypt($1, $2)` wrapping pgcrypto `pgp_sym_*`; key rides as bind param from `TENANT_ENCRYPTION_KEY`; applied via `make migrate` + init parity; fail-fast `BYOK_NOT_CONFIGURED` when the key is unset and BYOK is used | ⬜ |
+| 128 | Provider adapters `app/llm/providers/`: `base.py` (normalized contract: content + input/output tokens + provider-typed auth errors), `anthropic_provider.py` (today's langchain-anthropic path lifted — thinking mode, max_tokens), `openai_provider.py` (openai SDK, base_url gateway override, `response_format=json_object` mapping; thinking flag = documented no-op); shared adapter parity test matrix | ⬜ |
+| 129 | Resolver + client refactor: `resolve_llm(tenant_id)` → ResolvedLLM (tenant row via decrypt, else platform defaults), L1-cached 60s keyed `byok:{tenant}:{key_version}`, explicit invalidation on write; `LLMClient.invoke()` routes model/key/adapter through the resolver — agent call sites unchanged; retry/budget/`_extract_json` untouched | ⬜ |
+| 130 | No-fallback policy: provider 401/403 on a configured tenant surfaces `LLM_BYOK_MISCONFIGURED` (chat degrades gracefully with warning; never crosses to the platform key); `status: disabled` = explicit revert switch | ⬜ |
+| 131 | Embeddings resolution: `core/embeddings.py` accepts tenant context — tenant key + `embedding_model` used when provider=openai, else platform key (fail-open unchanged); wiki/schema embedding callers thread tenant_id | ⬜ |
+| 132 | Tests 30+: adapter parity matrix (mocked HTTP for both formats incl. gateway base_url), resolver routing (tenant vs platform vs disabled), rotation invalidation (key_version cache semantics), auth-failure surfacing (no fallback), crypto roundtrip via app_crypto (encrypt→decrypt, wrong-key failure), key-absence from every API response/log/audit row, audit columns populated (provider/key_source/key_version) | ⬜ |
+
+## Phase 26 — BYOK APIs, Admin/Settings UX & Spend Attribution (Tasks 133–138)
+
+| # | Task | Status |
+|---|---|---|
+| 133 | API `app/api/v1/byok.py`: GET/PUT/DELETE `/settings/llm`, POST `/settings/llm/validate` (live 1-token provider ping, sanitized errors), GET/PUT `/admin/tenants/{id}/llm` (ADR 009 guards); every response masked (key_last4 only); every mutation audited (actor, tenant, action, key_version) | ⬜ |
+| 134 | Spend attribution queries: per-tenant usage by provider/model/day from `audit_log` (tokens + call counts); surfaced via GET /admin/tenants/{id}/llm and /admin/stats | ⬜ |
+| 135 | Frontend settings page "AI Provider" section (extends the Phase 23 `/settings` page): provider select, base URL, model names, key input (password field, shows last4 once saved), Validate + Save + Revert-to-platform actions | ⬜ |
+| 136 | Admin portal integration: tenant detail gains an LLM panel (masked config, status toggle, spend-by-model sparktable, force-set with validation) | ⬜ |
+| 137 | Docs flip: api-reference ✅ statuses for /settings/llm + admin LLM; openapi planned markers removed; core-services §3 and infrastructure env notes updated to implemented; ADR 011 status → Accepted | ⬜ |
+| 138 | Live-stack verification (VERIFICATION.md): configure a tenant with an OpenAI-format key → chat pipeline runs end-to-end on the tenant key (audit rows show provider/key_source=tenant); rotate → 60s invalidation; break the key → LLM_BYOK_MISCONFIGURED with no platform fallback; unset TENANT_ENCRYPTION_KEY → fail-fast | ⬜ |
