@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "pretooluse-81e840373fc4495da1aa7fe6f483306a",
+  "runId": null,
+  "runStatus": "completed",
+  "coverage": {
+    "status": "complete",
+    "reasons": []
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "PreToolUse"
+  },
+  "revision": null,
+  "diffHash": null,
+  "rulesVersion": null,
+  "sessionHash": "3946ed7c2b11e331b06b71dec0b4caa0305b64044a4c0127d846bf25fcdd7c68",
+  "reportRef": null,
+  "events": [
+    {
+      "eventId": "hook-b82f8b611733b4c6491db6d1ffcac8f8",
+      "findingId": "mimosa-13180b2c39edc450fc0063de",
+      "type": "finding_blocked",
+      "at": "2026-09-05T08:01:07.932Z",
+      "identity": {
+        "projectRelativeFile": "tests/services/test_control_plane.py",
+        "ruleId": "security",
+        "codeEvidenceHash": "3ac8ed8a9e833dd206dfba75ab3ac735de8443ab2401d139f9e19b18be684d70",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 36,
+      "endLine": 36,
+      "reasonCode": "deny",
+      "reportedToAgent": true,
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "evidenceHash": "3ac8ed8a9e833dd206dfba75ab3ac735de8443ab2401d139f9e19b18be684d70"
+      },
+      "sequence": 0
+    }
+  ],
+  "observedFindingIds": [],
+  "verifiedFiles": [],
+  "recordedAt": "2026-09-05T08:01:08.642Z"
+}

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "mimosa-hook-status/v1",
+  "recordedAt": "2026-09-05T09:52:27.555Z",
+  "sessionId": "sess_592f22fc-576e-4497-9a8f-498e785318e4",
+  "event": "PostToolUse",
+  "toolName": "Write",
+  "file": "/home/ivenkwan/repo/GBI/backend/tests/services/test_wiki_wiring.py",
+  "outcome": "static_verified",
+  "coverage": "complete",
+  "findingCount": 1,
+  "durationMs": 1586,
+  "hostState": "hook_complete",
+  "reportHint": ".mimosa/reports/"
+}

@@ -1,0 +1,724 @@
+{
+  "schema_version": "mimosa-task-review/v2",
+  "run_id": "20260905T092559234Z-1575483-7332a61774b7",
+  "run_status": "inconclusive",
+  "errors": [
+    {
+      "stage": "baseline-read",
+      "target": "frontend/src/components/settings/settings-view.tsx",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "baseline-read",
+      "target": "frontend/src/components/settings/users-admin.tsx",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "baseline-read",
+      "target": "frontend/src/app/settings/page.tsx",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "baseline-read",
+      "target": "backend/tests/services/test_users_service.py",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "baseline-read",
+      "target": "backend/tests/api/test_users_api.py",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "baseline-read",
+      "target": "backend/app/api/v1/users.py",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/app/db/migrations/versions/0010_tenant_users.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/app/services/users.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "frontend/src/lib/api-client.ts",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "frontend/src/components/settings/settings-view.tsx",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "frontend/src/components/settings/users-admin.tsx",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "frontend/src/components/chat/chat-view.tsx",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "frontend/src/app/settings/page.tsx",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "frontend/src/app/admin/tenants/[id]/page.tsx",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/tests/services/test_users_service.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/tests/api/test_users_api.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/app/core/auth.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/app/api/v1/admin.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/app/api/v1/auth.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/app/api/v1/router.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/app/api/v1/users.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    }
+  ],
+  "coverage": {
+    "schema_version": "mimosa-hook-coverage/v1",
+    "status": "partial",
+    "scope": "hook_observed_diff",
+    "baseline": {
+      "complete": true,
+      "captured_files": 176,
+      "candidate_limit": 5000,
+      "truncated": false,
+      "enumeration_error_count": 0,
+      "snapshot_error_count": 0,
+      "compensated_target_count": 9
+    },
+    "change_tracking": {
+      "touched_observed": 2,
+      "touched_retained": 2,
+      "truncated": false,
+      "bash_mutation": true,
+      "bash_discovered": 15,
+      "bash_discovery_limit": 80,
+      "bash_discovery_truncated": false
+    },
+    "candidates": {
+      "eligible_files": 15,
+      "selected_files": 15,
+      "limit": 20,
+      "truncated": false
+    },
+    "scanning": {
+      "required_files": 15,
+      "scanned_files": 0,
+      "skipped_files": 0,
+      "failed_files": 15,
+      "project_checks_required": 0,
+      "project_checks_completed": 0
+    },
+    "notification": {
+      "eligible_findings": 0,
+      "detailed_findings": 0,
+      "detail_limit": 3,
+      "truncated": false
+    },
+    "reason_counts": {
+      "baseline_snapshot_unreadable": 6,
+      "scanner_failed": 15,
+      "project_check_failed": 21
+    },
+    "reasons": [
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "frontend/src/components/settings/settings-view.tsx",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "frontend/src/components/settings/users-admin.tsx",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "frontend/src/app/settings/page.tsx",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "backend/tests/services/test_users_service.py",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "backend/tests/api/test_users_api.py",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "backend/app/api/v1/users.py",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/app/db/migrations/versions/0010_tenant_users.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/app/services/users.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "frontend/src/lib/api-client.ts",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "frontend/src/components/settings/settings-view.tsx",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "frontend/src/components/settings/users-admin.tsx",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "frontend/src/components/chat/chat-view.tsx",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "frontend/src/app/settings/page.tsx",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "frontend/src/app/admin/tenants/[id]/page.tsx",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/tests/services/test_users_service.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/tests/api/test_users_api.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/app/core/auth.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/app/api/v1/admin.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/app/api/v1/auth.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/app/api/v1/router.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/app/api/v1/users.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "frontend/src/components/settings/settings-view.tsx",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "frontend/src/components/settings/users-admin.tsx",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "frontend/src/app/settings/page.tsx",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "backend/tests/services/test_users_service.py",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "backend/tests/api/test_users_api.py",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "backend/app/api/v1/users.py",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/app/db/migrations/versions/0010_tenant_users.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/app/services/users.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "frontend/src/lib/api-client.ts",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "frontend/src/components/settings/settings-view.tsx",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "frontend/src/components/settings/users-admin.tsx",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "frontend/src/components/chat/chat-view.tsx",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "frontend/src/app/settings/page.tsx",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "frontend/src/app/admin/tenants/[id]/page.tsx",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/tests/services/test_users_service.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/tests/api/test_users_api.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/app/core/auth.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/app/api/v1/admin.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/app/api/v1/auth.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/app/api/v1/router.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/app/api/v1/users.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      }
+    ],
+    "reasons_truncated": false
+  },
+  "generated_at": "2026-09-05T09:25:59.234Z",
+  "session_id": "sess_592f22fc-576e-4497-9a8f-498e785318e4",
+  "target": ".",
+  "revision": "8c7366c326f93e217da979937cf8295d875b6193",
+  "rules_version": "unavailable",
+  "diff_hash": "ed8719ba09cbbc0f5fe2224eb6d232eb0e17691be443a32b1562fd938e52101f",
+  "diff": {
+    "algorithm": "sha256",
+    "changed_file_count": 15,
+    "changed_files": [
+      {
+        "file": "backend/app/api/v1/admin.py",
+        "ranges": [
+          {
+            "start": 36,
+            "end": 36
+          }
+        ],
+        "before_hash": "37b42b945e999afe49a6f4f2ce332d7fc1ceede73368997c185016201fc62e44",
+        "after_hash": "d0b7a0d50daf2871fa881d02cc8e8fb4ee239b540864d99c0a1d799579c92be6"
+      },
+      {
+        "file": "backend/app/api/v1/auth.py",
+        "ranges": [
+          {
+            "start": 13,
+            "end": 13
+          },
+          {
+            "start": 16,
+            "end": 16
+          },
+          {
+            "start": 90,
+            "end": 90
+          },
+          {
+            "start": 94,
+            "end": 99
+          },
+          {
+            "start": 107,
+            "end": 109
+          },
+          {
+            "start": 129,
+            "end": 129
+          },
+          {
+            "start": 145,
+            "end": 193
+          }
+        ],
+        "before_hash": "f5818eebbf31e919c0c6971f2c97a30eb748a7550767ecc4e373f3e9e218d466",
+        "after_hash": "00d105e6b00b57e51b7debe02ab0cbe51f4d8aeaec77b825c678d8ccf9badedd"
+      },
+      {
+        "file": "backend/app/api/v1/router.py",
+        "ranges": [
+          {
+            "start": 17,
+            "end": 17
+          },
+          {
+            "start": 32,
+            "end": 32
+          }
+        ],
+        "before_hash": "ed121ef7be5d66b25db70535d54cf636914c76f273d12e8023d0a8a173dfa356",
+        "after_hash": "ea7cea7afc344fd88bd6f498bf207dc824c5720ebdc54b33bbd5a4f8106bc9d4"
+      },
+      {
+        "file": "backend/app/api/v1/users.py",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 299
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "98fd2f7afb46317d4a5b2971bf27c077069155162a51c31c01a11de422516649"
+      },
+      {
+        "file": "backend/app/core/auth.py",
+        "ranges": [
+          {
+            "start": 35,
+            "end": 35
+          },
+          {
+            "start": 49,
+            "end": 50
+          },
+          {
+            "start": 173,
+            "end": 213
+          }
+        ],
+        "before_hash": "476294362c01fe0bdf6d9100ec36dc2ba9ddb90d8ec5352564e9eb3fab803989",
+        "after_hash": "1c3c00dcdef82a32eb0d8e79da2d9ec4659362950686b45de4c9bc01766d96c4"
+      },
+      {
+        "file": "backend/app/db/migrations/versions/0010_tenant_users.py",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 48
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "1ba088f314c4ea4e752279ae3badadaab4f19bbd1606112c1bf33a5d50ccff10"
+      },
+      {
+        "file": "backend/app/services/users.py",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 352
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "3fa29a7a9b0c6d488fb4b215bfc4ff67e501f9284df0ba2e4ea7aee341380cf9"
+      },
+      {
+        "file": "backend/tests/api/test_users_api.py",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 266
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "a918aaced4350c38c563a59e973db3892a9a37eb108d2667a730f6742e44482a"
+      },
+      {
+        "file": "backend/tests/services/test_users_service.py",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 281
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "ea05336c96b59a8a73c870e2e82dfe6b147f597f944e13b81ee2c6170de3bdbb"
+      },
+      {
+        "file": "frontend/src/app/admin/tenants/[id]/page.tsx",
+        "ranges": [
+          {
+            "start": 15,
+            "end": 15
+          },
+          {
+            "start": 207,
+            "end": 210
+          }
+        ],
+        "before_hash": "fd2649d3d3654d107c2b069c273a7e11af90f0fe3001fbb21946efc6fbf67cfd",
+        "after_hash": "26af6b7450689c93734d88301a43d5269234bbd16955f0b3d1654f81010c69cf"
+      },
+      {
+        "file": "frontend/src/app/settings/page.tsx",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 12
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "8a03208292fa77506c811d0ceff798f70eba5e6fbd779a1c163204a5341d03e3"
+      },
+      {
+        "file": "frontend/src/components/chat/chat-view.tsx",
+        "ranges": [
+          {
+            "start": 408,
+            "end": 411
+          }
+        ],
+        "before_hash": "bab5adf62d91a0a57e7c8386c5016b5378ce2bb82b67406ed06aaf57285a6087",
+        "after_hash": "4ccd61d9245c73f8f9ebbd07ddb4db6cea7add88c56b947d83bf14ff0147b29c"
+      },
+      {
+        "file": "frontend/src/components/settings/settings-view.tsx",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 175
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "ba38150dcb0cf006676dba1235dae60bda64538b2f637b515be9c6b6de6ed942"
+      },
+      {
+        "file": "frontend/src/components/settings/users-admin.tsx",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 312
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "40cb6ad2a431ddd36b3f1cd4a96c458fd8bb501222b1a12cb60935aae0f64997"
+      },
+      {
+        "file": "frontend/src/lib/api-client.ts",
+        "ranges": [
+          {
+            "start": 574,
+            "end": 647
+          }
+        ],
+        "before_hash": "446277b0214b3f9deae9f48b3d45cb6273016424f23086449b4ca8f52dffe3de",
+        "after_hash": "7a9c494c34452e1b941b5379407a3b13ba9deb9563db82a42dbe4cb0efeb8570"
+      }
+    ]
+  },
+  "timing": {
+    "started_at": "2026-09-05T09:25:56.369Z",
+    "completed_at": "2026-09-05T09:25:59.234Z",
+    "duration_ms": 2865,
+    "measurement": "hook_wall_clock"
+  },
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "model_calls": 0,
+    "measurement": "known-zero"
+  },
+  "telemetry": {
+    "schemaVersion": "mimosa-gate-telemetry/v1",
+    "profile": "gate",
+    "operation": "Stop",
+    "outcome": "partial/INCONCLUSIVE",
+    "latencyMs": 2865,
+    "peakMemoryBytes": 183406592,
+    "memoryMeasurement": "max-observed-process-rss",
+    "scannedFiles": 0,
+    "cache": {
+      "hits": 0,
+      "misses": 0,
+      "measurement": "not-applicable"
+    },
+    "denyCount": 0,
+    "tokens": {
+      "input": 0,
+      "output": 0,
+      "total": 0,
+      "modelCalls": 0,
+      "measurement": "known-zero"
+    }
+  },
+  "finding_count": 0,
+  "rewake_finding_count": 0,
+  "evidence_boundary": {
+    "scan": "candidate",
+    "static_fix_verification": "observed_static_only",
+    "runtime_verification": "not_performed"
+  },
+  "finding_events": [],
+  "findings": [],
+  "artifacts": {
+    "immutable_report": ".mimosa/reports/task-review-sess_592f22fc-576e-4497-9a8f-498e785318e4-20260905T092559234Z-1575483-7332a61774b7.json",
+    "latest_report": ".mimosa/reports/task-review-sess_592f22fc-576e-4497-9a8f-498e785318e4.json",
+    "history_summary": ".mimosa/history/run-20260905T092559234Z-1575483-7332a61774b7.json"
+  }
+}

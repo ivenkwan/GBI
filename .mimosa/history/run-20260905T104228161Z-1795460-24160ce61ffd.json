@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "mimosa-finding-history/v1",
+  "runId": "20260905T104228161Z-1795460-24160ce61ffd",
+  "runStatus": "inconclusive",
+  "errors": [
+    "baseline-read:backend/tests/services/test_byok.py: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:backend/app/services/byok.py: baseline_snapshot_unreadable: file is missing from task baseline",
+    "scan:backend/app/db/migrations/versions/0012_tenant_llm.py: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:backend/app/llm/__init__.py: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:backend/app/llm/providers/base.py: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:backend/app/llm/providers/anthropic_provider.py: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:backend/app/llm/providers/openai_provider.py: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:backend/app/llm/resolver.py: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:backend/app/core/cache.py: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:backend/app/core/llm_client.py: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:backend/tests/test_embeddings.py: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:backend/tests/services/test_audit.py: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:backend/tests/services/test_byok.py: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:backend/app/services/audit.py: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:backend/app/services/byok.py: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:backend/app/core/embeddings.py: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+  ],
+  "target": ".",
+  "revision": "f2ec5d337348f11b2c3d06af681ab137e6c7d334",
+  "diffHash": "911b83c2303bbfa6038402206b49d3b6f1dc05cd0f8253d9fecd6d04acccc4ae",
+  "rulesVersion": "unavailable",
+  "recordedAt": "2026-09-05T10:42:28.161Z",
+  "timing": {
+    "startedAt": "2026-09-05T10:42:25.304Z",
+    "completedAt": "2026-09-05T10:42:28.161Z",
+    "durationMs": 2857
+  },
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "modelCalls": 0,
+    "measurement": "known-zero"
+  },
+  "findings": {
+    "total": 0,
+    "bySeverity": {},
+    "byStatus": {}
+  },
+  "coverage": {
+    "status": "partial",
+    "reasonCounts": {
+      "baseline_snapshot_unreadable": 2,
+      "scanner_failed": 14,
+      "project_check_failed": 16
+    }
+  },
+  "evidenceBoundary": "static_only",
+  "immutableReport": ".mimosa/reports/task-review-sess_592f22fc-576e-4497-9a8f-498e785318e4-20260905T104228161Z-1795460-24160ce61ffd.json"
+}

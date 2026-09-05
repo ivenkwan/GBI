@@ -1,0 +1,352 @@
+{
+  "schema_version": "mimosa-task-review/v2",
+  "run_id": "20260905T084417093Z-1456415-2e90cb36a6ce",
+  "run_status": "completed",
+  "errors": [],
+  "coverage": {
+    "schema_version": "mimosa-hook-coverage/v1",
+    "status": "complete",
+    "scope": "hook_observed_diff",
+    "baseline": {
+      "complete": true,
+      "captured_files": 168,
+      "candidate_limit": 5000,
+      "truncated": false,
+      "enumeration_error_count": 0,
+      "snapshot_error_count": 0,
+      "compensated_target_count": 6
+    },
+    "change_tracking": {
+      "touched_observed": 0,
+      "touched_retained": 0,
+      "truncated": false,
+      "bash_mutation": true,
+      "bash_discovered": 6,
+      "bash_discovery_limit": 80,
+      "bash_discovery_truncated": false
+    },
+    "candidates": {
+      "eligible_files": 6,
+      "selected_files": 6,
+      "limit": 20,
+      "truncated": false
+    },
+    "scanning": {
+      "required_files": 6,
+      "scanned_files": 6,
+      "skipped_files": 0,
+      "failed_files": 0,
+      "project_checks_required": 0,
+      "project_checks_completed": 0
+    },
+    "notification": {
+      "eligible_findings": 0,
+      "detailed_findings": 0,
+      "detail_limit": 3,
+      "truncated": false
+    },
+    "reason_counts": {},
+    "reasons": [],
+    "reasons_truncated": false
+  },
+  "generated_at": "2026-09-05T08:44:17.093Z",
+  "session_id": "sess_592f22fc-576e-4497-9a8f-498e785318e4",
+  "target": ".",
+  "revision": "401b8896122c28118af0825835424ff7dd65b1c4",
+  "rules_version": "unavailable",
+  "diff_hash": "ad2e35a006b7e96a5adb3683a10228a4ddc9f6f230608abace6bc8945b29d4e9",
+  "diff": {
+    "algorithm": "sha256",
+    "changed_file_count": 6,
+    "changed_files": [
+      {
+        "file": "backend/app/api/v1/admin.py",
+        "ranges": [
+          {
+            "start": 7,
+            "end": 7
+          },
+          {
+            "start": 12,
+            "end": 12
+          },
+          {
+            "start": 16,
+            "end": 16
+          },
+          {
+            "start": 298,
+            "end": 298
+          }
+        ],
+        "before_hash": "b7f3cb3ecc37d6d5e20a4b52e7a8a64a953737d55d589c55a543aac9a2a4759c",
+        "after_hash": "37b42b945e999afe49a6f4f2ce332d7fc1ceede73368997c185016201fc62e44"
+      },
+      {
+        "file": "backend/app/api/v1/auth.py",
+        "ranges": [
+          {
+            "start": 9,
+            "end": 9
+          },
+          {
+            "start": 108,
+            "end": 112
+          }
+        ],
+        "before_hash": "52587139534174cb1283d320be6c14f6b65c02efd052983081ff798b34375d8c",
+        "after_hash": "4e6cfd7e71cffef121478e5d77c7a7515dc18d9ffa092e4ab10ffacb8e190014"
+      },
+      {
+        "file": "backend/app/services/tenants.py",
+        "ranges": [
+          {
+            "start": 244,
+            "end": 248
+          },
+          {
+            "start": 408,
+            "end": 412
+          },
+          {
+            "start": 415,
+            "end": 416
+          },
+          {
+            "start": 418,
+            "end": 418
+          },
+          {
+            "start": 420,
+            "end": 420
+          },
+          {
+            "start": 422,
+            "end": 422
+          },
+          {
+            "start": 424,
+            "end": 424
+          },
+          {
+            "start": 426,
+            "end": 426
+          },
+          {
+            "start": 428,
+            "end": 428
+          },
+          {
+            "start": 430,
+            "end": 430
+          },
+          {
+            "start": 432,
+            "end": 432
+          },
+          {
+            "start": 434,
+            "end": 434
+          }
+        ],
+        "before_hash": "6ec1d82554645748a450d7ecd94b8ae8be48dac38a4e71de14603319bebd0b9e",
+        "after_hash": "e817f7ffd0f0324cd0ff903198ccb3d36301a9c62b0c9670966a30f3ff8cf929"
+      },
+      {
+        "file": "backend/tests/api/test_admin_api.py",
+        "ranges": [
+          {
+            "start": 3,
+            "end": 4
+          },
+          {
+            "start": 54,
+            "end": 76
+          },
+          {
+            "start": 90,
+            "end": 95
+          },
+          {
+            "start": 101,
+            "end": 115
+          },
+          {
+            "start": 119,
+            "end": 131
+          },
+          {
+            "start": 133,
+            "end": 135
+          },
+          {
+            "start": 137,
+            "end": 139
+          },
+          {
+            "start": 141,
+            "end": 141
+          },
+          {
+            "start": 147,
+            "end": 147
+          },
+          {
+            "start": 175,
+            "end": 187
+          },
+          {
+            "start": 196,
+            "end": 210
+          },
+          {
+            "start": 234,
+            "end": 234
+          },
+          {
+            "start": 270,
+            "end": 270
+          },
+          {
+            "start": 281,
+            "end": 281
+          },
+          {
+            "start": 320,
+            "end": 325
+          },
+          {
+            "start": 331,
+            "end": 333
+          },
+          {
+            "start": 337,
+            "end": 337
+          },
+          {
+            "start": 355,
+            "end": 355
+          },
+          {
+            "start": 361,
+            "end": 361
+          },
+          {
+            "start": 367,
+            "end": 367
+          },
+          {
+            "start": 382,
+            "end": 386
+          },
+          {
+            "start": 392,
+            "end": 410
+          },
+          {
+            "start": 424,
+            "end": 424
+          }
+        ],
+        "before_hash": "59d8ca0e3b2453d13af5071df27aa44500505497e93a07e48b90f98fbf6c83ce",
+        "after_hash": "fefaef6f9d0f5d4640c015994da05e9b27b7aa4aaa702f64a97fe00dd878c1a4"
+      },
+      {
+        "file": "backend/tests/api/test_tenant_isolation.py",
+        "ranges": [
+          {
+            "start": 129,
+            "end": 129
+          },
+          {
+            "start": 197,
+            "end": 197
+          },
+          {
+            "start": 207,
+            "end": 207
+          }
+        ],
+        "before_hash": "7f35475e22fdf481a9ec7daf7886a9ddbf8d4a697f1d83907705d9f178d75eb3",
+        "after_hash": "06facbeec7d317675357936549dce78f28b095684dc00526e94bc3f4bf139187"
+      },
+      {
+        "file": "backend/tests/services/test_control_plane.py",
+        "ranges": [
+          {
+            "start": 92,
+            "end": 95
+          },
+          {
+            "start": 105,
+            "end": 108
+          },
+          {
+            "start": 170,
+            "end": 170
+          },
+          {
+            "start": 172,
+            "end": 172
+          },
+          {
+            "start": 217,
+            "end": 221
+          }
+        ],
+        "before_hash": "9ce6cfcb5731c0a8e07d728cdff9fc5e06b9cc5eb1d6e94360623c4468e394bd",
+        "after_hash": "0d286a45c97e7ac5530c29682dfd016a530f08dde5f69c80376ef60e8a35b4bf"
+      }
+    ]
+  },
+  "timing": {
+    "started_at": "2026-09-05T08:44:14.521Z",
+    "completed_at": "2026-09-05T08:44:17.093Z",
+    "duration_ms": 2572,
+    "measurement": "hook_wall_clock"
+  },
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "model_calls": 0,
+    "measurement": "known-zero"
+  },
+  "telemetry": {
+    "schemaVersion": "mimosa-gate-telemetry/v1",
+    "profile": "gate",
+    "operation": "Stop",
+    "outcome": "complete",
+    "latencyMs": 2572,
+    "peakMemoryBytes": 171470848,
+    "memoryMeasurement": "max-observed-process-rss",
+    "scannedFiles": 6,
+    "cache": {
+      "hits": 0,
+      "misses": 0,
+      "measurement": "not-applicable"
+    },
+    "denyCount": 0,
+    "tokens": {
+      "input": 0,
+      "output": 0,
+      "total": 0,
+      "modelCalls": 0,
+      "measurement": "known-zero"
+    }
+  },
+  "finding_count": 0,
+  "rewake_finding_count": 0,
+  "evidence_boundary": {
+    "scan": "candidate",
+    "static_fix_verification": "observed_static_only",
+    "runtime_verification": "not_performed"
+  },
+  "finding_events": [],
+  "findings": [],
+  "artifacts": {
+    "immutable_report": ".mimosa/reports/task-review-sess_592f22fc-576e-4497-9a8f-498e785318e4-20260905T084417093Z-1456415-2e90cb36a6ce.json",
+    "latest_report": ".mimosa/reports/task-review-sess_592f22fc-576e-4497-9a8f-498e785318e4.json",
+    "history_summary": ".mimosa/history/run-20260905T084417093Z-1456415-2e90cb36a6ce.json"
+  }
+}

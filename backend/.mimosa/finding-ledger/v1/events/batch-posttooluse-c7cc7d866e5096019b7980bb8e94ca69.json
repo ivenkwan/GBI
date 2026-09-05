@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "posttooluse-c7cc7d866e5096019b7980bb8e94ca69",
+  "runId": null,
+  "runStatus": "completed",
+  "coverage": {
+    "status": "complete",
+    "reasons": []
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "PostToolUse"
+  },
+  "revision": null,
+  "diffHash": null,
+  "rulesVersion": null,
+  "sessionHash": "3946ed7c2b11e331b06b71dec0b4caa0305b64044a4c0127d846bf25fcdd7c68",
+  "reportRef": null,
+  "events": [
+    {
+      "eventId": "hook-9b50f5de064707085023db6c2c669bfa",
+      "findingId": "mimosa-13180b2c39edc450fc0063de",
+      "type": "static_fix_verified",
+      "at": "2026-09-05T08:02:45.000Z",
+      "identity": {
+        "projectRelativeFile": "tests/services/test_control_plane.py",
+        "ruleId": "security",
+        "codeEvidenceHash": "3ac8ed8a9e833dd206dfba75ab3ac735de8443ab2401d139f9e19b18be684d70",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 36,
+      "endLine": 36,
+      "reasonCode": "static_rescan_passed",
+      "reportedToAgent": false,
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "observed",
+        "producer": "deterministic",
+        "evidenceHash": "3ac8ed8a9e833dd206dfba75ab3ac735de8443ab2401d139f9e19b18be684d70"
+      },
+      "sequence": 0
+    }
+  ],
+  "observedFindingIds": [],
+  "verifiedFiles": [],
+  "recordedAt": "2026-09-05T08:02:45.713Z"
+}

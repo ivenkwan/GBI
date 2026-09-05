@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "mimosa-finding-history/v1",
+  "runId": "20260905T092559234Z-1575483-7332a61774b7",
+  "runStatus": "inconclusive",
+  "errors": [
+    "baseline-read:frontend/src/components/settings/settings-view.tsx: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:frontend/src/components/settings/users-admin.tsx: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:frontend/src/app/settings/page.tsx: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:backend/tests/services/test_users_service.py: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:backend/tests/api/test_users_api.py: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:backend/app/api/v1/users.py: baseline_snapshot_unreadable: file is missing from task baseline",
+    "scan:backend/app/db/migrations/versions/0010_tenant_users.py: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:backend/app/services/users.py: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:frontend/src/lib/api-client.ts: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:frontend/src/components/settings/settings-view.tsx: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:frontend/src/components/settings/users-admin.tsx: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:frontend/src/components/chat/chat-view.tsx: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:frontend/src/app/settings/page.tsx: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:frontend/src/app/admin/tenants/[id]/page.tsx: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:backend/tests/services/test_users_service.py: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:backend/tests/api/test_users_api.py: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:backend/app/core/auth.py: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:backend/app/api/v1/admin.py: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:backend/app/api/v1/auth.py: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:backend/app/api/v1/router.py: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:backend/app/api/v1/users.py: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+  ],
+  "target": ".",
+  "revision": "8c7366c326f93e217da979937cf8295d875b6193",
+  "diffHash": "ed8719ba09cbbc0f5fe2224eb6d232eb0e17691be443a32b1562fd938e52101f",
+  "rulesVersion": "unavailable",
+  "recordedAt": "2026-09-05T09:25:59.234Z",
+  "timing": {
+    "startedAt": "2026-09-05T09:25:56.369Z",
+    "completedAt": "2026-09-05T09:25:59.234Z",
+    "durationMs": 2865
+  },
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "modelCalls": 0,
+    "measurement": "known-zero"
+  },
+  "findings": {
+    "total": 0,
+    "bySeverity": {},
+    "byStatus": {}
+  },
+  "coverage": {
+    "status": "partial",
+    "reasonCounts": {
+      "baseline_snapshot_unreadable": 6,
+      "scanner_failed": 15,
+      "project_check_failed": 21
+    }
+  },
+  "evidenceBoundary": "static_only",
+  "immutableReport": ".mimosa/reports/task-review-sess_592f22fc-576e-4497-9a8f-498e785318e4-20260905T092559234Z-1575483-7332a61774b7.json"
+}

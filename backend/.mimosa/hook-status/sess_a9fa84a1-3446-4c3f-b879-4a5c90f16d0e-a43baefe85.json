@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "mimosa-hook-status/v1",
+  "recordedAt": "2026-09-05T12:48:42.751Z",
+  "sessionId": "sess_a9fa84a1-3446-4c3f-b879-4a5c90f16d0e",
+  "event": "PostToolUse",
+  "toolName": "Edit",
+  "file": "/home/ivenkwan/repo/GBI/docs/api/openapi.yaml",
+  "outcome": "clear",
+  "coverage": "complete",
+  "findingCount": 0,
+  "durationMs": 5,
+  "hostState": "hook_complete",
+  "reportHint": ".mimosa/reports/"
+}

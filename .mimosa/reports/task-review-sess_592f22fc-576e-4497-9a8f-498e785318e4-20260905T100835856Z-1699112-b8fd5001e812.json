@@ -1,0 +1,748 @@
+{
+  "schema_version": "mimosa-task-review/v2",
+  "run_id": "20260905T100835856Z-1699112-b8fd5001e812",
+  "run_status": "inconclusive",
+  "errors": [
+    {
+      "stage": "baseline-read",
+      "target": "frontend/src/components/wiki/wiki-view.tsx",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "baseline-read",
+      "target": "frontend/src/app/wiki/page.tsx",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "baseline-read",
+      "target": "backend/tests/services/test_wiki_service.py",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "baseline-read",
+      "target": "backend/tests/services/test_wiki_wiring.py",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "baseline-read",
+      "target": "backend/tests/api/test_wiki_api.py",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "baseline-read",
+      "target": "backend/app/services/wiki.py",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "baseline-read",
+      "target": "backend/app/db/migrations/versions/0011_wiki.py",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "baseline-read",
+      "target": "backend/app/api/v1/wiki.py",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "scan",
+      "target": "frontend/src/lib/api-client.ts",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "frontend/src/components/wiki/wiki-view.tsx",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "frontend/src/components/chat/chat-view.tsx",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "frontend/src/app/wiki/page.tsx",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/tests/services/test_wiki_service.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/tests/services/test_wiki_wiring.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/tests/api/test_wiki_api.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/app/services/chat_service.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/app/services/wiki.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/app/db/migrations/versions/0011_wiki.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/app/core/cache.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/app/api/v1/router.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/app/api/v1/wiki.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/app/agents/nl2sql/nl2sql_agent.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    }
+  ],
+  "coverage": {
+    "schema_version": "mimosa-hook-coverage/v1",
+    "status": "partial",
+    "scope": "hook_observed_diff",
+    "baseline": {
+      "complete": true,
+      "captured_files": 182,
+      "candidate_limit": 5000,
+      "truncated": false,
+      "enumeration_error_count": 0,
+      "snapshot_error_count": 0,
+      "compensated_target_count": 6
+    },
+    "change_tracking": {
+      "touched_observed": 0,
+      "touched_retained": 0,
+      "truncated": false,
+      "bash_mutation": true,
+      "bash_discovered": 14,
+      "bash_discovery_limit": 80,
+      "bash_discovery_truncated": false
+    },
+    "candidates": {
+      "eligible_files": 14,
+      "selected_files": 14,
+      "limit": 20,
+      "truncated": false
+    },
+    "scanning": {
+      "required_files": 14,
+      "scanned_files": 0,
+      "skipped_files": 0,
+      "failed_files": 14,
+      "project_checks_required": 0,
+      "project_checks_completed": 0
+    },
+    "notification": {
+      "eligible_findings": 0,
+      "detailed_findings": 0,
+      "detail_limit": 3,
+      "truncated": false
+    },
+    "reason_counts": {
+      "baseline_snapshot_unreadable": 8,
+      "scanner_failed": 14,
+      "project_check_failed": 22
+    },
+    "reasons": [
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "frontend/src/components/wiki/wiki-view.tsx",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "frontend/src/app/wiki/page.tsx",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "backend/tests/services/test_wiki_service.py",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "backend/tests/services/test_wiki_wiring.py",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "backend/tests/api/test_wiki_api.py",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "backend/app/services/wiki.py",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "backend/app/db/migrations/versions/0011_wiki.py",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "backend/app/api/v1/wiki.py",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "frontend/src/lib/api-client.ts",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "frontend/src/components/wiki/wiki-view.tsx",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "frontend/src/components/chat/chat-view.tsx",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "frontend/src/app/wiki/page.tsx",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/tests/services/test_wiki_service.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/tests/services/test_wiki_wiring.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/tests/api/test_wiki_api.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/app/services/chat_service.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/app/services/wiki.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/app/db/migrations/versions/0011_wiki.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/app/core/cache.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/app/api/v1/router.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/app/api/v1/wiki.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/app/agents/nl2sql/nl2sql_agent.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "frontend/src/components/wiki/wiki-view.tsx",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "frontend/src/app/wiki/page.tsx",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "backend/tests/services/test_wiki_service.py",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "backend/tests/services/test_wiki_wiring.py",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "backend/tests/api/test_wiki_api.py",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "backend/app/services/wiki.py",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "backend/app/db/migrations/versions/0011_wiki.py",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "backend/app/api/v1/wiki.py",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "frontend/src/lib/api-client.ts",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "frontend/src/components/wiki/wiki-view.tsx",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "frontend/src/components/chat/chat-view.tsx",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "frontend/src/app/wiki/page.tsx",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/tests/services/test_wiki_service.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/tests/services/test_wiki_wiring.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/tests/api/test_wiki_api.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/app/services/chat_service.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/app/services/wiki.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/app/db/migrations/versions/0011_wiki.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/app/core/cache.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/app/api/v1/router.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/app/api/v1/wiki.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/app/agents/nl2sql/nl2sql_agent.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      }
+    ],
+    "reasons_truncated": false
+  },
+  "generated_at": "2026-09-05T10:08:35.856Z",
+  "session_id": "sess_592f22fc-576e-4497-9a8f-498e785318e4",
+  "target": ".",
+  "revision": "acb561e39be2360bdf53da8bb1ca44cb8825e53b",
+  "rules_version": "unavailable",
+  "diff_hash": "680c11bb05a35d12eb5280cf6a509f67edd3f48bf39a0e8a38c524394c806a4e",
+  "diff": {
+    "algorithm": "sha256",
+    "changed_file_count": 14,
+    "changed_files": [
+      {
+        "file": "backend/app/agents/nl2sql/nl2sql_agent.py",
+        "ranges": [
+          {
+            "start": 56,
+            "end": 56
+          },
+          {
+            "start": 74,
+            "end": 76
+          },
+          {
+            "start": 89,
+            "end": 89
+          },
+          {
+            "start": 102,
+            "end": 102
+          },
+          {
+            "start": 171,
+            "end": 171
+          },
+          {
+            "start": 194,
+            "end": 202
+          },
+          {
+            "start": 221,
+            "end": 221
+          },
+          {
+            "start": 230,
+            "end": 230
+          },
+          {
+            "start": 238,
+            "end": 238
+          }
+        ],
+        "before_hash": "c9a29912ff60209f3e11dd8f1c00c0087514687c1343ae8f1f474ed3b13994d6",
+        "after_hash": "587723b429b54cf6e0494800cd299e1a7bcca4f4a28d23dad30c93c0de14f814"
+      },
+      {
+        "file": "backend/app/api/v1/router.py",
+        "ranges": [
+          {
+            "start": 18,
+            "end": 18
+          },
+          {
+            "start": 34,
+            "end": 34
+          }
+        ],
+        "before_hash": "ea7cea7afc344fd88bd6f498bf207dc824c5720ebdc54b33bbd5a4f8106bc9d4",
+        "after_hash": "a2f4456649d9bfd4c9288fa531c5d2866ad25f686f2f788dacb42b235e880084"
+      },
+      {
+        "file": "backend/app/api/v1/wiki.py",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 279
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "d87c3d59cf54af92369b731e203140bf1e0f03c54769ba0cfb2a8bef47c84f8a"
+      },
+      {
+        "file": "backend/app/core/cache.py",
+        "ranges": [
+          {
+            "start": 470,
+            "end": 491
+          }
+        ],
+        "before_hash": "3079602615115b617c74cf408aaa00080e252ab6d01b82e26985ad2ba0e830ba",
+        "after_hash": "52955e67852b1269574eef420e900793fb70ce78cee218d21c6e5f22be44b439"
+      },
+      {
+        "file": "backend/app/db/migrations/versions/0011_wiki.py",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 102
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "3c5e12f474aaf043b70b23a8cf9e9e398ed3b384bd310de7ccd0216bbcea99c8"
+      },
+      {
+        "file": "backend/app/services/chat_service.py",
+        "ranges": [
+          {
+            "start": 77,
+            "end": 89
+          },
+          {
+            "start": 267,
+            "end": 276
+          },
+          {
+            "start": 477,
+            "end": 516
+          },
+          {
+            "start": 594,
+            "end": 609
+          },
+          {
+            "start": 619,
+            "end": 619
+          }
+        ],
+        "before_hash": "00109afefb8052e0c41fa7cee5f224790c58202f38e7acebe2d5ea64caa0e565",
+        "after_hash": "716d15f467997ebd0b37fba8dd3ee864b85aa230e6d3f098d67efa93ed02e2b1"
+      },
+      {
+        "file": "backend/app/services/wiki.py",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 380
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "2660df15008a1247176d6e1a4ac3139ab1a6c63d62bf85640f880650aeb483bc"
+      },
+      {
+        "file": "backend/tests/api/test_wiki_api.py",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 116
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "0fe9f1a121ae4076b07c8aa8a6330eb025c870ac321cfd542901cfe0543762ec"
+      },
+      {
+        "file": "backend/tests/services/test_wiki_service.py",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 342
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "2a51515d1b4f44a844557e76ac27ee8a6341e0bde3226d9981a2e2121786661d"
+      },
+      {
+        "file": "backend/tests/services/test_wiki_wiring.py",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 144
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "b2c5cd0669e6c3d36c1605b7d606acb59c9ce9294c0fae050e8dade0afbb2c05"
+      },
+      {
+        "file": "frontend/src/app/wiki/page.tsx",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 12
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "3ec629cd7d70f38c7bca11972a246d6b1aff2cd6b7b760c4815f946dcf79500e"
+      },
+      {
+        "file": "frontend/src/components/chat/chat-view.tsx",
+        "ranges": [
+          {
+            "start": 21,
+            "end": 21
+          },
+          {
+            "start": 360,
+            "end": 373
+          }
+        ],
+        "before_hash": "4ccd61d9245c73f8f9ebbd07ddb4db6cea7add88c56b947d83bf14ff0147b29c",
+        "after_hash": "95dbc30b3ae1a8b0b6a3f5ce902bb1648fe6165c6086d5e0570e16601b41e36e"
+      },
+      {
+        "file": "frontend/src/components/wiki/wiki-view.tsx",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 450
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "c1b88c1e46fd46fdbbaeca54c9b37c2657fb3aa622acbcb8054ccf0008dda5cc"
+      },
+      {
+        "file": "frontend/src/lib/api-client.ts",
+        "ranges": [
+          {
+            "start": 648,
+            "end": 716
+          }
+        ],
+        "before_hash": "7a9c494c34452e1b941b5379407a3b13ba9deb9563db82a42dbe4cb0efeb8570",
+        "after_hash": "ecadd2214665ed925d23d955f788bc4ad490620d103b69be483dc4428fd5193d"
+      }
+    ]
+  },
+  "timing": {
+    "started_at": "2026-09-05T10:08:33.064Z",
+    "completed_at": "2026-09-05T10:08:35.856Z",
+    "duration_ms": 2792,
+    "measurement": "hook_wall_clock"
+  },
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "model_calls": 0,
+    "measurement": "known-zero"
+  },
+  "telemetry": {
+    "schemaVersion": "mimosa-gate-telemetry/v1",
+    "profile": "gate",
+    "operation": "Stop",
+    "outcome": "partial/INCONCLUSIVE",
+    "latencyMs": 2792,
+    "peakMemoryBytes": 184262656,
+    "memoryMeasurement": "max-observed-process-rss",
+    "scannedFiles": 0,
+    "cache": {
+      "hits": 0,
+      "misses": 0,
+      "measurement": "not-applicable"
+    },
+    "denyCount": 0,
+    "tokens": {
+      "input": 0,
+      "output": 0,
+      "total": 0,
+      "modelCalls": 0,
+      "measurement": "known-zero"
+    }
+  },
+  "finding_count": 0,
+  "rewake_finding_count": 0,
+  "evidence_boundary": {
+    "scan": "candidate",
+    "static_fix_verification": "observed_static_only",
+    "runtime_verification": "not_performed"
+  },
+  "finding_events": [],
+  "findings": [],
+  "artifacts": {
+    "immutable_report": ".mimosa/reports/task-review-sess_592f22fc-576e-4497-9a8f-498e785318e4-20260905T100835856Z-1699112-b8fd5001e812.json",
+    "latest_report": ".mimosa/reports/task-review-sess_592f22fc-576e-4497-9a8f-498e785318e4.json",
+    "history_summary": ".mimosa/history/run-20260905T100835856Z-1699112-b8fd5001e812.json"
+  }
+}

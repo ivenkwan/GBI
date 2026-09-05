@@ -1,0 +1,289 @@
+"""NL2SQLAgent -- natural language to SQL query generation.
+
+Uses schema context compression (top-k relevant tables via pgvector) and
+few-shot examples to generate safe, read-only SQL queries.
+
+Model: claude-opus-4 (reasoning with thinking blocks)
+Prompt: .claude/prompts/nl2sql-system.md
+"""
+
+import json
+import time
+from uuid import uuid4
+
+from app.agents.base import AgentResult, BaseAgent
+from app.agents.registry import register_agent
+from app.core.llm_client import LLMCallOptions, get_llm_client, load_prompt
+from app.core.logging import logger
+
+
+@register_agent("nl2sql")
+class NL2SQLAgent(BaseAgent):
+    """Generates read-only SQL queries from natural language questions.
+
+    Input: User prompt + schema context (top-k tables/columns from pgvector)
+    Output: SQL query + explanation + table references + assumptions
+    """
+
+    name = "nl2sql"
+    description = "Natural language to SQL generator with schema-aware context"
+
+    # Destructive SQL patterns that must NEVER appear in generated queries
+    DESTRUCTIVE_PATTERNS = [
+        r"\bDROP\s+(TABLE|DATABASE|SCHEMA|INDEX|VIEW|FUNCTION|PROCEDURE)\b",
+        r"\bDELETE\s+FROM\b",
+        r"\bTRUNCATE\s+(TABLE\s+)?",
+        r"\bALTER\s+TABLE\b.*\bDROP\b",
+        r"\bALTER\s+TABLE\b.*\bRENAME\b",
+        r"\bUPDATE\s+\w+\s+SET\b",
+        r"\bINSERT\s+INTO\b",
+        r"\bCREATE\s+(USER|ROLE|GROUP)\b",
+        r"\bGRANT\b",
+        r"\bREVOKE\b",
+        r"\bCOPY\b.*\bFROM\b",
+    ]
+
+    async def execute(
+        self,
+        query: str,
+        schema_context: list[dict] | None = None,
+        few_shot_examples: list[dict] | None = None,
+        metric_definitions: list[dict] | str | None = None,
+        tenant_id: str = "default",
+        user_id: str = "",
+        session_id: str = "",
+        history: list[dict] | None = None,
+        tenant_knowledge: list[dict] | None = None,
+        **kwargs,
+    ) -> AgentResult:
+        """Generate SQL from a natural language query.
+
+        Args:
+            query: The user\'s natural language question.
+            schema_context: Top-k relevant tables/columns from pgvector search.
+            few_shot_examples: Similar validated NL/SQL pairs for in-context learning.
+            metric_definitions: Business metrics from the semantic layer (Cube.dev).
+                Can be a pre-formatted string from CubeClient.get_agent_context()
+                or a legacy list of dicts.
+            tenant_id: Multi-tenant identifier for data isolation.
+            user_id: User identifier for audit logging.
+            session_id: Session identifier for audit logging.
+            history: Prior conversation turns (Phase 14) — enables follow-up
+                queries like "now break that down by region". Each dict has
+                role/content/generated_sql keys.
+            tenant_knowledge: Wiki hits (Phase 24, ADR 010) — tenant-defined
+                definitions/rules that shape the SQL. Each dict has slug,
+                title, chunk keys.
+        """
+        start = time.time()
+        run_id = str(uuid4())
+        session_id = session_id or run_id
+
+        logger.info(
+            "NL2SQLAgent starting",
+            run_id=run_id,
+            query=query[:200],
+            tables=len(schema_context or []),
+            examples=len(few_shot_examples or []),
+            history_turns=len(history or []),
+            knowledge_hits=len(tenant_knowledge or []),
+            tenant_id=tenant_id,
+        )
+
+        # Build the prompt
+        system_prompt = load_prompt("nl2sql-system")
+        user_message = self._build_user_message(
+            query=query,
+            schema_context=schema_context,
+            few_shot_examples=few_shot_examples,
+            metric_definitions=metric_definitions,
+            tenant_id=tenant_id,
+            history=history,
+            tenant_knowledge=tenant_knowledge,
+        )
+
+        try:
+            client = get_llm_client()
+            result = await client.invoke(
+                messages=user_message,
+                system=system_prompt,
+                use_reasoning=True,
+                options=LLMCallOptions(
+                    temperature=0.0,
+                    max_tokens=4096,
+                    response_format="json",
+                    timeout_seconds=90,
+                    max_retries=3,
+                ),
+                user_id=user_id,
+                tenant_id=tenant_id,
+                session_id=session_id,
+            )
+
+            # Parse the structured output
+            output = result.parsed or {}
+            sql = output.get("sql", "")
+
+            # Destructive pattern check
+            safety_warnings = self._check_destructive_patterns(sql)
+
+            # Build final result
+            return self._timed_result(
+                AgentResult(
+                    agent_name=self.name,
+                    success=bool(sql) and not safety_warnings,
+                    output={
+                        "sql": sql,
+                        "explanation": output.get("explanation", ""),
+                        "tables_used": output.get("tables_used", []),
+                        "assumptions": output.get("assumptions", []),
+                        "run_id": run_id,
+                    },
+                    input_tokens=result.input_tokens,
+                    output_tokens=result.output_tokens,
+                    model_version=result.model_name,
+                    warnings=output.get("warnings", []) + safety_warnings,
+                    errors=[] if sql else ["No SQL generated"],
+                ),
+                start,
+            )
+
+        except Exception as e:
+            logger.error(f"NL2SQLAgent failed: {e}")
+            return self._timed_result(
+                AgentResult(
+                    agent_name=self.name,
+                    success=False,
+                    output={"run_id": run_id},
+                    errors=[str(e)],
+                ),
+                start,
+            )
+
+    def _build_user_message(
+        self,
+        query: str,
+        schema_context: list[dict] | None,
+        few_shot_examples: list[dict] | None,
+        metric_definitions: list[dict] | str | None,
+        tenant_id: str,
+        history: list[dict] | None = None,
+        tenant_knowledge: list[dict] | None = None,
+    ) -> str:
+        """Build the full user message with schema context, examples, and metrics."""
+        parts = []
+
+        # 1. The user's question
+        parts.append(f"## User Question\n\n{query}")
+
+        # 1b. Conversation history (Phase 14): prior turns give referents for
+        # follow-up questions ("now break that down by region"). The CURRENT
+        # question always takes precedence.
+        if history:
+            parts.append("\n## Conversation History (previous turns)\n")
+            for turn in history[-6:]:
+                role = turn.get("role", "user")
+                content = str(turn.get("content", ""))[:500]
+                if role == "user":
+                    parts.append(f"User: {content}")
+                else:
+                    sql = turn.get("generated_sql")
+                    suffix = f" [SQL: {sql[:200]}]" if sql else ""
+                    parts.append(f"Assistant: {content[:300]}{suffix}")
+
+        # 2. Tenant knowledge (Phase 24, ADR 010): wiki pages the tenant
+        # wrote — definitions and rules that shape the SQL.
+        if tenant_knowledge:
+            parts.append("\n## Tenant Knowledge\n")
+            for hit in tenant_knowledge[:5]:
+                parts.append(f"### From page `{hit.get('slug', '')}` — {hit.get('title', '')}")
+                parts.append(str(hit.get("chunk", ""))[:1000])
+
+        # 3. Schema context (compressed top-k)
+        if schema_context:
+            parts.append("\n## Relevant Schema Context\n")
+            for table in schema_context:
+                table_name = table.get("table_name", "unknown")
+                columns = table.get("columns", [])
+                parts.append(f"### Table: {table_name}")
+                for col in columns:
+                    col_name = col.get("column_name", col) if isinstance(col, dict) else col
+                    col_desc = col.get("description", "") if isinstance(col, dict) else ""
+                    parts.append(f"- `{col_name}`" + (f" -- {col_desc}" if col_desc else ""))
+                if table.get("sample_rows"):
+                    parts.append(f"\nSample rows ({len(table['sample_rows'])}):")
+                    parts.append("```json")
+                    parts.append(json.dumps(table["sample_rows"][:3], default=str))
+                    parts.append("```")
+        else:
+            parts.append("\n## Schema Context\n\nNo schema context available.")
+
+        # 4. Metric definitions (from Cube.dev semantic layer)
+        if metric_definitions:
+            if isinstance(metric_definitions, str):
+                parts.append(metric_definitions)
+            else:
+                parts.append("\n## Available Metrics\n")
+                for metric in metric_definitions:
+                    parts.append(f"- **{metric['name']}**: {metric.get('description', '')}")
+
+        # 5. Few-shot examples
+        if few_shot_examples:
+            parts.append("\n## Example Queries\n")
+            for i, example in enumerate(few_shot_examples[:5]):
+                parts.append(f"### Example {i + 1}")
+                parts.append(f"Question: {example['nl_query']}")
+                parts.append(f"SQL: {example['expected_sql']}")
+
+        # 6. Tenant context
+        parts.append(f"\n## Session Context\n- Tenant ID: {tenant_id}")
+        parts.append("- Access: Read-only SELECT queries only")
+        parts.append("- Row Limit: 1000 (unless user specifies otherwise)")
+        parts.append("- Schema: Use fully qualified table names (schema.table)")
+
+        return "\n".join(parts)
+
+    def _check_destructive_patterns(self, sql: str) -> list[str]:
+        """Check generated SQL for destructive patterns."""
+        import re
+
+        if not sql:
+            return []
+
+        warnings = []
+        sql_upper = sql.upper()
+
+        for pattern in self.DESTRUCTIVE_PATTERNS:
+            if re.search(pattern, sql_upper):
+                warnings.append(f"Destructive pattern detected: {pattern}")
+
+        return warnings
+
+
+# ---------------------------------------------------------------------------
+# Schema context retrieval (pgvector semantic search)
+# ---------------------------------------------------------------------------
+
+
+async def retrieve_schema_context(
+    query: str,
+    tenant_id: str,
+    db_session=None,
+    top_k: int = 5,
+) -> list[dict]:
+    """Retrieve the top-k most relevant tables for a query."""
+
+    logger.info("Retrieving schema context", query=query[:100], top_k=top_k, tenant_id=tenant_id)
+    logger.warning("Schema context retrieval not yet implemented -- run scripts/embed_schema.py")
+    return []
+
+
+async def retrieve_few_shot_examples(
+    query: str,
+    agent_name: str = "nl2sql",
+    tenant_id: str = "default",
+    top_k: int = 3,
+) -> list[dict]:
+    """Retrieve similar validated NL/SQL pairs for few-shot learning."""
+    logger.info("Retrieving few-shot examples", agent=agent_name, top_k=top_k)
+    return []

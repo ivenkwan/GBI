@@ -1,0 +1,29 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "stop-20260905T104639182Z-1807786-c09ae1a5a946",
+  "runId": "20260905T104639182Z-1807786-c09ae1a5a946",
+  "runStatus": "completed",
+  "coverage": {
+    "status": "complete",
+    "reasons": []
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "Stop"
+  },
+  "revision": "21947da484dbe3a33434ffc3660cc6e9f3ac8fd4",
+  "diffHash": "368af3c5d11cde13cbf679a006de51b2facc503c39387e3ff744deb383bcc80a",
+  "rulesVersion": "unavailable",
+  "sessionHash": "3946ed7c2b11e331b06b71dec0b4caa0305b64044a4c0127d846bf25fcdd7c68",
+  "reportRef": ".mimosa/reports/task-review-sess_592f22fc-576e-4497-9a8f-498e785318e4-20260905T104639182Z-1807786-c09ae1a5a946.json",
+  "events": [],
+  "observedFindingIds": [],
+  "verifiedFiles": [
+    {
+      "file": "backend/tests/services/test_byok.py",
+      "direct": "complete",
+      "projectContext": "partial"
+    }
+  ],
+  "recordedAt": "2026-09-05T10:46:39.894Z"
+}

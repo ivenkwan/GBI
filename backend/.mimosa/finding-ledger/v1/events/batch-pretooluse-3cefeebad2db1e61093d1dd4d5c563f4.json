@@ -1,0 +1,96 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "pretooluse-3cefeebad2db1e61093d1dd4d5c563f4",
+  "runId": null,
+  "runStatus": "completed",
+  "coverage": {
+    "status": "complete",
+    "reasons": []
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "PreToolUse"
+  },
+  "revision": null,
+  "diffHash": null,
+  "rulesVersion": null,
+  "sessionHash": "3946ed7c2b11e331b06b71dec0b4caa0305b64044a4c0127d846bf25fcdd7c68",
+  "reportRef": null,
+  "events": [
+    {
+      "eventId": "hook-3e4b5c964d3e7d75315635135101f790",
+      "findingId": "mimosa-47ab0488abb1c16bda2f8dd0",
+      "type": "finding_blocked",
+      "at": "2026-09-05T10:24:19.793Z",
+      "identity": {
+        "projectRelativeFile": "tests/services/test_byok.py",
+        "ruleId": "security",
+        "codeEvidenceHash": "744f959db15e05d9520765905cc461bb729a38db388d52f59eeed871d2ba2304",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 26,
+      "endLine": 26,
+      "reasonCode": "deny",
+      "reportedToAgent": true,
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "evidenceHash": "744f959db15e05d9520765905cc461bb729a38db388d52f59eeed871d2ba2304"
+      },
+      "sequence": 0
+    },
+    {
+      "eventId": "hook-38682afb7dc88ca0f59b22da95e544d5",
+      "findingId": "mimosa-bff25d57af9e11bcf218f429",
+      "type": "finding_blocked",
+      "at": "2026-09-05T10:24:19.794Z",
+      "identity": {
+        "projectRelativeFile": "tests/services/test_byok.py",
+        "ruleId": "security",
+        "codeEvidenceHash": "859a6f946c028ae3f3ce0000dc2c3697b2d9b18f2c4de6a466fbf6fe1a4f6cf2",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 38,
+      "endLine": 38,
+      "reasonCode": "deny",
+      "reportedToAgent": true,
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "evidenceHash": "859a6f946c028ae3f3ce0000dc2c3697b2d9b18f2c4de6a466fbf6fe1a4f6cf2"
+      },
+      "sequence": 1
+    },
+    {
+      "eventId": "hook-0892898277b5eb1974a12520628b4965",
+      "findingId": "mimosa-801dc22104c6bbbcb57ad2d6",
+      "type": "finding_blocked",
+      "at": "2026-09-05T10:24:19.794Z",
+      "identity": {
+        "projectRelativeFile": "tests/services/test_byok.py",
+        "ruleId": "security",
+        "codeEvidenceHash": "e3ebf0743160c32b15abd0b1b84ee5f25553dabaaa699dc34d9b972003c2a54f",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 472,
+      "endLine": 472,
+      "reasonCode": "deny",
+      "reportedToAgent": true,
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "evidenceHash": "e3ebf0743160c32b15abd0b1b84ee5f25553dabaaa699dc34d9b972003c2a54f"
+      },
+      "sequence": 2
+    }
+  ],
+  "observedFindingIds": [],
+  "verifiedFiles": [],
+  "recordedAt": "2026-09-05T10:24:20.487Z"
+}

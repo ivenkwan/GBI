@@ -1,0 +1,662 @@
+{
+  "schema_version": "mimosa-task-review/v2",
+  "run_id": "20260905T104228161Z-1795460-24160ce61ffd",
+  "run_status": "inconclusive",
+  "errors": [
+    {
+      "stage": "baseline-read",
+      "target": "backend/tests/services/test_byok.py",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "baseline-read",
+      "target": "backend/app/services/byok.py",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/app/db/migrations/versions/0012_tenant_llm.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/app/llm/__init__.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/app/llm/providers/base.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/app/llm/providers/anthropic_provider.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/app/llm/providers/openai_provider.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/app/llm/resolver.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/app/core/cache.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/app/core/llm_client.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/tests/test_embeddings.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/tests/services/test_audit.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/tests/services/test_byok.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/app/services/audit.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/app/services/byok.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "backend/app/core/embeddings.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    }
+  ],
+  "coverage": {
+    "schema_version": "mimosa-hook-coverage/v1",
+    "status": "partial",
+    "scope": "hook_observed_diff",
+    "baseline": {
+      "complete": true,
+      "captured_files": 197,
+      "candidate_limit": 5000,
+      "truncated": false,
+      "enumeration_error_count": 0,
+      "snapshot_error_count": 0,
+      "compensated_target_count": 13
+    },
+    "change_tracking": {
+      "touched_observed": 9,
+      "touched_retained": 9,
+      "truncated": false,
+      "bash_mutation": true,
+      "bash_discovered": 14,
+      "bash_discovery_limit": 80,
+      "bash_discovery_truncated": false
+    },
+    "candidates": {
+      "eligible_files": 15,
+      "selected_files": 15,
+      "limit": 20,
+      "truncated": false
+    },
+    "scanning": {
+      "required_files": 14,
+      "scanned_files": 0,
+      "skipped_files": 0,
+      "failed_files": 14,
+      "project_checks_required": 0,
+      "project_checks_completed": 0
+    },
+    "notification": {
+      "eligible_findings": 0,
+      "detailed_findings": 0,
+      "detail_limit": 3,
+      "truncated": false
+    },
+    "reason_counts": {
+      "baseline_snapshot_unreadable": 2,
+      "scanner_failed": 14,
+      "project_check_failed": 16
+    },
+    "reasons": [
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "backend/tests/services/test_byok.py",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "backend/app/services/byok.py",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/app/db/migrations/versions/0012_tenant_llm.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/app/llm/__init__.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/app/llm/providers/base.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/app/llm/providers/anthropic_provider.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/app/llm/providers/openai_provider.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/app/llm/resolver.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/app/core/cache.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/app/core/llm_client.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/tests/test_embeddings.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/tests/services/test_audit.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/tests/services/test_byok.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/app/services/audit.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/app/services/byok.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "backend/app/core/embeddings.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "backend/tests/services/test_byok.py",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "backend/app/services/byok.py",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/app/db/migrations/versions/0012_tenant_llm.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/app/llm/__init__.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/app/llm/providers/base.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/app/llm/providers/anthropic_provider.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/app/llm/providers/openai_provider.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/app/llm/resolver.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/app/core/cache.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/app/core/llm_client.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/tests/test_embeddings.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/tests/services/test_audit.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/tests/services/test_byok.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/app/services/audit.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/app/services/byok.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "backend/app/core/embeddings.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      }
+    ],
+    "reasons_truncated": false
+  },
+  "generated_at": "2026-09-05T10:42:28.161Z",
+  "session_id": "sess_592f22fc-576e-4497-9a8f-498e785318e4",
+  "target": ".",
+  "revision": "f2ec5d337348f11b2c3d06af681ab137e6c7d334",
+  "rules_version": "unavailable",
+  "diff_hash": "911b83c2303bbfa6038402206b49d3b6f1dc05cd0f8253d9fecd6d04acccc4ae",
+  "diff": {
+    "algorithm": "sha256",
+    "changed_file_count": 14,
+    "changed_files": [
+      {
+        "file": "backend/app/core/cache.py",
+        "ranges": [
+          {
+            "start": 492,
+            "end": 510
+          }
+        ],
+        "before_hash": "52955e67852b1269574eef420e900793fb70ce78cee218d21c6e5f22be44b439",
+        "after_hash": "96ad0b35874a2c5b3b9c94ecb7adf1afd42164882724c5f9756b9f1b7f30347b"
+      },
+      {
+        "file": "backend/app/core/embeddings.py",
+        "ranges": [
+          {
+            "start": 7,
+            "end": 10
+          },
+          {
+            "start": 17,
+            "end": 17
+          },
+          {
+            "start": 23,
+            "end": 39
+          },
+          {
+            "start": 44,
+            "end": 44
+          },
+          {
+            "start": 47,
+            "end": 47
+          }
+        ],
+        "before_hash": "6b1a54f758ac617fe37ea31ad457fa96a67afbd55a67f676454c79ea87f81f8f",
+        "after_hash": "8d2b2365c87fead54ccd2fbb6fe0f1ded073d8603820baec2f9c41bca49b3a85"
+      },
+      {
+        "file": "backend/app/core/llm_client.py",
+        "ranges": [
+          {
+            "start": 59,
+            "end": 68
+          },
+          {
+            "start": 134,
+            "end": 140
+          },
+          {
+            "start": 146,
+            "end": 146
+          },
+          {
+            "start": 191,
+            "end": 191
+          },
+          {
+            "start": 199,
+            "end": 201
+          },
+          {
+            "start": 224,
+            "end": 240
+          },
+          {
+            "start": 250,
+            "end": 269
+          },
+          {
+            "start": 279,
+            "end": 294
+          },
+          {
+            "start": 346,
+            "end": 348
+          },
+          {
+            "start": 368,
+            "end": 371
+          }
+        ],
+        "before_hash": "dc9b1c47f1a4c4833067119044defd2f60aaead468a3c60b287d9fdd7354bbf6",
+        "after_hash": "fab08dfdc0ce1f6f9a84e8067a613ee3a7b0ccc507be12e1b09a5e1d02130cb4"
+      },
+      {
+        "file": "backend/app/db/migrations/versions/0012_tenant_llm.py",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 74
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "36a377c6c2eebc64c6d52fa270dddb6063747da11d2722555f69288921c3ece7"
+      },
+      {
+        "file": "backend/app/llm/__init__.py",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 1
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "0f4043b0207da5a80845e42b137bcd50eb521f0792c506c7884541b0525de254"
+      },
+      {
+        "file": "backend/app/llm/providers/anthropic_provider.py",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 68
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "204fa612fb16a305106a42ac77e283340ea9cadf2588d54e332ac2d5b5ea11da"
+      },
+      {
+        "file": "backend/app/llm/providers/base.py",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 48
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "ad5a7a44efd9c1d83f1809a594edda3a4452b77542239a5628f1e1fffba57372"
+      },
+      {
+        "file": "backend/app/llm/providers/openai_provider.py",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 116
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "823156f83d25d7d38b62cba68ac44c3d0a433c49c1161b13226a864eae0b95be"
+      },
+      {
+        "file": "backend/app/llm/resolver.py",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 148
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "d887c8e4da655f5da12de054109cf125ff34eb9272d9b1f89b1013ca77f183e5"
+      },
+      {
+        "file": "backend/app/services/audit.py",
+        "ranges": [
+          {
+            "start": 28,
+            "end": 34
+          },
+          {
+            "start": 65,
+            "end": 79
+          },
+          {
+            "start": 89,
+            "end": 89
+          },
+          {
+            "start": 93,
+            "end": 102
+          }
+        ],
+        "before_hash": "b5c427386d88798f69357c6d2236c4de60104859a97c8c4d943428ea1a633fad",
+        "after_hash": "52bda2132d112d4fcd0fa68847b9018d8ef5a29962e453b8bda338aa61972a72"
+      },
+      {
+        "file": "backend/app/services/byok.py",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 180
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "d0f114d390c7ba3507c0dff02bbac8c61744bfd3c4cb1ca1f55ea526640546b9"
+      },
+      {
+        "file": "backend/tests/services/test_audit.py",
+        "ranges": [
+          {
+            "start": 26,
+            "end": 29
+          },
+          {
+            "start": 68,
+            "end": 69
+          },
+          {
+            "start": 71,
+            "end": 72
+          },
+          {
+            "start": 84,
+            "end": 86
+          }
+        ],
+        "before_hash": "909b3c0800bd5dcd0215fcebf28ede1b0e5994fe024ff92b97c361571d038375",
+        "after_hash": "0be3bb8c940727725d7c88b0af26005d57315247f607bd76f2501a7d0240b023"
+      },
+      {
+        "file": "backend/tests/services/test_byok.py",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 525
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "a113062719865d34f35071e42363c3709c94a51b40544f4a2e3495ed1cbc5a39"
+      },
+      {
+        "file": "backend/tests/test_embeddings.py",
+        "ranges": [
+          {
+            "start": 30,
+            "end": 30
+          },
+          {
+            "start": 41,
+            "end": 41
+          },
+          {
+            "start": 56,
+            "end": 56
+          }
+        ],
+        "before_hash": "2da3698529ba2cbc489c4b914ffbddb07d73ec963f07110a3ba7d6b8459d581a",
+        "after_hash": "706f2d59d39b22183c904bf22fd241fd7c1190691d695fabee02e4751acf0670"
+      }
+    ]
+  },
+  "timing": {
+    "started_at": "2026-09-05T10:42:25.304Z",
+    "completed_at": "2026-09-05T10:42:28.161Z",
+    "duration_ms": 2857,
+    "measurement": "hook_wall_clock"
+  },
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "model_calls": 0,
+    "measurement": "known-zero"
+  },
+  "telemetry": {
+    "schemaVersion": "mimosa-gate-telemetry/v1",
+    "profile": "gate",
+    "operation": "Stop",
+    "outcome": "partial/INCONCLUSIVE",
+    "latencyMs": 2857,
+    "peakMemoryBytes": 192933888,
+    "memoryMeasurement": "max-observed-process-rss",
+    "scannedFiles": 0,
+    "cache": {
+      "hits": 0,
+      "misses": 0,
+      "measurement": "not-applicable"
+    },
+    "denyCount": 0,
+    "tokens": {
+      "input": 0,
+      "output": 0,
+      "total": 0,
+      "modelCalls": 0,
+      "measurement": "known-zero"
+    }
+  },
+  "finding_count": 0,
+  "rewake_finding_count": 0,
+  "evidence_boundary": {
+    "scan": "candidate",
+    "static_fix_verification": "observed_static_only",
+    "runtime_verification": "not_performed"
+  },
+  "finding_events": [],
+  "findings": [],
+  "artifacts": {
+    "immutable_report": ".mimosa/reports/task-review-sess_592f22fc-576e-4497-9a8f-498e785318e4-20260905T104228161Z-1795460-24160ce61ffd.json",
+    "latest_report": ".mimosa/reports/task-review-sess_592f22fc-576e-4497-9a8f-498e785318e4.json",
+    "history_summary": ".mimosa/history/run-20260905T104228161Z-1795460-24160ce61ffd.json"
+  }
+}
