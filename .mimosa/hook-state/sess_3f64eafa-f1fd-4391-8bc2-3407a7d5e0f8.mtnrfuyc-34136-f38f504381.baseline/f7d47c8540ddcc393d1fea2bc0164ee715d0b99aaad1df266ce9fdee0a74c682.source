@@ -164,7 +164,9 @@ class CubeClient:
             cache_ttl_seconds: How long to cache metric definitions (default 5 min).
         """
         self.api_url = (api_url or settings.CUBE_API_URL).rstrip("/")
-        self.api_secret = api_secret or settings.CUBE_API_SECRET
+        # Explicit "" means "no secret" (anonymous); only None falls back to
+        # settings — `or` would swallow the explicit empty string.
+        self.api_secret = api_secret if api_secret is not None else settings.CUBE_API_SECRET
         self.cache_ttl = cache_ttl_seconds
 
         # In-memory cache for metric definitions

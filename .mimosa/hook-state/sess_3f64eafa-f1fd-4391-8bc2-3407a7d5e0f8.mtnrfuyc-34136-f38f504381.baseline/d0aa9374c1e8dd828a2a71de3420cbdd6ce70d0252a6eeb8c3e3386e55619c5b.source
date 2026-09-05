@@ -1,6 +1,6 @@
 """Catalog validation — the Cube-native semantic layer must stay coherent.
 
-Parses every YAML under semantic/cube/schema and asserts structural
+Parses every YAML under semantic/cube/model and asserts structural
 invariants: unique names, real join targets, tenant dimension present, and
 measures that the CubeClient /meta parser can consume. Pure offline — no
 Cube or database required.
@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-SCHEMA_DIR = Path(__file__).resolve().parents[3] / "semantic" / "cube" / "schema"
+SCHEMA_DIR = Path(__file__).resolve().parents[3] / "semantic" / "cube" / "model"
 
 
 @pytest.fixture(scope="module")

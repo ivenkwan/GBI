@@ -78,6 +78,7 @@ if should_write "$BACKEND_ENV"; then
     -e "s|^DATABASE_URL_AUTH=.*|DATABASE_URL_AUTH=postgresql+asyncpg://genbi_auth:genbi_auth@postgres:5432/${PG_DB}|" \
     -e "s|^DATABASE_URL_SYNC=.*|DATABASE_URL_SYNC=postgresql://${PG_USER}:${PG_PASS}@postgres:5432/${PG_DB}|" \
     -e "s|^REDIS_URL=.*|REDIS_URL=redis://redis:6379/0|" \
+    -e "s|^CUBE_API_URL=.*|CUBE_API_URL=http://cube:4000/cubejs-api/v1|" \
     -e "s|^JWT_SECRET_KEY=.*|JWT_SECRET_KEY=${JWT_SECRET}|" \
     -e "s|^CUBE_API_SECRET=.*|CUBE_API_SECRET=${CUBE_SECRET}|" \
     -e "s|^TENANT_ENCRYPTION_KEY=.*|TENANT_ENCRYPTION_KEY=${TENANT_KEY}|" \

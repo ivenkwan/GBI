@@ -1,0 +1,96 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "posttooluse-57ded557ae823f885e1f08b52733037f",
+  "runId": null,
+  "runStatus": "completed",
+  "coverage": {
+    "status": "complete",
+    "reasons": []
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "PostToolUse"
+  },
+  "revision": null,
+  "diffHash": null,
+  "rulesVersion": null,
+  "sessionHash": "1d230f4b3e16c5f170bea5a7bfe861ce4f7412ab2120d668d3dec38a671cf79d",
+  "reportRef": null,
+  "events": [
+    {
+      "eventId": "hook-cdfa797af83781e6f2a0c7ea6494a91d",
+      "findingId": "mimosa-71a22517fec83bcbddc69b91",
+      "type": "static_fix_verified",
+      "at": "2026-09-05T02:42:53.095Z",
+      "identity": {
+        "projectRelativeFile": "frontend/src/lib/api-client.ts",
+        "ruleId": "security",
+        "codeEvidenceHash": "7f5625fdfed9637041233457b706bd9ae6d9a35c6a8fba392669db4848d42868",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 86,
+      "endLine": 86,
+      "reasonCode": "static_rescan_passed",
+      "reportedToAgent": false,
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "observed",
+        "producer": "deterministic",
+        "evidenceHash": "7f5625fdfed9637041233457b706bd9ae6d9a35c6a8fba392669db4848d42868"
+      },
+      "sequence": 0
+    },
+    {
+      "eventId": "hook-b94a86e7db723bae4b1933e06f3fced4",
+      "findingId": "mimosa-c77ed68b523d7cfc7305aae0",
+      "type": "static_fix_verified",
+      "at": "2026-09-05T02:42:53.095Z",
+      "identity": {
+        "projectRelativeFile": "frontend/src/lib/api-client.ts",
+        "ruleId": "security",
+        "codeEvidenceHash": "68bbae5a581474c70f7fcf6d12d08ccab97073ee3cbab74bb618ada7c54804e0",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 86,
+      "endLine": 86,
+      "reasonCode": "static_rescan_passed",
+      "reportedToAgent": false,
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "observed",
+        "producer": "deterministic",
+        "evidenceHash": "68bbae5a581474c70f7fcf6d12d08ccab97073ee3cbab74bb618ada7c54804e0"
+      },
+      "sequence": 1
+    },
+    {
+      "eventId": "hook-f61f1bd6c47ef0aed6e7543c1f2ae891",
+      "findingId": "mimosa-565dcf1c649aa36eca71eb1f",
+      "type": "static_fix_verified",
+      "at": "2026-09-05T02:42:53.095Z",
+      "identity": {
+        "projectRelativeFile": "frontend/src/lib/api-client.ts",
+        "ruleId": "security",
+        "codeEvidenceHash": "2b55e2a2304b655af2218dd54bba9b6917fbd5b3f13228b30a13094e38361632",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 88,
+      "endLine": 88,
+      "reasonCode": "static_rescan_passed",
+      "reportedToAgent": false,
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "observed",
+        "producer": "deterministic",
+        "evidenceHash": "2b55e2a2304b655af2218dd54bba9b6917fbd5b3f13228b30a13094e38361632"
+      },
+      "sequence": 2
+    }
+  ],
+  "observedFindingIds": [],
+  "verifiedFiles": [],
+  "recordedAt": "2026-09-05T02:42:53.390Z"
+}

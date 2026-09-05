@@ -18,6 +18,10 @@ import uuid
 from datetime import datetime, timedelta
 
 from app.core.logging import logger
+
+# Synthetic seed data: draw from the OS randomness source (SystemRandom)
+# rather than the seeded Mersenne Twister, which is predictable.
+_rng = random.SystemRandom()
 from db_admin import owner_connect, set_tenant_guc
 
 
@@ -56,7 +60,7 @@ SALES_REPS = [
 def random_date(start: datetime, end: datetime) -> datetime:
     """Generate a random date between start and end."""
     delta = end - start
-    random_days = random.randint(0, delta.days)
+    random_days = _rng.randint(0, delta.days)
     return start + timedelta(days=random_days)
 
 
@@ -70,11 +74,11 @@ def generate_sales(tenant_id: str, num_rows: int = 500) -> list[dict]:
         rows.append({
             "id": str(uuid.uuid4()),
             "tenant_id": tenant_id,
-            "region": random.choice(REGIONS),
+            "region": _rng.choice(REGIONS),
             "product_id": str(uuid.uuid4()),
-            "product_name": random.choice(PRODUCT_NAMES),
-            "revenue": round(random.uniform(100, 500000), 2),
-            "units": random.randint(1, 100),
+            "product_name": _rng.choice(PRODUCT_NAMES),
+            "revenue": round(_rng.uniform(100, 500000), 2),
+            "units": _rng.randint(1, 100),
             "transaction_date": random_date(start, end),
             "rep_id": str(uuid.uuid4()),
         })
@@ -86,15 +90,15 @@ def generate_customers(tenant_id: str, num_rows: int = 100) -> list[dict]:
     """Generate synthetic customer records."""
     rows = []
     for _ in range(num_rows):
-        name = random.choice(CUSTOMER_NAMES)
+        name = _rng.choice(CUSTOMER_NAMES)
         rows.append({
             "id": str(uuid.uuid4()),
             "tenant_id": tenant_id,
             "name": name,
             "email": f"contact@{name.lower().replace(' ', '-')}.com",
-            "country": random.choice(COUNTRIES),
+            "country": _rng.choice(COUNTRIES),
             "signup_date": random_date(datetime(2022, 1, 1), datetime(2026, 6, 1)),
-            "status": random.choice(["active", "active", "active", "inactive", "churned"]),
+            "status": _rng.choice(["active", "active", "active", "inactive", "churned"]),
         })
 
     return rows
@@ -107,15 +111,15 @@ def generate_orders(tenant_id: str, customers: list[dict], num_rows: int = 1000)
     end = datetime(2026, 6, 30)
 
     for _ in range(num_rows):
-        customer = random.choice(customers)
+        customer = _rng.choice(customers)
         rows.append({
             "id": str(uuid.uuid4()),
             "tenant_id": tenant_id,
             "customer_id": customer["id"],
             "product_id": str(uuid.uuid4()),
-            "amount": round(random.uniform(50, 100000), 2),
+            "amount": round(_rng.uniform(50, 100000), 2),
             "order_date": random_date(start, end),
-            "status": random.choice(["completed", "completed", "completed", "pending", "cancelled"]),
+            "status": _rng.choice(["completed", "completed", "completed", "pending", "cancelled"]),
         })
 
     return rows
@@ -131,10 +135,10 @@ def generate_transactions(tenant_id: str, num_rows: int = 2000) -> list[dict]:
         rows.append({
             "id": str(uuid.uuid4()),
             "tenant_id": tenant_id,
-            "amount": round(random.uniform(-10000, 100000), 2),
+            "amount": round(_rng.uniform(-10000, 100000), 2),
             "transaction_date": random_date(start, end),
-            "type": random.choice(["deposit", "withdrawal", "transfer", "payment"]),
-            "status": random.choice(["completed", "completed", "pending", "failed"]),
+            "type": _rng.choice(["deposit", "withdrawal", "transfer", "payment"]),
+            "status": _rng.choice(["completed", "completed", "pending", "failed"]),
         })
 
     return rows
@@ -152,12 +156,12 @@ def generate_users(tenant_id: str, num_rows: int = 200) -> list[dict]:
         rows.append({
             "id": str(uuid.uuid4()),
             "tenant_id": tenant_id,
-            "name": f"User {random.randint(1, 99999)}",
-            "email": f"user{random.randint(1, 99999)}@example.com",
-            "country": random.choice(COUNTRIES),
+            "name": f"User {_rng.randint(1, 99999)}",
+            "email": f"user{_rng.randint(1, 99999)}@example.com",
+            "country": _rng.choice(COUNTRIES),
             "signup_date": signup,
             "last_login": last_login,
-            "status": random.choice(["active", "active", "inactive"]),
+            "status": _rng.choice(["active", "active", "inactive"]),
         })
 
     return rows
@@ -171,8 +175,8 @@ def generate_products(tenant_id: str) -> list[dict]:
             "id": str(uuid.uuid4()),
             "tenant_id": tenant_id,
             "product_name": name,
-            "category": random.choice(PRODUCT_CATEGORIES),
-            "price": round(random.uniform(99, 49999), 2),
+            "category": _rng.choice(PRODUCT_CATEGORIES),
+            "price": round(_rng.uniform(99, 49999), 2),
         })
     return rows
 
@@ -189,7 +193,7 @@ def generate_sales_reps(tenant_id: str, regions: list[dict]) -> list[dict]:
     """Generate sales representative records."""
     rows = []
     for name in SALES_REPS:
-        region = random.choice(regions)
+        region = _rng.choice(regions)
         rows.append({
             "id": str(uuid.uuid4()),
             "tenant_id": tenant_id,
@@ -208,16 +212,16 @@ def generate_deals(tenant_id: str, reps: list[dict], regions: list[dict], num_ro
     end = datetime(2026, 6, 30)
 
     for _ in range(num_rows):
-        rep = random.choice(reps)
-        region = random.choice(regions)
+        rep = _rng.choice(reps)
+        region = _rng.choice(regions)
         rows.append({
             "id": str(uuid.uuid4()),
             "tenant_id": tenant_id,
-            "amount": round(random.uniform(1000, 1000000), 2),
+            "amount": round(_rng.uniform(1000, 1000000), 2),
             "rep_id": rep["id"],
             "region_id": region["id"],
             "close_date": random_date(start, end),
-            "stage": random.choice(["prospecting", "negotiation", "closed_won", "closed_lost"]),
+            "stage": _rng.choice(["prospecting", "negotiation", "closed_won", "closed_lost"]),
         })
 
     return rows
@@ -230,13 +234,13 @@ def generate_activity(tenant_id: str, users: list[dict], num_rows: int = 5000) -
     end = datetime(2026, 6, 30)
 
     for _ in range(num_rows):
-        user = random.choice(users)
+        user = _rng.choice(users)
         rows.append({
             "id": str(uuid.uuid4()),
             "tenant_id": tenant_id,
             "user_id": user["id"],
             "activity_date": random_date(start, end),
-            "event_type": random.choice(["login", "query", "export", "dashboard_view", "report_create"]),
+            "event_type": _rng.choice(["login", "query", "export", "dashboard_view", "report_create"]),
         })
 
     return rows

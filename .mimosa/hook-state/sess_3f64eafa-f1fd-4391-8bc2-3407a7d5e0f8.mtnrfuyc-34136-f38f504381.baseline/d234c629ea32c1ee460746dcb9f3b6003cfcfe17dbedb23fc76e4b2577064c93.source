@@ -78,14 +78,16 @@ else
 fi
 
 # --- 6. RLS enforcement (Phase 8b: runtime roles are actually bound) --------
-APP_USERS="$(psql_exec "SET ROLE genbi_app; SELECT count(*) FROM users;" || true)"
+# NOTE: multi-statement psql -c prints "SET" for the SET ROLE line — pipe
+# through tail to keep only the query result.
+APP_USERS="$(psql_exec "SET ROLE genbi_app; SELECT count(*) FROM users;" | tail -1 || true)"
 if [[ "${APP_USERS:-x}" == "0" ]]; then
   ok "RLS enforced — genbi_app sees 0 users without tenant GUC"
 else
   bad "RLS NOT enforced — genbi_app saw ${APP_USERS:-<error>} users without GUC (roles migrated?)"
 fi
 
-AUTH_USERS="$(psql_exec "SET ROLE genbi_auth; SELECT count(*) FROM users;" || true)"
+AUTH_USERS="$(psql_exec "SET ROLE genbi_auth; SELECT count(*) FROM users;" | tail -1 || true)"
 if [[ "${AUTH_USERS:-x}" =~ ^[0-9]+$ ]] && [[ "${AUTH_USERS}" -ge 1 ]]; then
   ok "auth role can look up users ($AUTH_USERS row(s), cross-tenant by design)"
 else

@@ -18,14 +18,15 @@ from app.core.config import settings
 from app.core.embeddings import embed_text, vector_literal
 from app.core.logging import logger
 
-# Cosine distance with a vector-literal cast; works through the connector's
-# SQLAlchemy text() named params on plain strings (no pgvector codec needed).
+# Cosine distance with an explicit cast (CAST, not '::' — SQLAlchemy text()
+# treats '::' as an escaped literal colon and breaks the bind); works through
+# the connector's named params on plain strings (no pgvector codec needed).
 SCHEMA_SEARCH_SQL = """
     SELECT full_name, table_description, columns_json,
-           1 - (embedding <=> :emb::vector(1536)) AS score
+           1 - (embedding <=> CAST(:emb AS vector)) AS score
     FROM schema_embeddings
     WHERE embedding IS NOT NULL
-    ORDER BY embedding <=> :emb::vector(1536)
+    ORDER BY embedding <=> CAST(:emb AS vector)
     LIMIT :top_k
 """
 
@@ -33,10 +34,10 @@ SCHEMA_SEARCH_SQL = """
 # at the current scale (tens of examples); add an index if it grows.
 FEW_SHOT_SEARCH_SQL = """
     SELECT nl_query, expected_sql,
-           1 - (embedding <=> :emb::vector(1536)) AS score
+           1 - (embedding <=> CAST(:emb AS vector)) AS score
     FROM agent_examples
     WHERE agent_name = 'nl2sql' AND embedding IS NOT NULL
-    ORDER BY embedding <=> :emb::vector(1536)
+    ORDER BY embedding <=> CAST(:emb AS vector)
     LIMIT :top_k
 """
 

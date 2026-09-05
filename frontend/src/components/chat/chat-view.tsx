@@ -43,7 +43,12 @@ interface ChatMessage {
   confirmQuery?: string;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1";
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1").replace(
+  /\/?$/,
+  "/",
+);
+// Fixed relative route resolved against the configured base at module load.
+const CHAT_STREAM_URL = new URL("/chat/stream", API_BASE).toString();
 
 export function ChatView() {
   const { user, token, logout } = useAuth();
@@ -183,7 +188,7 @@ export function ChatView() {
       const controller = new AbortController();
       abortRef.current = controller;
 
-      const res = await fetch(`${API_BASE}/chat/stream`, {
+      const res = await fetch(CHAT_STREAM_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

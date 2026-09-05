@@ -241,23 +241,45 @@ def upgrade() -> None:
     op.create_index("idx_agent_examples_tenant", "agent_examples", ["tenant_id"])
 
     # RLS — every tenant-scoped table. FORCE closes the owner-bypass loophole.
-    for tbl in ("users", "audit_log", "conversations", "schema_embeddings", "agent_examples"):
-        op.execute(f"ALTER TABLE {tbl} ENABLE ROW LEVEL SECURITY")
-        op.execute(f"ALTER TABLE {tbl} FORCE ROW LEVEL SECURITY")
-        op.execute(
-            f"CREATE POLICY tenant_isolation ON {tbl} "
-            f"USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID)"
-        )
+    # Fully static DDL, one literal statement per call — a migration is fixed
+    # at authoring time, so no identifiers are interpolated anywhere.
+    op.execute("ALTER TABLE users ENABLE ROW LEVEL SECURITY")
+    op.execute("ALTER TABLE users FORCE ROW LEVEL SECURITY")
+    op.execute(
+        "CREATE POLICY tenant_isolation ON users "
+        "USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID)"
+    )
+    op.execute("ALTER TABLE audit_log ENABLE ROW LEVEL SECURITY")
+    op.execute("ALTER TABLE audit_log FORCE ROW LEVEL SECURITY")
+    op.execute(
+        "CREATE POLICY tenant_isolation ON audit_log "
+        "USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID)"
+    )
+    op.execute("ALTER TABLE conversations ENABLE ROW LEVEL SECURITY")
+    op.execute("ALTER TABLE conversations FORCE ROW LEVEL SECURITY")
+    op.execute(
+        "CREATE POLICY tenant_isolation ON conversations "
+        "USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID)"
+    )
+    op.execute("ALTER TABLE schema_embeddings ENABLE ROW LEVEL SECURITY")
+    op.execute("ALTER TABLE schema_embeddings FORCE ROW LEVEL SECURITY")
+    op.execute(
+        "CREATE POLICY tenant_isolation ON schema_embeddings "
+        "USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID)"
+    )
+    op.execute("ALTER TABLE agent_examples ENABLE ROW LEVEL SECURITY")
+    op.execute("ALTER TABLE agent_examples FORCE ROW LEVEL SECURITY")
+    op.execute(
+        "CREATE POLICY tenant_isolation ON agent_examples "
+        "USING (tenant_id = current_setting('app.current_tenant_id', true)::UUID)"
+    )
 
 
 def downgrade() -> None:
     # Destructive on purpose — Alembic downgrades are explicit and reviewed.
-    for tbl in (
-        "agent_examples",
-        "schema_embeddings",
-        "conversations",
-        "audit_log",
-        "users",
-        "tenants",
-    ):
-        op.execute(f"DROP TABLE IF EXISTS {tbl} CASCADE")
+    op.execute("DROP TABLE IF EXISTS agent_examples CASCADE")
+    op.execute("DROP TABLE IF EXISTS schema_embeddings CASCADE")
+    op.execute("DROP TABLE IF EXISTS conversations CASCADE")
+    op.execute("DROP TABLE IF EXISTS audit_log CASCADE")
+    op.execute("DROP TABLE IF EXISTS users CASCADE")
+    op.execute("DROP TABLE IF EXISTS tenants CASCADE")
