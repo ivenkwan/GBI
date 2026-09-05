@@ -10,10 +10,10 @@ import json
 import uuid
 
 import asyncpg
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
-from app.core.auth import create_access_token
+from app.core.auth import create_access_token, get_current_user
 from app.core.cache import get_cache
 from app.core.config import settings
 from app.core.security import verify_password
@@ -87,10 +87,16 @@ async def login(request: LoginRequest) -> LoginResponse:
     conn = await asyncpg.connect(_admin_dsn())
     try:
         rows = await conn.fetch(
-            "SELECT u.id, u.tenant_id, u.email, u.hashed_password, u.roles, t.status, EXISTS(SELECT 1 FROM platform_admins pa WHERE pa.user_id = u.id AND pa.revoked_at IS NULL) AS platform_admin FROM users u JOIN tenants t ON t.id = u.tenant_id WHERE u.email = $1 AND (CAST($2 AS uuid) IS NULL OR u.tenant_id = CAST($2 AS uuid)) LIMIT 2",
+            "SELECT u.id, u.tenant_id, u.email, u.hashed_password, u.roles, u.status AS user_status, t.status, EXISTS(SELECT 1 FROM platform_admins pa WHERE pa.user_id = u.id AND pa.revoked_at IS NULL) AS platform_admin FROM users u JOIN tenants t ON t.id = u.tenant_id WHERE u.email = $1 AND (CAST($2 AS uuid) IS NULL OR u.tenant_id = CAST($2 AS uuid)) LIMIT 2",
             email,
             tenant_uuid,
         )
+        if len(rows) == 1 and verify_password(request.password, rows[0]["hashed_password"]):
+            # Stamp last_login_at on the authenticated path only (Phase 23).
+            await conn.execute(
+                "UPDATE users SET last_login_at = NOW() WHERE id = $1::uuid",
+                rows[0]["id"],
+            )
     finally:
         await conn.close()
 
@@ -98,6 +104,9 @@ async def login(request: LoginRequest) -> LoginResponse:
         raise await _reject(email)
 
     user = rows[0]
+    # Disabled users are indistinguishable from unknown ones (no enumeration).
+    if user["user_status"] == "disabled":
+        raise await _reject(email)
     if user["status"] == "suspended":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -117,6 +126,7 @@ async def login(request: LoginRequest) -> LoginResponse:
         tenant_id=str(user["tenant_id"]),
         roles=roles,
         platform_admin=bool(user["platform_admin"]),
+        email=user["email"],
     )
 
     await cache.clear_failed_logins(email)
@@ -132,3 +142,52 @@ async def login(request: LoginRequest) -> LoginResponse:
             platform_admin=bool(user["platform_admin"]),
         ),
     )
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(min_length=6, max_length=128)
+    new_password: str = Field(min_length=8, max_length=128)
+
+
+@router.get("/me", response_model=UserOut)
+async def whoami(user: dict = Depends(get_current_user)) -> UserOut:
+    """Current identity from the token: id, email, tenant, roles, and the
+    platform_admin flag (Phase 23)."""
+    email = user.get("email") or ""
+    return UserOut(
+        id=str(user["sub"]),
+        email=email,
+        name=email.split("@")[0] if email else "user",
+        tenant_id=str(user.get("tenant_id", "")),
+        roles=list(user.get("roles") or ["user"]),
+        platform_admin=bool(user.get("platform_admin")),
+    )
+
+
+@router.post("/change-password")
+async def change_password(
+    request: ChangePasswordRequest,
+    user: dict = Depends(get_current_user),
+):
+    """Self-service password change (Phase 23).
+
+    Requires the current password; a wrong one registers a login-throttle
+    failure for the account (the same lockout login uses).
+    """
+    from app.services.users import change_password as do_change
+
+    changed = await do_change(
+        tenant_id=str(user["tenant_id"]),
+        user_id=str(user["sub"]),
+        current_password=request.current_password,
+        new_password=request.new_password,
+    )
+    if changed is False:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={
+                "code": "INVALID_CREDENTIALS",
+                "message": "Current password is incorrect",
+            },
+        )
+    return {"status": "changed"}

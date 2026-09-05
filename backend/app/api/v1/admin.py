@@ -33,7 +33,7 @@ class TenantProvisionRequest(BaseModel):
 
 class TenantUpdateRequest(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
-    status: str | None = Field(pattern="^(active|suspended)$")
+    status: str | None = Field(default=None, pattern="^(active|suspended)$")
     settings: dict | None = None
 
 

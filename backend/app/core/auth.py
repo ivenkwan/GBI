@@ -32,6 +32,7 @@ def create_access_token(
     roles: list[str] | None = None,
     expires_minutes: int | None = None,
     platform_admin: bool = False,
+    email: str | None = None,
 ) -> str:
     """Create a JWT access token."""
     expires_delta = timedelta(minutes=expires_minutes or settings.JWT_EXPIRE_MINUTES)
@@ -45,6 +46,8 @@ def create_access_token(
         "exp": expire,
         "iat": datetime.now(UTC),
     }
+    if email:
+        payload["email"] = email
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 
@@ -164,6 +167,47 @@ async def require_platform_admin(
             detail={
                 "code": "NOT_PLATFORM_ADMIN",
                 "message": "Platform administrator privileges required",
+            },
+        )
+    return user
+
+
+async def require_tenant_admin(
+    user: dict = Depends(get_current_user),
+) -> dict:
+    """Guard for tenant-management routes (Phase 23): the caller must hold
+    the tenant ``admin`` role OR be an active platform superuser (claim +
+    cached grant re-check, same semantics as require_platform_admin)."""
+    roles = user.get("roles") or []
+    if "admin" in roles:
+        return user
+
+    if not user.get("platform_admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "NOT_TENANT_ADMIN",
+                "message": "Tenant administrator privileges required",
+            },
+        )
+
+    from app.core.cache import get_cache
+
+    user_id = str(user["sub"])
+    try:
+        cached = await get_cache().get_platform_admin(user_id)
+        active = cached if cached is not None else await _lookup_platform_admin(user_id)
+        if cached is None:
+            await get_cache().set_platform_admin(user_id, bool(active))
+    except Exception:
+        active = True  # fail-open: claim was minted from the grant table
+
+    if not active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "NOT_TENANT_ADMIN",
+                "message": "Tenant administrator privileges required",
             },
         )
     return user

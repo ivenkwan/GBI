@@ -218,3 +218,22 @@ docker compose -f infra/docker-compose.dev.yml exec backend \
   decommission flow requiring the tenant slug to be typed plus force,
   superuser grant/revoke with history table, audit feed with actor/action
   filters.
+
+---
+
+# Phase 23 verification (2026-09-05) — tenant user management & self-service
+
+- Migration `0010_tenant_users` applied to dev + test DBs: users.status
+  (active/disabled), last_login_at (stamped at login), composite unique
+  (tenant_id, email).
+- Live, end-to-end against the dev DB: create → duplicate 409 →
+  change-password wrong-current 401 (throttled) → plain user 403 on /users
+  → promote/disable → disabled login indistinguishable 401 → admin reset →
+  login succeeds with last_login_at stamped → deleting the last active
+  admin refused 422 LAST_TENANT_ADMIN.
+- 23 new offline tests; full suite 304 passed / 1 pre-existing
+  (Cube-dependent `/datasources` assertion).
+- Frontend: `/settings` live (profile via /auth/me, change-password, user
+  table for tenant admins); admin portal tenant detail uses the same table
+  via the superuser `?tenant_id=` path; Settings header button wired.
+  tsc 0 / eslint 0 errors / build 14 routes.

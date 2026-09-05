@@ -571,6 +571,80 @@ export function listAdminAudit(limit = 50): Promise<AdminAuditEntry[]> {
   return request<AdminAuditEntry[]>(`/admin/audit?limit=${limit}`);
 }
 
+// --- Tenant users + self-service (Phase 23) ---
+
+export interface TenantUserRow {
+  id: string;
+  email: string;
+  roles: string[];
+  status: "active" | "disabled";
+  created_at: string | null;
+  last_login_at: string | null;
+}
+
+export function getMe(): Promise<{
+  id: string;
+  email: string;
+  name: string;
+  tenant_id: string;
+  roles: string[];
+  platform_admin: boolean;
+}> {
+  return request("/auth/me");
+}
+
+export function changePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<{ status: string }> {
+  return request("/auth/change-password", {
+    method: "POST",
+    body: { current_password: currentPassword, new_password: newPassword },
+  });
+}
+
+export function listUsers(tenantId?: string): Promise<{
+  users: TenantUserRow[];
+  count: number;
+}> {
+  const suffix = tenantId ? `?tenant_id=${tenantId}` : "";
+  return request<{ users: TenantUserRow[]; count: number }>(`/users${suffix}`);
+}
+
+export function createUser(body: {
+  email: string;
+  password: string;
+  roles?: string[];
+}): Promise<TenantUserRow> {
+  return request<TenantUserRow>("/users", { method: "POST", body });
+}
+
+export function updateUser(
+  userId: string,
+  body: { email?: string; roles?: string[]; status?: "active" | "disabled" },
+  tenantId?: string,
+): Promise<TenantUserRow> {
+  const suffix = tenantId ? `?tenant_id=${tenantId}` : "";
+  return request<TenantUserRow>(`/users/${userId}${suffix}`, { method: "PATCH", body });
+}
+
+export function deleteUser(userId: string, tenantId?: string): Promise<{ status: string }> {
+  const suffix = tenantId ? `?tenant_id=${tenantId}` : "";
+  return request(`/users/${userId}${suffix}`, { method: "DELETE" });
+}
+
+export function resetUserPassword(
+  userId: string,
+  password: string,
+  tenantId?: string,
+): Promise<{ status: string }> {
+  const suffix = tenantId ? `?tenant_id=${tenantId}` : "";
+  return request(`/users/${userId}/reset-password${suffix}`, {
+    method: "POST",
+    body: { password },
+  });
+}
+
 // --- Health ---
 
 export function healthCheck(): Promise<{ status: string; version: string }> {

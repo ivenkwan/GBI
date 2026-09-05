@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { UsersAdmin } from "@/components/settings/users-admin";
 import { AlertTriangle, ArrowLeft, RefreshCw, Trash2 } from "lucide-react";
 
 export default function TenantDetailPage() {
@@ -201,27 +202,11 @@ export default function TenantDetailPage() {
             business data (ADR 009 §3).
           </p>
         </section>
-
-        <section className="bg-white border border-gray-200 rounded-xl p-5 space-y-3">
-          <h2 className="text-sm font-semibold text-gray-900">
-            Users ({tenant.user_count})
-          </h2>
-          <ul className="space-y-2 text-sm max-h-56 overflow-y-auto">
-            {tenant.users.map((u) => (
-              <li key={u.id} className="flex items-center justify-between">
-                <span className="text-gray-700 truncate">{u.email}</span>
-                <span className="text-[11px] text-gray-400">{u.roles.join(", ")}</span>
-              </li>
-            ))}
-            {tenant.users.length === 0 && (
-              <li className="text-gray-400 text-sm">No users.</li>
-            )}
-          </ul>
-          <p className="text-[11px] text-gray-400">
-            User management UI lands in Phase 23; today it lives here read-only.
-          </p>
-        </section>
       </div>
+
+      {/* User management (Phase 23): superusers administer this tenant's
+          users through the ?tenant_id= superuser path. */}
+      <UsersAdmin tenantId={tenant.id} currentUserId="none" />
 
       {/* Settings editor */}
       <section className="bg-white border border-gray-200 rounded-xl p-5 space-y-3">

@@ -405,7 +405,10 @@ export function ChatView() {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <button className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+                <button
+                  onClick={() => router.push("/settings")}
+                  className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+                >
                   <Settings className="w-5 h-5" />
                 </button>
               </TooltipTrigger>

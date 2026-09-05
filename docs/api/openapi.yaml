@@ -496,7 +496,7 @@ paths:
   /users:
     get:
       operationId: list_tenant_users
-      summary: "(planned) The tenant's users — tenant admin or superuser"
+      summary: "The tenant's users — tenant admin or superuser"
       security:
         - BearerAuth: []
       responses:
@@ -504,7 +504,7 @@ paths:
           description: User list
     post:
       operationId: create_tenant_user
-      summary: "(planned) Create a user in the caller's tenant"
+      summary: "Create a user in the caller's tenant"
       security:
         - BearerAuth: []
       responses:
@@ -516,7 +516,7 @@ paths:
   /users/{user_id}:
     patch:
       operationId: update_tenant_user
-      summary: "(planned) Update email / roles / enable-disable"
+      summary: "Update email / roles / enable-disable"
       security:
         - BearerAuth: []
       parameters:
@@ -531,7 +531,7 @@ paths:
           description: Updated
     delete:
       operationId: delete_tenant_user
-      summary: "(planned) Hard delete — refused for the last active tenant admin"
+      summary: "Hard delete — refused for the last active tenant admin"
       security:
         - BearerAuth: []
       parameters:
@@ -567,7 +567,7 @@ paths:
   /auth/me:
     get:
       operationId: whoami
-      summary: "(planned) Current identity incl. roles and platform_admin flag"
+      summary: "Current identity incl. roles and platform_admin flag"
       security:
         - BearerAuth: []
       responses:
@@ -577,7 +577,7 @@ paths:
   /auth/change-password:
     post:
       operationId: change_password
-      summary: "(planned) Self-service password change (current password required)"
+      summary: "Self-service password change (current password required)"
       security:
         - BearerAuth: []
       responses:

@@ -1,6 +1,6 @@
 # GenBI Platform — Build Progress
 
-> **Last updated:** 2026-09-05 | **Stack tier:** Enterprise | **113/138 shipped (Phases 1–22) · Phases 23–26 planned (user management, knowledge base, tenant BYOK LLM — ADRs 009/010/011)**
+> **Last updated:** 2026-09-05 | **Stack tier:** Enterprise | **118/138 shipped (Phases 1–23) · Phases 24–26 planned (knowledge base, tenant BYOK LLM — ADRs 010/011)**
 
 ---
 
@@ -1406,11 +1406,11 @@ validation permissions (user_roles plumbing exists, unused).
 
 | # | Task | Status |
 |---|---|---|
-| 114 | `app/services/users.py` (GUC-writer on `genbi_admin`, tenant GUC for tenant scoping beyond the permissive control-plane policy): list/create/update (email, roles ⊆ user/admin)/enable-disable, admin reset-password, hard delete with last-active-tenant-admin refusal; bcrypt via existing `security.py`; unique-email-per-tenant enforcement | ⬜ |
-| 115 | API: GET+POST /users, PATCH+DELETE /users/{id} (422 LAST_TENANT_ADMIN), POST /users/{id}/reset-password — guard = tenant `admin` role OR platform superuser; GET /auth/me (identity + roles + platform_admin); POST /auth/change-password (self-service, current-password check, reuses login throttle) | ⬜ |
-| 116 | Tests: 15+ — role guard matrix (user 403 / tenant admin 200 / superuser cross-tenant 200), last-admin refusal, email uniqueness per tenant, password reset + change-password flows (wrong current → 401), /auth/me claim fidelity; API matrix | ⬜ |
-| 117 | Frontend: `/settings` page (makes the chat-header Settings button real) — profile via /auth/me, change-password form, per-tenant user admin table for tenant admins (create/edit/disable/delete/reset) | ⬜ |
-| 118 | Docs: api-reference ✅-statuses flipped for /users + /auth additions; frontend-guide section for settings/admin-adjacent pages | ⬜ |
+| 114 | `app/services/users.py` (GUC-writer on `genbi_admin`, tenant GUC for tenant scoping beyond the permissive control-plane policy): list/create/update (email, roles ⊆ user/admin)/enable-disable, admin reset-password, hard delete with last-active-tenant-admin refusal; bcrypt via existing `security.py`; unique-email-per-tenant enforcement | ✅ |
+| 115 | API: GET+POST /users, PATCH+DELETE /users/{id} (422 LAST_TENANT_ADMIN), POST /users/{id}/reset-password — guard = tenant `admin` role OR platform superuser; GET /auth/me (identity + roles + platform_admin); POST /auth/change-password (self-service, current-password check, reuses login throttle) | ✅ |
+| 116 | Tests: 15+ — role guard matrix (user 403 / tenant admin 200 / superuser cross-tenant 200), last-admin refusal, email uniqueness per tenant, password reset + change-password flows (wrong current → 401), /auth/me claim fidelity; API matrix | ✅ |
+| 117 | Frontend: `/settings` page (makes the chat-header Settings button real) — profile via /auth/me, change-password form, per-tenant user admin table for tenant admins (create/edit/disable/delete/reset) | ✅ |
+| 118 | Docs: api-reference ✅-statuses flipped for /users + /auth additions; frontend-guide section for settings/admin-adjacent pages | ✅ |
 
 ## Phase 24 — OpenWiki: Tenant Knowledge Base (Tasks 119–125)
 
@@ -1502,3 +1502,25 @@ validation permissions (user_roles plumbing exists, unused).
   renders only for superusers
 - Backend suite still green after the additive UserOut.platform_admin
   change (same single pre-existing Cube-dependent failure)
+
+### Phase 23 — verified by (2026-09-05)
+
+- 23 new tests (services: bcrypt/GUC contract, roles validation,
+  unique-violation mapping, last-admin guard on demote/disable/delete,
+  change-password wrong-current throttling + success hash verification;
+  API: guard matrix incl. superuser cross-tenant + non-superuser
+  cross-tenant refusal, 400/404/409/422 mapping, /auth/me fidelity,
+  email JWT claim roundtrip). Full suite: 304 passed / 1 pre-existing
+  (Cube-dependent, reproduced on HEAD earlier)
+- Live stack: create → 201; duplicate → 409 USER_EXISTS; wrong current
+  password → 401; plain user on /users → 403 NOT_TENANT_ADMIN; promote →
+  200; disable non-last admin → 200; disabled login → indistinguishable
+  401; reset → login succeeds; last_login_at stamped; deleting the last
+  active admin → 422 LAST_TENANT_ADMIN
+- Frontend: tsc 0, eslint 0 errors, next build 14/14 routes incl. /settings;
+  shared UsersAdmin table powers both /settings (tenant admins) and the
+  admin portal tenant detail (superuser ?tenant_id= path); chat-header
+  Settings button wired
+- Drive-by: Field(pattern=…) on Optional fields made them required — fixed
+  in both /users and /admin update models (name-only PATCHes would have
+  422'd)

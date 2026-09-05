@@ -280,6 +280,23 @@ Redirects to `/chat` if already authenticated; otherwise renders `LoginForm`, wh
 
 Wraps `ChatView` in `AuthGuard` (redirects to `/login` when signed out). The header's database icon navigates to `/explore`; the file icon to `/reports`.
 
+### `settings/page.tsx` — Settings Page (Phase 23)
+
+Wraps `SettingsView` (`components/settings/settings-view.tsx`) in `AuthGuard`
+— the chat-header gear icon routes here. Three sections:
+
+- **Profile** from `GET /auth/me` (email, tenant, roles, platform-superuser badge).
+- **Change password** (`POST /auth/change-password`): current + new password;
+  a wrong current password counts toward the login lockout ( surfaced as a
+  hint).
+- **Tenant users** (visible to the tenant `admin` role): the shared
+  `UsersAdmin` table (`components/settings/users-admin.tsx`) — create (with
+  generated-password option + admin-role toggle), role select,
+  enable/disable, reset password (generated one-time value), delete with
+  confirm. Self-actions are disabled (you cannot demote/delete yourself).
+  The same component powers the admin portal's tenant detail page via the
+  superuser `?tenant_id=` path.
+
 ### `explore/page.tsx` — Explore Page (Phase 10)
 
 Wraps `ExploreView` (`components/explore/explore-view.tsx`) in `AuthGuard`. The semantic-layer workbench:

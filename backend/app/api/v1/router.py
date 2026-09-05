@@ -14,6 +14,7 @@ from app.api.v1 import (
     lineage,
     metrics,
     reports,
+    users,
 )
 
 api_router = APIRouter()
@@ -28,4 +29,5 @@ api_router.include_router(metrics.router, prefix="/metrics", tags=["metrics"])
 api_router.include_router(dashboards.router, prefix="/dashboards", tags=["dashboards"])
 api_router.include_router(lineage.router, prefix="/lineage", tags=["lineage"])
 api_router.include_router(admin.router, prefix="/admin", tags=["admin"])
+api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(datasources.router, prefix="/datasources", tags=["datasources"])

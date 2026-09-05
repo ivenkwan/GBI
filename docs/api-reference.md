@@ -458,7 +458,7 @@ Errors: `403 NOT_PLATFORM_ADMIN`, `400 INVALID_SLUG`, `409 TENANT_EXISTS`,
 `409 USER_EXISTS`, `422 TENANT_NOT_EMPTY` (delete without force),
 `403 TENANT_SUSPENDED` (on any authenticated endpoint for suspended tenants).
 
-## Tenant Users — ADR 009 §6 / Phase 23
+## Tenant Users — ADR 009 §6 / Phase 23 ✅ (built)
 
 Guard: tenant `admin` role or platform superuser (user management is
 in-tenant; platform admins act cross-tenant through the same endpoints).
@@ -496,7 +496,7 @@ Agent integration (same phase): retrieved wiki chunks feed a
 `## Tenant Knowledge` section of the NL2SQL prompt, and the router's
 `chat_knowledge` intent answers from wiki search directly.
 
-## BYOK LLM Providers (tenant + admin) — ADR 011
+## BYOK LLM Providers (tenant + admin) — ADR 011 (planned, Phases 25–26)
 
 > Planned (Phases 25–26 — not yet built). Writes validate the candidate
 > config with a live 1-token provider ping; reads are always masked — the
