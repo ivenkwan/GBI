@@ -1,0 +1,101 @@
+"""RouterAgent — intent classification and agent dispatch.
+
+Classifies the user's natural language query into one or more agent pipelines:
+- chat_data: NL → SQL → execute → chart + narrative
+- chat_knowledge: RAG over documents / knowledge base
+- chat_visualize: Direct chart generation from inline data or file
+- chat_explore: Schema exploration and data profiling
+"""
+
+import json
+
+from app.agents.base import AgentResult, BaseAgent
+from app.agents.registry import register_agent
+
+
+@register_agent("router")
+class RouterAgent(BaseAgent):
+    """Routes user queries to the appropriate agent pipeline."""
+
+    name = "router"
+    description = "Intent classifier and agent dispatch router"
+
+    INTENTS = ["chat_data", "chat_visualize", "chat_knowledge", "chat_explore", "chat_report"]
+
+    async def execute(
+        self, query: str, conversation_history: list[dict] | None = None, **kwargs
+    ) -> AgentResult:
+        """Classify the query intent and return a dispatch plan."""
+        import time
+
+        start = time.time()
+
+        intent = await self._classify_intent(query)
+        plan = self._build_dispatch_plan(intent, query)
+
+        return self._timed_result(
+            AgentResult(
+                agent_name=self.name,
+                success=True,
+                output={"intent": intent, "dispatch_plan": plan},
+            ),
+            start,
+        )
+
+    async def _classify_intent(self, query: str) -> str:
+        """Classify query intent using a fast LLM call."""
+        from langchain_anthropic import ChatAnthropic
+
+        from app.core.config import settings
+
+        llm = ChatAnthropic(
+            model=settings.LLM_FAST_MODEL,
+            temperature=0,
+            max_tokens=256,
+            api_key=settings.ANTHROPIC_API_KEY,
+        )
+
+        prompt = f"""Classify this user query into exactly one intent category:
+- chat_data: asking for data from a database (SQL query needed)
+- chat_visualize: asking to create a chart or visualization
+- chat_knowledge: asking about concepts, documentation, or knowledge
+- chat_explore: asking to explore or understand a data schema
+- chat_report: asking to generate a full report with charts and narrative
+
+Query: {query}
+
+Return ONLY a JSON object with the key "intent"."""
+
+        response = await llm.ainvoke(prompt)
+        try:
+            result = json.loads(response.content)
+            return result.get("intent", "chat_data")
+        except json.JSONDecodeError:
+            return "chat_data"  # Default fallback
+
+    def _build_dispatch_plan(self, intent: str, query: str) -> list[dict]:
+        """Build an ordered list of agent calls based on intent."""
+        plans = {
+            "chat_data": [
+                {"agent": "nl2sql", "input": {"query": query}},
+                {"agent": "validation", "input": {}},
+                {"agent": "chart_gen", "input": {}},
+                {"agent": "narrative", "input": {}},
+            ],
+            "chat_visualize": [
+                {"agent": "chart_gen", "input": {"query": query}},
+            ],
+            "chat_report": [
+                {"agent": "nl2sql", "input": {"query": query}},
+                {"agent": "validation", "input": {}},
+                {"agent": "chart_gen", "input": {}},
+                {"agent": "narrative", "input": {}},
+            ],
+            "chat_knowledge": [
+                {"agent": "narrative", "input": {"query": query, "mode": "rag"}},
+            ],
+            "chat_explore": [
+                {"agent": "nl2sql", "input": {"query": query, "mode": "explore"}},
+            ],
+        }
+        return plans.get(intent, [{"agent": "nl2sql", "input": {"query": query}}])

@@ -1,0 +1,203 @@
+"""API tests for /reports (Phase 16) — service mocked, JWTs minted."""
+
+import uuid
+from unittest.mock import AsyncMock, MagicMock
+
+from httpx import ASGITransport, AsyncClient
+
+from app.core.auth import create_access_token
+
+TENANT = "00000000-0000-0000-0000-000000000001"
+REPORT_ID = str(uuid.uuid4())
+
+
+def _report_dict():
+    return {
+        "report_id": REPORT_ID,
+        "title": "Q3 Report",
+        "prompt": "Q3 performance",
+        "summary": "Solid quarter.",
+        "status": "complete",
+        "created_at": "2026-08-15T10:00:00+00:00",
+        "sections": [
+            {
+                "position": 0,
+                "metric_name": "Sales.revenue_total",
+                "section_title": "Revenue by Region",
+                "chart_spec": {"chartType": "Bar Chart"},
+                "chart_svg": "<svg/>",
+                "data_total": 215000.0,
+                "row_count": 2,
+                "narrative": None,
+            }
+        ],
+        "warnings": [],
+    }
+
+
+def _patch_service(monkeypatch, generate=None, lister=None, getter=None):
+    import app.services.reports as reports_module
+
+    service = MagicMock()
+    service.generate_report = AsyncMock(
+        return_value=generate if generate is not None else _report_dict()
+    )
+    service.list_reports = AsyncMock(
+        return_value=lister
+        if lister is not None
+        else [
+            {
+                "id": REPORT_ID,
+                "title": "Q3 Report",
+                "created_at": "2026-08-15T10:00:00+00:00",
+                "section_count": 1,
+            }
+        ]
+    )
+    service.get_report = AsyncMock(return_value=getter if getter is not None else _report_dict())
+    # monkeypatch (not plain assignment) so mocks restore between tests
+    monkeypatch.setattr(reports_module, "generate_report", service.generate_report)
+    monkeypatch.setattr(reports_module, "list_reports", service.list_reports)
+    monkeypatch.setattr(reports_module, "get_report", service.get_report)
+    return service
+
+
+def _auth_headers() -> dict:
+    token = create_access_token(user_id="test-user", tenant_id=TENANT)
+    return {"Authorization": f"Bearer {token}"}
+
+
+async def _client() -> AsyncClient:
+    from app.main import create_app
+
+    transport = ASGITransport(app=create_app())
+    return AsyncClient(transport=transport, base_url="http://test")
+
+
+async def test_generate_returns_report(monkeypatch):
+    service = _patch_service(monkeypatch)
+
+    async with await _client() as client:
+        res = await client.post(
+            "/api/v1/reports/generate",
+            json={"prompt": "Q3 performance", "max_sections": 3},
+            headers=_auth_headers(),
+        )
+
+    assert res.status_code == 200
+    body = res.json()
+    assert body["title"] == "Q3 Report"
+    assert body["sections"][0]["chart_svg"] == "<svg/>"
+
+    # Tenant + user from the JWT thread into generation
+    kwargs = service.generate_report.await_args.kwargs
+    assert kwargs["tenant_id"] == TENANT
+    assert kwargs["max_sections"] == 3
+
+
+async def test_generate_503_on_generation_failure(monkeypatch):
+    from app.services.reports import ReportGenerationError
+
+    _patch_service(monkeypatch)
+    import app.services.reports as reports_module
+
+    monkeypatch.setattr(
+        reports_module,
+        "generate_report",
+        AsyncMock(side_effect=ReportGenerationError("planner failed")),
+    )
+
+    async with await _client() as client:
+        res = await client.post(
+            "/api/v1/reports/generate",
+            json={"prompt": "x"},
+            headers=_auth_headers(),
+        )
+
+    assert res.status_code == 503
+    assert res.json()["detail"]["code"] == "REPORT_GENERATION_FAILED"
+
+
+async def test_generate_validates_request(monkeypatch):
+    _patch_service(monkeypatch)
+
+    async with await _client() as client:
+        res = await client.post(
+            "/api/v1/reports/generate",
+            json={"prompt": "", "max_sections": 9},
+            headers=_auth_headers(),
+        )
+
+    assert res.status_code == 422
+
+
+async def test_list_reports(monkeypatch):
+    _patch_service(monkeypatch)
+
+    async with await _client() as client:
+        res = await client.get("/api/v1/reports", headers=_auth_headers())
+
+    assert res.status_code == 200
+    body = res.json()
+    assert body["count"] == 1
+    assert body["reports"][0]["section_count"] == 1
+
+
+async def test_list_503_on_store_failure(monkeypatch):
+    _patch_service(monkeypatch)
+    import app.services.reports as reports_module
+
+    monkeypatch.setattr(
+        reports_module, "list_reports", AsyncMock(side_effect=ConnectionError("db down"))
+    )
+
+    async with await _client() as client:
+        res = await client.get("/api/v1/reports", headers=_auth_headers())
+
+    assert res.status_code == 503
+    assert res.json()["detail"]["code"] == "PERSISTENCE_UNAVAILABLE"
+
+
+async def test_get_report_happy(monkeypatch):
+    _patch_service(monkeypatch)
+
+    async with await _client() as client:
+        res = await client.get(f"/api/v1/reports/{REPORT_ID}", headers=_auth_headers())
+
+    assert res.status_code == 200
+    assert res.json()["report_id"] == REPORT_ID
+
+
+async def test_get_report_404(monkeypatch):
+    _patch_service(monkeypatch)
+    import app.services.reports as reports_module
+
+    monkeypatch.setattr(reports_module, "get_report", AsyncMock(return_value=None))
+
+    async with await _client() as client:
+        res = await client.get(
+            "/api/v1/reports/00000000-0000-0000-0000-0000000000ff",
+            headers=_auth_headers(),
+        )
+
+    assert res.status_code == 404
+    assert res.json()["detail"]["code"] == "REPORT_NOT_FOUND"
+
+
+async def test_get_report_rejects_non_uuid(monkeypatch):
+    _patch_service(monkeypatch)
+
+    async with await _client() as client:
+        res = await client.get("/api/v1/reports/not-a-uuid", headers=_auth_headers())
+
+    assert res.status_code == 400
+    assert res.json()["detail"]["code"] == "INVALID_REPORT"
+
+
+async def test_reports_require_auth(monkeypatch):
+    _patch_service(monkeypatch)
+
+    async with await _client() as client:
+        res = await client.get("/api/v1/reports")
+
+    assert res.status_code in (401, 403)

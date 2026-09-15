@@ -1,0 +1,44 @@
+"use client";
+
+import Link from "next/link";
+import { useAuth } from "@/components/auth/auth-provider";
+
+export default function HomePage() {
+  const { isAuthenticated, loading } = useAuth();
+
+  return (
+    <main className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-6 text-center">
+      <div className="w-12 h-12 rounded-xl bg-brand-600 flex items-center justify-center mb-6">
+        <span className="text-white font-bold text-xl">G</span>
+      </div>
+
+      <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 tracking-tight">
+        GenBI
+      </h1>
+      <p className="mt-4 max-w-xl text-lg text-gray-600">
+        Ask questions about your data in plain English. Get validated SQL, a
+        chart, and a written insight — governed, explainable, and multi-tenant.
+      </p>
+
+      <div className="mt-8">
+        {loading ? (
+          <span className="text-sm text-gray-400">Loading…</span>
+        ) : isAuthenticated ? (
+          <Link
+            href="/chat"
+            className="px-6 py-3 bg-brand-600 text-white rounded-lg font-medium hover:bg-brand-700 transition-colors"
+          >
+            Open GenBI
+          </Link>
+        ) : (
+          <Link
+            href="/login"
+            className="px-6 py-3 bg-brand-600 text-white rounded-lg font-medium hover:bg-brand-700 transition-colors"
+          >
+            Sign in
+          </Link>
+        )}
+      </div>
+    </main>
+  );
+}

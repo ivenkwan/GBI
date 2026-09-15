@@ -1,0 +1,36 @@
+"""Chart request/response schemas — Flint MCP integration."""
+
+from pydantic import BaseModel, Field
+
+
+class ChartAssemblyInput(BaseModel):
+    """Unified chart specification following the Flint ChartAssemblyInput schema."""
+
+    chartType: str = Field(
+        ..., description="Chart type, e.g. 'Bar Chart', 'Line Chart', 'Scatter Chart'"
+    )
+    encodings: dict = Field(..., description="Field-to-channel mappings: x, y, color, size, etc.")
+    baseSize: dict = Field(default_factory=lambda: {"width": 600, "height": 400})
+    semantic_types: dict[str, str] = Field(
+        default_factory=dict, description="Field-level semantic types: Category, Quantity, Temporal"
+    )
+    data: dict = Field(..., description="Inline data values or file URL")
+
+
+class ChartRenderRequest(BaseModel):
+    """Request to render a chart via Flint MCP."""
+
+    spec: ChartAssemblyInput
+    backend: str = Field(default="vegalite", description="vegalite, echarts, or chartjs")
+    format: str = Field(default="png", description="png or svg")
+
+
+class ChartRenderResponse(BaseModel):
+    """Response from Flint chart rendering."""
+
+    success: bool
+    format: str
+    image_base64: str | None = None
+    svg: str | None = None
+    warnings: list[str] = []
+    errors: list[str] = []
