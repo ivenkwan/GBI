@@ -54,3 +54,9 @@ semantic/dbt/target/
 
 # Graphify (knowledge graph output)
 graphify-out/
+
+# Cube dev-server runtime state (rewritten on every start — never commit)
+semantic/cube/.cubestore/
+
+# pnpm content-addressable store (docker build cache)
+frontend/.pnpm-store/
