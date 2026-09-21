@@ -1,0 +1,25 @@
+# Demo-mode override — layered on docker-compose.dev.yml by the demo CLI
+# (scripts/demo.py): the frontend serves its PRODUCTION build instead of the
+# dev server. Prebuilt hashed assets mean no HMR state, no on-demand compile
+# races, and no dev-mode cross-origin asset checks — the fragility we kept
+# hitting when the demo frontend restarted under browsers on the LAN.
+#
+#   docker compose -f infra/docker-compose.dev.yml -f infra/docker-compose.demo.yml ...
+#
+# Plain development (`make up`, single dev file) still runs `pnpm dev` with
+# the source bind-mounted.
+services:
+  frontend:
+    # No source bind mounts — serve what the image baked in.
+    volumes: !reset []
+    # The production stage's CMD (node server.js, port 3000 in-container).
+    command: ["node", "server.js"]
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      target: production
+      args:
+        # Inlined into the client bundle AND the standalone server's
+        # serialized next.config.js at build time (see Dockerfile ARGs).
+        NEXT_PUBLIC_API_URL: /api/v1
+        BACKEND_INTERNAL_URL: http://backend:8000

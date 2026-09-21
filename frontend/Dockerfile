@@ -19,6 +19,14 @@ RUN corepack enable && corepack prepare pnpm@10.34.5 --activate \
 # Stage 2: Build
 FROM node:22-alpine AS builder
 WORKDIR /app
+# Build-time vars — the standalone server serializes next.config.js during
+# `pnpm build`, so anything it reads (the /api/v1 rewrite destination) must
+# be baked here, not supplied at runtime. The dev target never builds, so
+# `next dev` still evaluates these from its live environment.
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ARG BACKEND_INTERNAL_URL
+ENV BACKEND_INTERNAL_URL=${BACKEND_INTERNAL_URL}
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN corepack enable && corepack prepare pnpm@10.34.5 --activate && pnpm build

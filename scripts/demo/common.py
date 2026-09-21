@@ -25,7 +25,14 @@ import urllib.request
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-COMPOSE_FILE = REPO_ROOT / "infra" / "docker-compose.dev.yml"
+# The demo stack layers the demo override on the dev compose file: same
+# services, but the frontend serves its production build (see
+# docker-compose.demo.yml for why). Plain `make up` uses the dev file alone.
+COMPOSE_FILES = [
+    REPO_ROOT / "infra" / "docker-compose.dev.yml",
+    REPO_ROOT / "infra" / "docker-compose.demo.yml",
+]
+COMPOSE_ARGS = [arg for f in COMPOSE_FILES for arg in ("-f", str(f))]
 BACKEND_ENV = REPO_ROOT / "backend" / ".env"
 
 # The prebuilt pgvector+AGE image CI publishes (skip the slow source build).
@@ -208,16 +215,12 @@ def run(cmd: list[str], *, shell: bool = False, check: bool = True, quiet: bool 
 
 
 def compose(*args: str, check: bool = True, quiet: bool = False):
-    return run(
-        ["docker", "compose", "-f", str(COMPOSE_FILE), *args],
-        check=check,
-        quiet=quiet,
-    )
+    return run(["docker", "compose", *COMPOSE_ARGS, *args], check=check, quiet=quiet)
 
 
 def compose_quiet(*args: str) -> subprocess.CompletedProcess:
     """compose with captured output; caller checks returncode."""
-    return run(["docker", "compose", "-f", str(COMPOSE_FILE), *args], check=False, quiet=True)
+    return run(["docker", "compose", *COMPOSE_ARGS, *args], check=False, quiet=True)
 
 
 def psql(sql: str) -> str:

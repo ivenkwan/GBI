@@ -513,3 +513,21 @@ on the LAN got HTML without CSS/JS. Fixes:
 Verified: login POST via `http://<host>:3003/api/v1/auth/login` → 200;
 CSS asset with LAN Origin → 200; SSE route through the proxy → 401
 unauthenticated (routing proven); tsc/eslint/build clean.
+
+### Phase 27b addendum 2 — demo frontend in production mode (2026-09-21)
+
+After another unstyled-page report (stale dev-server session across
+restarts: "Fast Refresh had to perform a full reload due to a runtime
+error"), the demo stack now serves the frontend's PRODUCTION build:
+
+- `infra/docker-compose.demo.yml` (layered by the demo CLI over the dev
+  file): frontend target `production`, no bind mounts, `node server.js`.
+  Plain `make up` keeps `pnpm dev` for development.
+- `frontend/Dockerfile`: `NEXT_PUBLIC_API_URL` and `BACKEND_INTERNAL_URL`
+  become build ARGs — the standalone server serializes next.config.js
+  during `pnpm build`, so runtime env cannot steer the /api/v1 rewrite
+  (first attempt 500'd exactly because of that). Also added the missing
+  `public/` dir (the never-exercised production stage COPYed it).
+- Verified: hashed assets + page 200 via the LAN IP; proxy through the
+  standalone server (health/login/auth'd conversations → 200); relative
+  `/api/v1` baked in the client bundle; verify.sh 13/13.

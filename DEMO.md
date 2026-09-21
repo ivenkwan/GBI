@@ -30,6 +30,12 @@ open http://localhost:3003
 > with `GENBI_HOST_FRONTEND_PORT` (same pattern for pg/redis/cube/grafana:
 > `GENBI_HOST_*_PORT`). The backend stays on 8000.
 >
+> **Production frontend.** The demo stack layers
+> `infra/docker-compose.demo.yml` over the dev compose file: the frontend
+> serves its **production build** (prebuilt hashed assets — no dev-server
+> HMR, compile races, or dev-origin checks). Plain `make up` still runs
+> `pnpm dev` with mounted sources for development.
+
 > **Accessing from another machine** (LAN IP / SSH tunnel): the browser talks
 > only to the frontend origin — `/api/v1` is proxied server-side to the
 > backend (`next.config.js` rewrites) — so `http://<host>:3003` works from
