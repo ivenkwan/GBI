@@ -29,6 +29,13 @@ open http://localhost:3003
 > `CORS_ORIGINS` — `make demo-status` always prints the live URL. Pin a port
 > with `GENBI_HOST_FRONTEND_PORT` (same pattern for pg/redis/cube/grafana:
 > `GENBI_HOST_*_PORT`). The backend stays on 8000.
+>
+> **Accessing from another machine** (LAN IP / SSH tunnel): the browser talks
+> only to the frontend origin — `/api/v1` is proxied server-side to the
+> backend (`next.config.js` rewrites) — so `http://<host>:3003` works from
+> anywhere that can reach the host, no CORS or port-forwarding gymnastics.
+> If a page ever renders unstyled after a rebuild, hard-refresh
+> (Ctrl+Shift+R) to drop stale asset references.
 
 ## What each command does
 

@@ -493,3 +493,23 @@ threaded the same env into compose + verify.sh.
   interpolates the defaults (3003/5432/…) — on this shared machine pin the
   ports (e.g. `GENBI_HOST_PG_PORT=5433`) or use the demo CLI, which
   remembers running containers' ports.
+
+### Phase 27b addendum — remote-browser fixes (2026-09-21)
+
+The first remote login attempt rendered an UNSTYLED, non-hydrated login
+page: Next.js dev mode refuses `/_next/*` assets for cross-origin clients
+(logged: "Cross origin request detected from 172.23.16.54"), so browsers
+on the LAN got HTML without CSS/JS. Fixes:
+
+1. `allowedDevOrigins` in `next.config.js` (localhost/127.0.0.1/*.local +
+   RFC1918 wildcard patterns) — LAN clients now receive dev assets.
+2. Same-origin API proxy: `/api/v1/:path*` rewrites to
+   `BACKEND_INTERNAL_URL` (http://backend:8000 in compose,
+   http://localhost:8000 for host dev); `NEXT_PUBLIC_API_URL=/api/v1` and
+   the chat SSE URL builder handles relative bases. The browser now talks
+   only to the frontend origin — works from localhost, the machine's LAN
+   IP, or an SSH tunnel without CORS or extra port-forwards.
+
+Verified: login POST via `http://<host>:3003/api/v1/auth/login` → 200;
+CSS asset with LAN Origin → 200; SSE route through the proxy → 401
+unauthenticated (routing proven); tsc/eslint/build clean.

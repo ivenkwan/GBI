@@ -50,8 +50,11 @@ const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/
   /\/?$/,
   "/",
 );
-// Fixed relative route resolved against the configured base at module load.
-const CHAT_STREAM_URL = new URL("/chat/stream", API_BASE).toString();
+// Absolute bases resolve the stream URL; relative bases (the same-origin
+// /api/v1 proxy) are used as-is — `new URL` rejects relative input.
+const CHAT_STREAM_URL = API_BASE.startsWith("http")
+  ? new URL("/chat/stream", API_BASE).toString()
+  : `${API_BASE}chat/stream`;
 
 export function ChatView() {
   const { token } = useAuth();

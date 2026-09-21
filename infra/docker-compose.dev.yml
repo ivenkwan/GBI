@@ -92,7 +92,11 @@ services:
       target: builder
     container_name: genbi-frontend
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+      # Same-origin API path — the Next server proxies /api/v1 to the
+      # backend (see next.config.js rewrites), so the browser works from
+      # localhost, the machine's LAN IP, or an SSH tunnel alike.
+      NEXT_PUBLIC_API_URL: /api/v1
+      BACKEND_INTERNAL_URL: http://backend:8000
     ports:
       - "${GENBI_HOST_FRONTEND_PORT:-3003}:3000"
     depends_on:

@@ -1,6 +1,6 @@
 # GenBI Platform — Build Progress
 
-> **Last updated:** 2026-09-21 | **Stack tier:** Enterprise | **151/151 shipped (Phases 1–27b) · roadmap complete**
+> **Last updated:** 2026-09-21 | **Stack tier:** Enterprise | **152/152 shipped (Phases 1–27b) · roadmap complete**
 
 ---
 
@@ -1879,6 +1879,7 @@ all → 148 last. Each task its own commit, matching the repo convention
 | 149 | Workspace shell: `app/(app)` route group + `AppShell` (dark sidebar nav, sectioned links, admin entry for superusers, user card with logout, mobile drawer) + shared `PageHeader`; split-screen login with demo-credentials hint; gradient landing page; brand palette + slim scrollbars; all six workspace views stripped of bespoke headers (URLs unchanged) | ✅ |
 | 150 | Frontend port 3003 as the default across artifacts: compose mapping + comment, demo CLI `PORT_ENV`, verify.sh, backend `CORS_ORIGINS` default + `.env.example`, README/DEMO URLs; `ensure_cors_origins` becomes always-ensure; `ports_match_running` guard so `demo up` reconciles a port change instead of fast-pathing | ✅ |
 | 151 | Verification: tsc 0 / eslint 0 / next build 15/15 routes; images rebuilt and stack reconciled onto 3003 (old 3002 binding gone); verify.sh 13/13 incl. frontend on :3003; CORS preflight + demo login from origin 3003 green; 30 demo tests + ruff clean | ✅ |
+| 152 | Remote-browser fixes: `allowedDevOrigins` (Next dev blocked /_next/* assets for LAN clients → unstyled, non-hydrated page) + same-origin API proxy (`/api/v1` rewrites → backend over the compose network; `NEXT_PUBLIC_API_URL=/api/v1`), so the demo works from localhost, the machine's LAN IP, or an SSH tunnel | ✅ |
 
 ### Phase 27b — verified by (2026-09-21)
 
@@ -1892,6 +1893,11 @@ all → 148 last. Each task its own commit, matching the repo convention
 - Offline: `backend/tests/demo/` 30 passed; ruff check + format clean on
   the demo CLI after the `ports_match_running` / `ensure_cors_origins`
   changes.
+- Task 152 verified live: CSS asset serves with `Origin: http://<LAN-IP>:3003`
+  (previously blocked → the user's unstyled login page); POST
+  `http://<host>:3003/api/v1/auth/login` → 200 through the rewrite proxy;
+  `/api/v1/chat/stream` routes (401 unauthenticated = expected). tsc 0 /
+  eslint 0 / build 15/15 after the changes.
 
 ---
 
