@@ -1,3 +1,11 @@
+# GenBI dev stack.
+#
+# Host-side ports are env-overridable (defaults unchanged) so the stack can
+# coexist with other local services: GENBI_HOST_PG_PORT, GENBI_HOST_REDIS_PORT,
+# GENBI_HOST_FRONTEND_PORT, GENBI_HOST_CUBE_PORT, GENBI_HOST_GRAFANA_PORT,
+# GENBI_HOST_PROM_PORT. The demo CLI (scripts/demo.py) auto-picks free
+# alternates and threads the same variables into scripts/verify.sh. The
+# backend stays fixed on 8000 (the frontend's NEXT_PUBLIC_API_URL points at it).
 services:
   # =========================================================================
   # Core Services
@@ -15,13 +23,14 @@ services:
       # Opt out of AGE at boot if you don't need lineage (dev convenience).
       GENBI_ENABLE_AGE: ${GENBI_ENABLE_AGE:-true}
     ports:
-      - "5432:5432"
+      - "${GENBI_HOST_PG_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
-      # 99- prefix keeps it after init.sql (alphabetical apply order): the AGE
-      # lineage functions need the roles/grants init.sql creates (Phase 17).
-      - ./postgres/age-lineage.sql:/docker-entrypoint-initdb.d/99-age-lineage.sql:ro
+      # Numeric prefixes force the apply order under ANY collation (digits
+      # sort before letters in the container's C locale, which put a 99-
+      # prefix FIRST and aborted init before init.sql created the roles).
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./postgres/age-lineage.sql:/docker-entrypoint-initdb.d/02-age-lineage.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U genbi"]
       interval: 5s
@@ -32,7 +41,7 @@ services:
     image: redis:7-alpine
     container_name: genbi-redis
     ports:
-      - "6379:6379"
+      - "${GENBI_HOST_REDIS_PORT:-6379}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -83,7 +92,7 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
     ports:
-      - "3000:3000"
+      - "${GENBI_HOST_FRONTEND_PORT:-3000}:3000"
     depends_on:
       backend:
         condition: service_healthy
@@ -101,7 +110,7 @@ services:
     env_file:
       - ../semantic/cube/.env
     ports:
-      - "4000:4000"
+      - "${GENBI_HOST_CUBE_PORT:-4000}:4000"
     volumes:
       - ../semantic/cube:/cube/conf
     depends_on:
@@ -121,7 +130,7 @@ services:
     image: prom/prometheus:latest
     container_name: genbi-prometheus
     ports:
-      - "9090:9090"
+      - "${GENBI_HOST_PROM_PORT:-9090}:9090"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
 
@@ -129,7 +138,7 @@ services:
     image: grafana/grafana:latest
     container_name: genbi-grafana
     ports:
-      - "3001:3000"
+      - "${GENBI_HOST_GRAFANA_PORT:-3001}:3000"
     depends_on:
       - prometheus
 

@@ -17,7 +17,7 @@ import argparse
 import asyncio
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
@@ -77,14 +77,16 @@ async def get_schema_metadata(conn, schema: str = "public") -> list[dict]:
                 "columns": [],
             }
 
-        tables[key]["columns"].append({
-            "column_name": record["column_name"],
-            "data_type": record["data_type"],
-            "udt_name": record["udt_name"],
-            "is_nullable": record["is_nullable"],
-            "ordinal_position": record["ordinal_position"],
-            "description": record["column_description"] or "",
-        })
+        tables[key]["columns"].append(
+            {
+                "column_name": record["column_name"],
+                "data_type": record["data_type"],
+                "udt_name": record["udt_name"],
+                "is_nullable": record["is_nullable"],
+                "ordinal_position": record["ordinal_position"],
+                "description": record["column_description"] or "",
+            }
+        )
 
     return list(tables.values())
 
@@ -129,12 +131,13 @@ async def sync_schema(
     conn,
     schema: str = "public",
     dry_run: bool = False,
+    tenant_id: str = DEFAULT_TENANT_ID,
 ) -> dict[str, int]:
     """Sync schema metadata to the schema_embeddings table.
 
     For each table in information_schema:
         1. Build embedding text from table + column metadata
-        2. Generate embedding via Anthropic API
+        2. Generate embedding via the shared provider
         3. Upsert into schema_embeddings with tenant_id
 
     Returns:
@@ -150,7 +153,7 @@ async def sync_schema(
 
     # schema_embeddings is RLS-enrolled and FORCEd — even the owner needs the
     # tenant GUC set before writing.
-    await set_tenant_guc(conn, DEFAULT_TENANT_ID)
+    await set_tenant_guc(conn, tenant_id)
 
     processed = 0
     embeddings = 0
@@ -190,7 +193,7 @@ async def sync_schema(
                             updated_at = EXCLUDED.updated_at
                         """,
                         str(uuid4()),
-                        DEFAULT_TENANT_ID,
+                        tenant_id,
                         table["table_schema"],
                         table["table_name"],
                         table["full_name"],
@@ -198,7 +201,7 @@ async def sync_schema(
                         columns_json,
                         embedding_text,
                         str(embedding_vector),
-                        datetime.now(timezone.utc),
+                        datetime.now(UTC),
                     )
 
                 logger.info(
@@ -282,7 +285,8 @@ async def main():
         description="Sync database schema metadata to pgvector embeddings"
     )
     parser.add_argument(
-        "--schema", default="public",
+        "--schema",
+        default="public",
         help="Database schema to embed (default: public)",
     )
     parser.add_argument(
@@ -290,11 +294,13 @@ async def main():
         help="Limit to tables matching this prefix (e.g. 'sales')",
     )
     parser.add_argument(
-        "--dry-run", action="store_true",
+        "--dry-run",
+        action="store_true",
         help="Preview tables without generating embeddings or writing",
     )
     parser.add_argument(
-        "--examples", action="store_true",
+        "--examples",
+        action="store_true",
         help="Also seed agent_examples with the golden NL/SQL pairs",
     )
     parser.add_argument(
@@ -302,6 +308,11 @@ async def main():
         default=None,
         help="Golden JSON path for --examples "
         "(default: backend/tests/evals/nl2sql_golden.json relative to repo root)",
+    )
+    parser.add_argument(
+        "--tenant-id",
+        default=DEFAULT_TENANT_ID,
+        help=f"Tenant to embed for (default: {DEFAULT_TENANT_ID})",
     )
     parser.add_argument(
         "--connection-url",
@@ -323,14 +334,17 @@ async def main():
             conn=conn,
             schema=args.schema,
             dry_run=args.dry_run,
+            tenant_id=args.tenant_id,
         )
 
         if args.examples and not args.dry_run:
             examples_file = args.examples_file
             if examples_file is None:
                 repo_root = Path(__file__).resolve().parents[1]
-                examples_file = str(repo_root / "backend" / "tests" / "evals" / "nl2sql_golden.json")
-            await sync_examples(conn, examples_file)
+                examples_file = str(
+                    repo_root / "backend" / "tests" / "evals" / "nl2sql_golden.json"
+                )
+            await sync_examples(conn, examples_file, tenant_id=args.tenant_id)
     finally:
         await conn.close()
 
@@ -345,7 +359,7 @@ async def main():
         sys.exit(1)
 
     if not args.dry_run:
-        await _invalidate_caches(DEFAULT_TENANT_ID)
+        await _invalidate_caches(args.tenant_id)
 
 
 if __name__ == "__main__":

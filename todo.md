@@ -1,6 +1,6 @@
 # GenBI Platform — Build Progress
 
-> **Last updated:** 2026-09-05 | **Stack tier:** Enterprise | **138/138 shipped (Phases 1–26) · roadmap complete**
+> **Last updated:** 2026-09-21 | **Stack tier:** Enterprise | **148/148 shipped (Phases 1–27) · roadmap complete**
 
 ---
 
@@ -1373,9 +1373,10 @@ validation permissions (user_roles plumbing exists, unused).
 
 ---
 
-# Phases 21–24 — Multi-Tenancy Control Plane & Knowledge Base (PLANNED)
+# Phases 21–24 — Multi-Tenancy Control Plane & Knowledge Base
 
-> **Status: DESIGN APPROVED, NOT YET BUILT** (2026-09-05). Design authority:
+> ✅ **STATUS: VERIFIED 2026-09-05.** Built and live-verified — per-phase
+> evidence in the "verified by" sections below. Design authority:
 > ADR 009 (platform admin plane — superusers, tenant lifecycle, control/data
 > plane split) and ADR 010 (tenant knowledge base / openwiki). Endpoint
 > contracts: docs/api-reference.md §Planned + docs/api/openapi.yaml.
@@ -1439,7 +1440,7 @@ validation permissions (user_roles plumbing exists, unused).
 
 # Phases 25–26 — Tenant BYOK LLM Architecture
 
-> **Status: BUILT (2026-09-05)** — foundations (storage, crypto, adapters,
+> ✅ **STATUS: VERIFIED 2026-09-05.** Foundations (storage, crypto, adapters,
 > resolver, no-fallback) in Phase 25; APIs, spend attribution, and
 > settings/admin UX in Phase 26. Design authority: ADR 011 (Accepted).
 
@@ -1606,6 +1607,265 @@ validation permissions (user_roles plumbing exists, unused).
 - Docs: api-reference + openapi flipped to built (incl. new PATCH
   status endpoints), core-services §3 + infrastructure env notes →
   implemented, ADR 011 → Accepted.
+
+---
+
+## Phase 27 — Demo Environment CLI (Tasks 139–148)
+
+> ✅ **STATUS: VERIFIED 2026-09-21.** Built and live-verified — full-cycle
+> evidence in VERIFICATION.md §Phase 27. Deliverable: a demo-environment
+> lifecycle CLI (`scripts/demo.py` + `make demo-*` targets) that takes a
+> clean machine to a demo-ready platform and back: `up → seed → unseed →
+> reset`. All ten tasks shipped in one pass.
+
+**Design baseline (decided 2026-09-21):**
+
+- **CLI shape** — `scripts/demo.py`, argparse subcommands (`up`, `seed`,
+  `unseed`, `reset`, `status`), no new framework (repo convention: argparse
+  + `scripts/` + Makefile, like `setup.sh` / `verify.sh` /
+  `seed_test_data.py` / `create_admin.py`). The host-side entry is
+  **stdlib-only** (argparse, subprocess, pathlib, urllib) so a demo machine
+  needs just `docker` + `python3` — no `make setup` prerequisite.
+- **DB work runs in-container** — the host CLI orchestrates compose and
+  delegates DB-heavy operations via `docker compose exec -e PYTHONPATH=/app
+  backend uv run python scripts/demo.py <cmd>` (the `make seed` pattern;
+  `scripts/` is already bind-mounted read-only into the backend container,
+  `docker-compose.dev.yml:61`). The script detects in-container mode via a
+  `GENBI_DEMO_INTERNAL=1` env marker set by its own exec and dispatches to
+  the ops package instead of orchestrating compose.
+- **Dedicated demo tenants** — demo data lives in new tenants marked
+  `tenants.settings = {"demo": true, ...}` (default roster: **Acme
+  Analytics** `demo-acme` + **Globex Retail** `demo-globex`; extras
+  generated for `--tenants N`). The bootstrap tenant (`admin@genbi.local`)
+  stays pristine; `unseed` is marker-driven decommission (precise, safe);
+  a second tenant also showcases cross-tenant isolation in the demo.
+- **Deterministic by default** — fixed seed (default 42) → identical
+  numbers/dates every demo run; `--random` opts out. Fixed date ranges
+  (2024-01-01 → 2026-06-30, same as `seed_test_data.py`) keep chart axes
+  stable.
+- **No LLM spend** — reports/dashboards/conversations are hand-authored
+  against the known deterministic figures; schema/wiki embeddings are
+  attempted only when `OPENAI_API_KEY` is set (warned + skipped otherwise —
+  existing fail-open paths cover it). No Anthropic key required to seed.
+- **Reuse, don't duplicate** — `gen-env.sh` (env/secrets), the `make
+  migrate` command sequence, `setup.sh`'s fresh-volume baseline stamp,
+  `seed_test_data.py` generators (deterministic variant), `embed_schema.py`
+  (per-tenant embeddings + golden examples), `db_admin.py`
+  (`owner_connect` + `set_tenant_guc`), and the `app/services/tenants.py`
+  decommission path (unseed).
+
+| # | Task | Status |
+|---|---|---|
+| 139 | Demo CLI foundation: `scripts/demo.py` (stdlib-only host CLI, argparse subcommands) + `scripts/demo/` package (`common.py` compose/psql/wait-healthy helpers, in-container dispatch) + Makefile `demo-*` wrappers | ✅ |
+| 140 | `demo up` — idempotent provision & bring-up: prereqs, env via gen-env.sh, build or `--pull` prebuilt AGE image, fresh-volume baseline stamp, migrate + RLS, health waits, verify.sh, URLs | ✅ |
+| 141 | Deterministic dataset package `scripts/demo/dataset.py`: seeded-RNG generators for the 10 analytics tables (seed_test_data.py shape, stable uuid5 FKs), tenant/user roster, wiki/report/dashboard/conversation content | ✅ |
+| 142 | `demo seed`: demo tenants with settings marker, bcrypt users (admin/analyst/viewer), analytics, per-tenant embeddings + golden examples (embed_schema.py `--tenant-id` extension; skip-with-warning without OPENAI_API_KEY), wiki, report + pinned dashboard, sample conversation, Redis tenant-cache purge; replace-by-default idempotency; prints credentials + suggested queries | ✅ |
+| 143 | `demo unseed`: marker-driven decommission of all settings.demo tenants (tenants-service cascade + analytics cleanup + admin_audit), Redis purge, baseline-intact post-checks | ✅ |
+| 144 | `demo reset`: down -v, regenerate secrets preserving user API keys (`--nuke-env` for factory state), fresh-volume bring-up (init.sql bootstrap + stamp + migrate), verify, print fresh credentials | ✅ |
+| 145 | `demo status`: compose health + endpoint polls + demo-tenant marker scan + credentials + seeded state | ✅ |
+| 146 | Offline tests (backend/tests/demo/): dataset determinism (same seed → identical rows), roster/bcrypt contract, unseed marker/target selection, reset env-key preservation | ✅ |
+| 147 | Live-stack verification cycle recorded in VERIFICATION.md: reset → up → seed → demo login + metric/wiki/dashboard smoke → unseed (baseline intact) → reset → verify.sh green | ✅ |
+| 148 | Docs & closeout: DEMO.md quickstart, README demo section, CLAUDE.md §5 demo commands, todo.md header counter + Phase 27 status flips | ✅ |
+
+### Phase 27 — verified by (2026-09-21)
+
+- Offline: `backend/tests/demo/` **30 passed** (determinism incl. chart
+  values ↔ analytics aggregates, FK integrity, roster/bcrypt, env-key
+  preservation round-trip, marker parsing); ruff check + format clean on
+  every touched Python file.
+- Live cycle on a cold Docker daemon with foreign services on 5432/3000/4000
+  (auto-remapped 5433/3002/4001): reset → up (baseline stamp + migrate +
+  RLS + verify 13/13) → seed (2 tenants, 18,244 rows, full content,
+  credentials) → demo logins + tenant-scoped metric queries with
+  cross-tenant isolation (acme \$123.5M vs globex \$127.0M) → determinism
+  proven to the cent against the offline dataset → replace-by-default
+  re-seed (2 replaced, still 2 tenants) → unseed (0 remaining, baseline
+  intact, audit retained, bootstrap login 200) → reset → verify 13/13 →
+  up fast-path + status correct. Full record: VERIFICATION.md §Phase 27.
+- Drive-by repairs the cycle surfaced (all pre-existing): frontend
+  Dockerfile/CI pnpm pin 9→10 (411db48 moved overrides to
+  pnpm-workspace.yaml), init-script mount order (99- sorted first under C
+  collation), AGE 1.6 create_graph search_path + cstring label calls in
+  age-lineage.sql, verify.sh's retired genbi_auth checks → genbi_admin
+  (ADR 009), decommission_tenant's missing `activity` cleanup, and
+  host-port env overrides in the compose file for shared machines.
+
+### Task 139 — CLI foundation
+
+**Deliverable:** `scripts/demo.py` (host entry, stdlib-only: argparse,
+subprocess, pathlib, urllib) + `scripts/demo/` package — `__init__.py`,
+`common.py` (compose/psql/docker-exec invocation helpers, env detection,
+wait-for-healthy polling, colored step/success/warn output), plus the
+in-container dispatch (`GENBI_DEMO_INTERNAL=1` set by the exec switches the
+same entry point into ops mode). Makefile gains `demo-up`, `demo-seed`,
+`demo-unseed`, `demo-reset`, `demo-status` targets (`.PHONY` + help entries)
+wrapping `python3 scripts/demo.py <cmd>`.
+
+**Done when:** `python3 scripts/demo.py --help` and `make demo-status` run
+on a host with only docker + python3 (status may report "stack down").
+
+### Task 140 — `demo up`: provision & bring the environment up
+
+**Why it matters:** the requested "CLI to provision and bring environment
+up and running". `make setup` exists but assumes host dev tooling (uv sync,
+pnpm install) and is dev-oriented; `demo up` must take a bare machine to a
+running, verified stack.
+
+**Flow (idempotent — healthy stack → print URLs, exit 0):**
+1. Preflight: `docker` + compose v2 present; `python3` (implicit). Warn
+   (non-fatal) if `backend/.env` lacks `ANTHROPIC_API_KEY` — chat degrades
+   but the stack runs.
+2. Ensure env files via `scripts/gen-env.sh` (no `--force`; it already
+   refuses to overwrite).
+3. Images: default `docker compose build`; with `--pull`, pull the
+   CI-published pgvector+AGE image from ghcr and retag to
+   `genbi/postgres-pgvector-age:pg16` (skips the slow AGE source compile;
+   backend/frontend still build locally; fall back to build with a clear
+   message if the pull fails).
+4. `up -d postgres redis`, wait for healthy.
+5. Fresh-volume detection + `alembic stamp 0001_baseline` (replicating
+   `setup.sh` logic) when the alembic version table is empty.
+6. `alembic upgrade head` + apply `infra/postgres/rls/*.sql` via
+   `docker exec genbi-postgres psql` (the `make migrate` sequence).
+7. `up -d` full stack; poll backend `/health/ready` + frontend :3000.
+8. Run `scripts/verify.sh` (skip with `--no-verify`); non-zero fails loudly.
+9. Print URLs (backend :8000/docs, frontend :3000, Cube :4000, Grafana
+   :3001, Prometheus :9090) + hint to run `demo seed`.
+
+**Done when:** from `down -v` state, `make demo-up` reaches `verify.sh`
+green with no manual edits; re-running exits 0 fast.
+
+### Task 141 — Deterministic dataset package
+
+**Deliverable:** `scripts/demo/dataset.py` — a pure-data module (no I/O,
+unit-testable offline):
+- Seeded-RNG generators (`random.Random(seed + tenant_index)`) for the 10
+  analytics tables, same shape and default row counts as
+  `seed_test_data.py` (sales 500, customers 100, orders 1000, transactions
+  2000, web_users 200, deals 300, activity 5000, + products/regions/reps),
+  with stable `uuid5` keys so FK-linked tables (orders → customers) are
+  referentially sane.
+- Tenant/user roster: name, slug, email-local-part per role
+  (admin/analyst/viewer), fixed demo password `Demo123!`, role sets
+  `["admin","user"]` / `["user"]` / `["viewer"]`.
+- Wiki content: 3–5 markdown pages per tenant (metric glossary, data
+  caveats).
+- Hand-authored report (3 sections — revenue-by-region bar, units-over-time
+  line, top-products — with chart specs matching the deterministic figures)
+  + dashboard pinning its sections; one sample conversation (2 turns, user
+  question + assistant narrative citing the deterministic numbers).
+
+**Done when:** building the dataset twice with the same seed produces
+identical rows (the property Task 146's tests assert).
+
+### Task 142 — `demo seed`: provision demo data
+
+**Flags:** `--tenants N` (default 2), `--seed INT` (default 42),
+`--random`, `--append`, `--skip-embeddings`. Replace-by-default: existing
+demo-marked tenants are decommissioned + recreated unless `--append`.
+
+**Per demo tenant** (owner role via `db_admin.owner_connect`, tenant GUC
+per pass — the established admin-script pattern):
+1. Tenant row with `settings = {"demo": true, "seed": <seed>, "seeded_at":
+   <iso>, "demo_version": 1}`.
+2. Users: `admin@demo-acme.test` / `analyst@…` / `viewer@…`, bcrypt via
+   `app.core.security`.
+3. Deterministic analytics inserts (Task 141 generators).
+4. Per-tenant `schema_embeddings` + golden `agent_examples` — extend
+   `scripts/embed_schema.py` with an optional `--tenant-id` (default stays
+   the sentinel — backward compatible) and run it per demo tenant with
+   `--examples`. Skipped with a prominent warning when `OPENAI_API_KEY` is
+   unset.
+5. Wiki pages (parameterized INSERTs; `wiki_embeddings` left empty without
+   an OpenAI key — keyword fallback already works).
+6. Report + report_sections + dashboard + dashboard_sections pins.
+7. Sample conversation + messages.
+Then purge tenant-scoped Redis keys for the demo tenants (SCAN + DEL via
+`docker exec genbi-redis redis-cli`) and print the credentials table,
+seeded row counts, suggested demo queries, and capability warnings.
+
+**Done when:** `make demo-seed` twice in a row leaves exactly N demo
+tenants; login as the demo admin works; a suggested query returns rows
+through Cube.
+
+### Task 143 — `demo unseed`: remove demo data
+
+Requires the stack up (clear error otherwise). Selects all tenants with
+`settings->>'demo' = 'true'` and removes each through the decommission
+path from `app/services/tenants.py` (FK cascade + per-table analytics
+cleanup + `admin_audit` row; `audit_log` retention is by design — `demo
+reset` is the true clean slate). Purges Redis keys. Post-checks + summary:
+zero demo-marked tenants remain; bootstrap tenant and `admin@genbi.local`
+untouched.
+
+**Done when:** after unseed, the marker scan returns 0 rows, the bootstrap
+login still works, and wiki/dashboards/reports/conversations/analytics for
+demo tenants are gone.
+
+### Task 144 — `demo reset`: everything back to original defaults
+
+Destructive — requires `--yes` or an interactive confirm. Flow:
+`docker compose down -v` (drops `postgres_data` + `flint_data`) →
+regenerate env via `gen-env.sh --force` **while preserving user-supplied
+keys** (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `LANGFUSE_*`) from the
+previous `backend/.env`; `--nuke-env` wipes them for a true factory state →
+same bring-up path as `demo up` (fresh volume → `init.sql` bootstrap +
+stamp + migrate + verify) → print fresh credentials (`admin@genbi.local` /
+`admin123`, from init.sql on fresh volumes) + hint to re-run `demo seed`.
+
+**Done when:** from a seeded/dirty state, `demo reset` returns the stack
+to fresh-`setup` state: only the bootstrap tenant, `verify.sh` green,
+preserved keys still in `backend/.env` (or gone with `--nuke-env`).
+
+### Task 145 — `demo status`
+
+`compose ps` + health-endpoint polls (stdlib urllib) + demo-tenant marker
+scan via `docker exec genbi-postgres psql` + credentials + URLs +
+seeded/not-seeded state.
+
+**Done when:** status correctly distinguishes up/down and seeded/not-seeded
+and prints working credentials in each state.
+
+### Task 146 — Offline tests
+
+`backend/tests/demo/`: dataset determinism (same seed → identical rows;
+different seed → different), roster/bcrypt contract, unseed marker/target
+selection logic, reset env-key preservation merge. Offline only (no
+Docker).
+
+**Done when:** `uv run pytest backend/tests/demo/` green offline, ruff
+clean, full suite unaffected.
+
+### Task 147 — Live-stack verification cycle
+
+Full cycle on the local Docker daemon, recorded in VERIFICATION.md:
+`demo reset` (from any state) → `demo up` → `demo seed` → curl login as
+demo admin → tenant-scoped metric query → wiki/dashboard/report rows
+present → `demo unseed` → baseline-intact checks → `demo reset` →
+`scripts/verify.sh` green.
+
+### Task 148 — Docs & closeout
+
+DEMO.md (quickstart, commands, credentials, troubleshooting), README demo
+section pointing at it, CLAUDE.md §5 demo commands, and this file's header
+counter + Phase 27 status flips as tasks ship.
+
+### Sequencing
+
+139 → 140 and 141 (140 is infra-heavy, 141 is pure code — either order)
+→ 142 → 143 → 144 → 145, with 146 written alongside 141–145 → 147 after
+all → 148 last. Each task its own commit, matching the repo convention
+(`Phase 27: … (tasks 139-1NN)`).
+
+### Out of scope (follow-ups, not tasks)
+
+- LLM-generated demo content (`--with-llm` flag spending Anthropic tokens)
+- BYOK demo tenant configuration (needs real provider keys)
+- Prod-compose (`docker-compose.yml`) demo profile; CI job exercising the
+  demo cycle
+- Grafana dashboard seeding
+
+---
 
 ## Post-roadmap follow-ups (2026-09-05 security audit)
 

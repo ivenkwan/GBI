@@ -13,6 +13,11 @@ FAIL=0
 ok()   { echo "  ✅ $1"; PASS=$((PASS+1)); }
 bad()  { echo "  ❌ $1"; FAIL=$((FAIL+1)); }
 
+# Host ports may be overridden by the demo CLI on busy machines (same env
+# vars the compose file interpolates); standalone runs keep the defaults.
+FRONTEND_PORT="${GENBI_HOST_FRONTEND_PORT:-3000}"
+CUBE_PORT="${GENBI_HOST_CUBE_PORT:-4000}"
+
 echo "GenBI stack verification"
 echo "────────────────────────"
 
@@ -45,11 +50,11 @@ else
 fi
 
 # --- 3. Cube -----------------------------------------------------------------
-if curl -sf http://localhost:4000/ >/dev/null 2>&1 \
-   || curl -sf http://localhost:4000/cubejs-api/v1/load >/dev/null 2>&1; then
-  ok "cube reachable on :4000"
+if curl -sf "http://localhost:${CUBE_PORT}/" >/dev/null 2>&1 \
+   || curl -sf "http://localhost:${CUBE_PORT}/cubejs-api/v1/load" >/dev/null 2>&1; then
+  ok "cube reachable on :${CUBE_PORT}"
 else
-  bad "cube — not responding on :4000"
+  bad "cube — not responding on :${CUBE_PORT}"
 fi
 
 # --- 4. Redis ----------------------------------------------------------------
@@ -78,6 +83,9 @@ else
 fi
 
 # --- 6. RLS enforcement (Phase 8b: runtime roles are actually bound) --------
+# NOTE: genbi_auth was retired in Phase 21 (ADR 009) — the login path runs on
+# genbi_admin, which owns control-plane DML (tenants/users/platform_admins/
+# admin_audit) + SELECT on audit_log and NOTHING else.
 # NOTE: multi-statement psql -c prints "SET" for the SET ROLE line — pipe
 # through tail to keep only the query result.
 APP_USERS="$(psql_exec "SET ROLE genbi_app; SELECT count(*) FROM users;" | tail -1 || true)"
@@ -87,18 +95,18 @@ else
   bad "RLS NOT enforced — genbi_app saw ${APP_USERS:-<error>} users without GUC (roles migrated?)"
 fi
 
-AUTH_USERS="$(psql_exec "SET ROLE genbi_auth; SELECT count(*) FROM users;" | tail -1 || true)"
-if [[ "${AUTH_USERS:-x}" =~ ^[0-9]+$ ]] && [[ "${AUTH_USERS}" -ge 1 ]]; then
-  ok "auth role can look up users ($AUTH_USERS row(s), cross-tenant by design)"
+ADMIN_USERS="$(psql_exec "SET ROLE genbi_admin; SELECT count(*) FROM users;" | tail -1 || true)"
+if [[ "${ADMIN_USERS:-x}" =~ ^[0-9]+$ ]] && [[ "${ADMIN_USERS}" -ge 1 ]]; then
+  ok "control-plane role can look up users ($ADMIN_USERS row(s), cross-tenant by design)"
 else
-  bad "auth role cannot read users (login path broken — Alembic 0002 applied?)"
+  bad "control-plane role cannot read users (login path broken — 0008 RLS file applied?)"
 fi
 
-AUTH_AUDIT="$(psql_full "SET ROLE genbi_auth; SELECT count(*) FROM audit_log;" || true)"
-if echo "$AUTH_AUDIT" | grep -q "permission denied"; then
-  ok "auth role is denied on non-users tables (audit_log)"
+ADMIN_CONVOS="$(psql_full "SET ROLE genbi_admin; SELECT count(*) FROM conversations;" || true)"
+if echo "$ADMIN_CONVOS" | grep -q "permission denied"; then
+  ok "control-plane role is denied on business tables (conversations)"
 else
-  bad "auth role could read audit_log — its grants are too broad"
+  bad "control-plane role could read conversations — its grants are too broad"
 fi
 
 # --- 6b. Auth: login issues a JWT (needed by the checks below) ---------------
@@ -148,9 +156,9 @@ else
 fi
 
 # --- 8. Frontend (optional — requires Node/pnpm toolchain to build) ----------
-HTTP_CODE="$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000 2>/dev/null || echo '000')"
-if [[ "${HTTP_CODE}" =~ ^([23][0-9][0-9])$ ]]; then
-  ok "frontend served on :3000 (HTTP $HTTP_CODE)"
+HTTP_CODE="$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:${FRONTEND_PORT}" 2>/dev/null || echo '000')"
+if [[ "$HTTP_CODE" =~ ^([23][0-9][0-9])$ ]]; then
+  ok "frontend served on :${FRONTEND_PORT} (HTTP $HTTP_CODE)"
 else
   echo "  ℹ️  frontend not reachable on :3000 (requires Node/pnpm to build; optional)"
 fi

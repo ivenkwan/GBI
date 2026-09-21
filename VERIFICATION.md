@@ -380,3 +380,91 @@ docker compose -f infra/docker-compose.dev.yml exec backend \
     migrating `python-jose` → PyJWT (already in the tree via mcp).
     `nltk 3.10.3` PYSEC-2026-3740 — 3.10.3 is the latest release; no
     fixed version exists yet.
+
+---
+
+## Phase 27 — Demo environment CLI: live verification (2026-09-21)
+
+Full lifecycle exercised on the local Docker daemon from a COLD machine
+(no images, no containers, no host uv/pnpm — the demo CLI is stdlib-only;
+all tooling runs in-container). Two foreign workloads occupied ports
+5432/3000/4000 throughout; the CLI auto-remapped to 5433/3002/4001 and
+threaded the same env into compose + verify.sh.
+
+### Cycle (reset → up → seed → smoke → replace → unseed → reset)
+
+- **`demo reset --yes`** (final): `down -v` → `gen-env.sh --force` with
+  API-key preservation (LANGFUSE_* carried over; ANTHROPIC/OPENAI were
+  placeholders → correctly NOT preserved) → fresh volume (01-init.sql +
+  02-age-lineage.sql applied cleanly: AGE graph, 5 vlabels + 6 elabels +
+  9 app_lineage functions) → baseline stamp → `alembic upgrade head` +
+  RLS files → **verify.sh 13/13 green**.
+- **`demo up`**: idempotent fast path proven post-reset ("stack already
+  up, all services running" via compose ps reconciliation check — a
+  partial stack falls through to the full flow).
+- **`demo seed`** (default: 2 tenants, seed 42): demo-acme + demo-globex
+  created with `settings.demo` marker; 3 bcrypt users each
+  (`Demo123!`); **9,122 analytics rows/tenant** (18,244 total);
+  3 wiki pages + 3 report sections + 3 dashboard pins + 2 conversation
+  messages per tenant; 2 `demo.seed` audit rows; Redis tenant keys
+  purged; embeddings skipped with a warning (no OPENAI_API_KEY —
+  documented degradation).
+- **Smoke (real API, real DB)**: demo-admin login issues a JWT for BOTH
+  tenants; tenant-scoped `POST /metrics/query` through the full
+  JWT→Cube→GUC→RLS chain returns 5 regions per tenant; **cross-tenant
+  isolation**: acme total \$123,538,129.14 vs globex \$126,965,082.33 —
+  each tenant sees only its own data; **determinism**: the live acme
+  total matches the offline `dataset.build_dataset(seed=42)` computation
+  to the cent.
+- **Replace semantics**: second `demo seed` run → "2 replaced, 0
+  skipped", still exactly 2 tenants / 18,244 rows.
+- **`demo unseed`**: both demo tenants decommissioned (analytics
+  DELETE-with-GUC incl. `activity` + tenant-row cascade); 6 Redis keys
+  purged; post-checks: 0 demo tenants, 0 demo sales rows, bootstrap
+  tenant + admin intact, `admin@genbi.local` login still 200; 2
+  `demo.unseed` audit rows retained by design.
+- **`demo status`**: distinguishes up/down + seeded/not-seeded; prints
+  credentials.
+
+### Offline gates
+
+- `pytest backend/tests/demo/` — **30 passed** (dataset determinism,
+  FK integrity, chart-spec↔aggregate equality, roster/bcrypt contract,
+  env-key preservation round-trip, marker parsing).
+- `ruff check` + `ruff format --check` clean on every touched Python
+  file (scripts/demo.py, scripts/demo/*, embed_schema.py, tenants.py,
+  backend/tests/demo).
+
+### Drive-by repairs surfaced by the live cycle (all pre-existing defects)
+
+1. **Frontend Docker build broken since 411db48**: pnpm moved overrides
+   to `pnpm-workspace.yaml` (pnpm 10 style) but the Dockerfile still
+   pinned pnpm@9.15.9, which cannot read that file
+   (ERR_PNPM_LOCKFILE_CONFIG_MISMATCH / "packages field missing") →
+   Dockerfile + CI pinned to **pnpm@10.34.5**; lockfile verified
+   unchanged under it.
+2. **Postgres first-boot init aborted**: `99-age-lineage.sql` sorted
+   BEFORE `init.sql` under the container's C collation (digits before
+   letters), hard-errored on the missing genbi_app role, and init never
+   ran → mounts renamed `01-init.sql` / `02-age-lineage.sql`
+   (collation-proof).
+3. **AGE 1.6 create_graph needs `search_path`**: without `ag_catalog`
+   on the session search_path the graph is never created
+   (graphid_ops does not resolve) and every app_lineage CREATE FUNCTION
+   then fails ("graph genbi_graph does not exist") → the lineage script
+   now SETs search_path before its bootstrap block; label creation
+   switched to EXECUTE-with-literals (create_vlabel/elabel take cstring
+   pseudo-type args — `::name` casts never resolved). Verified in a
+   throwaway container: 0 errors, graph + 11 labels + 9 functions.
+4. **verify.sh checked the retired genbi_auth role** (dropped in Phase
+   21's 0008 RLS file) → checks rewritten for genbi_admin per ADR 009
+   (users readable cross-tenant; conversations denied).
+5. **decommission_tenant missed the `activity` table** → DELETE added
+   (analytics rows no longer leak past tenant decommission).
+
+### Not covered
+
+- Embedding seeding (needs a real OPENAI_API_KEY) and LLM chat (needs
+  ANTHROPIC_API_KEY) — both degrade with documented warnings.
+- `--pull` prebuilt-image path (the CI-published ghcr image is private;
+  pull denied — fell back to local build, which is the default path).

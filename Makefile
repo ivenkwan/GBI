@@ -5,7 +5,8 @@
 COMPOSE_DEV := docker compose -f infra/docker-compose.dev.yml
 COMPOSE_PROD := docker compose -f infra/docker-compose.yml
 
-.PHONY: help setup up down restart logs ps verify secrets migrate seed reset clean deps
+.PHONY: help setup up down restart logs ps verify secrets migrate seed reset clean deps \
+	demo-up demo-seed demo-unseed demo-reset demo-status
 
 help: ## Show this help
 	@awk 'BEGIN {FS = ":.*##"; printf "Usage: make \033[36m<target>\033[0m\n\n"} \
@@ -66,3 +67,18 @@ clean: ## Remove build artifacts, venvs, node_modules, Docker volumes
 deps: ## Install host-side dev dependencies (backend uv + frontend pnpm)
 	cd backend && uv sync --dev
 	cd frontend && pnpm install
+
+demo-up: ## Provision & start the demo stack (idempotent; --pull uses the prebuilt AGE image)
+	@python3 scripts/demo.py up
+
+demo-seed: ## Seed demo tenants/users/analytics/content (DEMO_ARGS='--tenants 3' for flags)
+	@python3 scripts/demo.py seed $(DEMO_ARGS)
+
+demo-unseed: ## Remove demo data; the platform baseline stays intact
+	@python3 scripts/demo.py unseed
+
+demo-reset: ## ⚠️ Factory reset: nuke volumes, regen secrets (API keys preserved), bring up
+	@python3 scripts/demo.py reset
+
+demo-status: ## Show stack health, demo state, and credentials
+	@python3 scripts/demo.py status

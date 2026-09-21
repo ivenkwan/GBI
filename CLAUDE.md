@@ -154,6 +154,14 @@ docker compose -f infra/docker-compose.dev.yml up -d   # start all services
 docker compose down -v                                  # tear down (keeps volumes)
 docker compose logs -f backend                          # tail backend logs
 
+# Demo environment (Phase 27 — see DEMO.md; host needs only docker + python3)
+make demo-up        # provision & bring up (idempotent, runs verify.sh)
+make demo-seed      # demo tenants/users/analytics/content (deterministic)
+make demo-unseed    # remove demo data; baseline stays intact
+make demo-reset     # factory reset (preserves API keys in backend/.env)
+make demo-status    # stack health + demo state + credentials
+# flags pass through: make demo-seed DEMO_ARGS='--tenants 3 --seed 7'
+
 # Semantic layer
 cd semantic/dbt
 dbt run --select +metrics.*   # run dbt models

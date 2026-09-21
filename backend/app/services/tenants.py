@@ -433,6 +433,8 @@ async def decommission_tenant(tenant_id: str, actor_user_id: str, force: bool = 
         with contextlib.suppress(Exception):
             await owner.execute("DELETE FROM sales_representatives")
         with contextlib.suppress(Exception):
+            await owner.execute("DELETE FROM activity")
+        with contextlib.suppress(Exception):
             await owner.execute("DELETE FROM products")
         with contextlib.suppress(Exception):
             await owner.execute("DELETE FROM regions")

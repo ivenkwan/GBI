@@ -65,6 +65,24 @@ A dev-only user is seeded into a fresh database (via `infra/postgres/init.sql`):
 > databases created before this seed need `make reset` (init.sql only runs on
 > fresh volumes).
 
+### Demo environment (one command from zero)
+
+For demos there is a dedicated lifecycle CLI — [DEMO.md](DEMO.md) has the
+full guide. It needs nothing beyond Docker + Python 3 on the host:
+
+```bash
+make demo-up      # provision & bring the stack up (idempotent, verified)
+make demo-seed    # demo tenants + users + deterministic data + content
+make demo-unseed  # remove demo data (platform baseline stays intact)
+make demo-reset   # factory reset (API keys in backend/.env are preserved)
+make demo-status  # health, demo state, credentials
+```
+
+`demo-seed` creates two demo tenants (Acme Analytics, Globex Retail) with
+`admin@demo-acme.test` / `Demo123!` style logins, deterministic analytics
+across all 10 tables, wiki pages, a report + pinned dashboard, and a sample
+conversation — no LLM spend.
+
 ### Database roles (enforced tenant isolation)
 
 The backend never connects as a superuser (see

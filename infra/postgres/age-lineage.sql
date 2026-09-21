@@ -20,6 +20,13 @@
 
 LOAD 'age';
 
+-- AGE 1.6's create_graph resolves the graphid_ops operator class UNQUALIFIED,
+-- so ag_catalog must be on the session search_path BEFORE the graph (and the
+-- app_lineage DDL below, whose SQL bodies validate against the graph) —
+-- without this the graph is never created and every CREATE FUNCTION fails
+-- with "graph genbi_graph does not exist".
+SET search_path = ag_catalog, public;
+
 DO $bootstrap$
 BEGIN
     BEGIN
@@ -30,8 +37,6 @@ BEGIN
 END
 $bootstrap$;
 
-SET search_path = ag_catalog, public;
-
 DO $labels$
 DECLARE
     vlabel text;
@@ -39,7 +44,9 @@ DECLARE
 BEGIN
     FOREACH vlabel IN ARRAY ARRAY['Table', 'Column', 'Metric', 'Dashboard', 'User'] LOOP
         BEGIN
-            PERFORM ag_catalog.create_vlabel('genbi_graph', vlabel::name);
+            -- create_vlabel takes cstring pseudo-type args: it must be called
+            -- with literals (EXECUTE), not ::name casts from a variable.
+            EXECUTE format('SELECT ag_catalog.create_vlabel(%L, %L)', 'genbi_graph', vlabel);
         EXCEPTION WHEN OTHERS THEN
             RAISE NOTICE 'vlabel % skipped: %', vlabel, SQLERRM;
         END;
@@ -47,7 +54,7 @@ BEGIN
     FOREACH elabel IN ARRAY ARRAY['TABLE_CONTAINS', 'METRIC_SOURCE', 'METRIC_DEPENDS',
                                   'DASHBOARD_USES', 'USER_CAN_ACCESS', 'TABLE_JOINS'] LOOP
         BEGIN
-            PERFORM ag_catalog.create_elabel('genbi_graph', elabel::name);
+            EXECUTE format('SELECT ag_catalog.create_elabel(%L, %L)', 'genbi_graph', elabel);
         EXCEPTION WHEN OTHERS THEN
             RAISE NOTICE 'elabel % skipped: %', elabel, SQLERRM;
         END;
