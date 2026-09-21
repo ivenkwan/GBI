@@ -19,9 +19,16 @@ make demo-status  # health + demo state + credentials         (or: scripts/demo.
 git clone https://github.com/ivenkwan/GBI && cd GBI
 make demo-up        # builds images (first run compiles AGE — grab a coffee), starts everything, verifies
 make demo-seed      # creates demo tenants, users, analytics, wiki, report, dashboard
-open http://localhost:3000
+open http://localhost:3003
 # log in as admin@demo-acme.test (password below)
 ```
+
+> **Ports.** The frontend listens on **3003** by default (3000 is claimed by
+> common local services). If 3003 is busy the CLI auto-picks the next free
+> port, threads it through compose + verify.sh, and adjusts the backend's
+> `CORS_ORIGINS` — `make demo-status` always prints the live URL. Pin a port
+> with `GENBI_HOST_FRONTEND_PORT` (same pattern for pg/redis/cube/grafana:
+> `GENBI_HOST_*_PORT`). The backend stays on 8000.
 
 ## What each command does
 

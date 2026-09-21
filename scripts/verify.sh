@@ -15,7 +15,7 @@ bad()  { echo "  ❌ $1"; FAIL=$((FAIL+1)); }
 
 # Host ports may be overridden by the demo CLI on busy machines (same env
 # vars the compose file interpolates); standalone runs keep the defaults.
-FRONTEND_PORT="${GENBI_HOST_FRONTEND_PORT:-3000}"
+FRONTEND_PORT="${GENBI_HOST_FRONTEND_PORT:-3003}"
 CUBE_PORT="${GENBI_HOST_CUBE_PORT:-4000}"
 
 echo "GenBI stack verification"
@@ -160,7 +160,7 @@ HTTP_CODE="$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:${FRONTEND
 if [[ "$HTTP_CODE" =~ ^([23][0-9][0-9])$ ]]; then
   ok "frontend served on :${FRONTEND_PORT} (HTTP $HTTP_CODE)"
 else
-  echo "  ℹ️  frontend not reachable on :3000 (requires Node/pnpm to build; optional)"
+  echo "  ℹ️  frontend not reachable on :${FRONTEND_PORT} (requires Node/pnpm to build; optional)"
 fi
 
 # --- 9. Prometheus (optional) ------------------------------------------------

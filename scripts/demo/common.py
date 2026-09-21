@@ -42,7 +42,7 @@ BACKEND_READY = "http://localhost:8000/api/v1/health/ready"
 PORT_ENV = {
     "pg": ("GENBI_HOST_PG_PORT", 5432),
     "redis": ("GENBI_HOST_REDIS_PORT", 6379),
-    "frontend": ("GENBI_HOST_FRONTEND_PORT", 3000),
+    "frontend": ("GENBI_HOST_FRONTEND_PORT", 3003),
     "cube": ("GENBI_HOST_CUBE_PORT", 4000),
     "grafana": ("GENBI_HOST_GRAFANA_PORT", 3001),
     "prometheus": ("GENBI_HOST_PROM_PORT", 9090),
@@ -301,6 +301,20 @@ def compose_services_healthy(*services: str) -> bool:
     return all(seen.get(s) == "healthy" for s in services)
 
 
+def ports_match_running() -> bool:
+    """True when every running service publishes exactly the chosen port.
+
+    Guards `demo up`'s fast path when the user pins a different port (or the
+    default changes) — the stack must be reconciled onto the new mapping,
+    not declared "already up".
+    """
+    for service in PORT_ENV:
+        running = _published_port(service)
+        if running is not None and running != port_choice(service):
+            return False
+    return True
+
+
 def compose_all_services_running() -> bool:
     """True when every service the compose file declares is running.
 
@@ -487,15 +501,25 @@ def env_has_real_key(name: str) -> bool:
     return False
 
 
-def ensure_cors_origins() -> None:
-    """When the frontend runs on a non-default host port, make sure the
-    backend allows its origin (CORS_ORIGINS defaults to localhost:3000).
+def _cors_line_has(origin: str) -> bool:
+    for line in BACKEND_ENV.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if stripped.startswith("CORS_ORIGINS=") and origin in stripped:
+            return True
+    return False
 
+
+def ensure_cors_origins() -> None:
+    """Make sure the backend allows the frontend origin the CLI will use.
+
+    CORS_ORIGINS defaults to the frontend's default port (3003); when the
+    port was remapped on a busy machine, the new origin is appended.
     Idempotent; call after env files exist and before the stack starts.
     """
     port = port_choice("frontend")
     origin = f"http://localhost:{port}"
-    if port == 3000 or not BACKEND_ENV.is_file():
+    default_origin = f"http://localhost:{PORT_ENV['frontend'][1]}"
+    if not BACKEND_ENV.is_file() or origin == default_origin and _cors_line_has(default_origin):
         return
     lines = BACKEND_ENV.read_text(encoding="utf-8").splitlines()
     for i, line in enumerate(lines):
@@ -507,7 +531,7 @@ def ensure_cors_origins() -> None:
             BACKEND_ENV.write_text("\n".join(lines) + "\n", encoding="utf-8")
             warn(f"CORS_ORIGINS extended with {origin} (remapped frontend)")
             return
-    lines.append(f"CORS_ORIGINS=http://localhost:3000,{origin}")
+    lines.append("CORS_ORIGINS=" + ",".join(dict.fromkeys([default_origin, origin])))
     BACKEND_ENV.write_text("\n".join(lines) + "\n", encoding="utf-8")
     warn(f"CORS_ORIGINS set to include {origin} (remapped frontend)")
 

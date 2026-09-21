@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { changePassword, getMe } from "@/lib/api-client";
 import { useAuth } from "@/components/auth/auth-provider";
 import { LLMProviderSettings } from "@/components/settings/llm-provider";
@@ -9,7 +8,9 @@ import { UsersAdmin } from "@/components/settings/users-admin";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, KeyRound, Settings2, Shield, User } from "lucide-react";
+import { KeyRound, Settings2, Shield, User } from "lucide-react";
+import { PageHeader } from "@/components/layout/page-header";
+
 
 export function SettingsView() {
   const { user } = useAuth();
@@ -58,28 +59,14 @@ export function SettingsView() {
   const isTenantAdmin = (profile?.roles ?? user?.roles ?? []).includes("admin");
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-full flex-col bg-gray-50">
+      <PageHeader
+        title="Settings"
+        description="Profile, security, AI provider, and users"
+        icon={Settings2}
+      />
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-brand-600 flex items-center justify-center">
-                <Settings2 className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-semibold text-gray-900">Settings</h1>
-                <p className="text-sm text-gray-500">Profile, security, AI provider, and users</p>
-              </div>
-            </div>
-            <Link
-              href="/chat"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to chat
-            </Link>
-          </div>
-
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-2">
               {error}

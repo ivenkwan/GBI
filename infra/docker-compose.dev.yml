@@ -6,6 +6,8 @@
 # GENBI_HOST_PROM_PORT. The demo CLI (scripts/demo.py) auto-picks free
 # alternates and threads the same variables into scripts/verify.sh. The
 # backend stays fixed on 8000 (the frontend's NEXT_PUBLIC_API_URL points at it).
+# The frontend listens on 3003 by default (3000 collides with common local
+# services); override with GENBI_HOST_FRONTEND_PORT.
 services:
   # =========================================================================
   # Core Services
@@ -92,7 +94,7 @@ services:
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
     ports:
-      - "${GENBI_HOST_FRONTEND_PORT:-3000}:3000"
+      - "${GENBI_HOST_FRONTEND_PORT:-3003}:3000"
     depends_on:
       backend:
         condition: service_healthy

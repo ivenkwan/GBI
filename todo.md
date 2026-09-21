@@ -1,6 +1,6 @@
 # GenBI Platform — Build Progress
 
-> **Last updated:** 2026-09-21 | **Stack tier:** Enterprise | **148/148 shipped (Phases 1–27) · roadmap complete**
+> **Last updated:** 2026-09-21 | **Stack tier:** Enterprise | **151/151 shipped (Phases 1–27b) · roadmap complete**
 
 ---
 
@@ -1864,6 +1864,34 @@ all → 148 last. Each task its own commit, matching the repo convention
 - Prod-compose (`docker-compose.yml`) demo profile; CI job exercising the
   demo cycle
 - Grafana dashboard seeding
+
+---
+
+## Phase 27b — Workspace Shell, Login Redesign & Frontend Port 3003 (Tasks 149–151)
+
+> ✅ **STATUS: VERIFIED 2026-09-21.** Follow-up to the first demo session:
+> the frontend gets a real app shell (each view used to carry its own
+> copy-pasted top navbar), and the frontend moves to port 3003 so it stops
+> colliding with common local services on 3000.
+
+| # | Task | Status |
+|---|---|---|
+| 149 | Workspace shell: `app/(app)` route group + `AppShell` (dark sidebar nav, sectioned links, admin entry for superusers, user card with logout, mobile drawer) + shared `PageHeader`; split-screen login with demo-credentials hint; gradient landing page; brand palette + slim scrollbars; all six workspace views stripped of bespoke headers (URLs unchanged) | ✅ |
+| 150 | Frontend port 3003 as the default across artifacts: compose mapping + comment, demo CLI `PORT_ENV`, verify.sh, backend `CORS_ORIGINS` default + `.env.example`, README/DEMO URLs; `ensure_cors_origins` becomes always-ensure; `ports_match_running` guard so `demo up` reconciles a port change instead of fast-pathing | ✅ |
+| 151 | Verification: tsc 0 / eslint 0 / next build 15/15 routes; images rebuilt and stack reconciled onto 3003 (old 3002 binding gone); verify.sh 13/13 incl. frontend on :3003; CORS preflight + demo login from origin 3003 green; 30 demo tests + ruff clean | ✅ |
+
+### Phase 27b — verified by (2026-09-21)
+
+- Frontend: `pnpm typecheck` 0 errors, `pnpm lint` clean, `next build`
+  compiles all 15 routes (the `(app)` group keeps every URL unchanged);
+  live container runs the rebuilt image — new landing hero + login render
+  from :3003.
+- Port: frontend publishes 0.0.0.0:3003 (3002 refused); CORS preflight from
+  http://localhost:3003 → allow-origin echoed; demo login from that origin
+  → 200 + JWT; `verify.sh` 13/13 with "frontend served on :3003".
+- Offline: `backend/tests/demo/` 30 passed; ruff check + format clean on
+  the demo CLI after the `ports_match_running` / `ensure_cors_origins`
+  changes.
 
 ---
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import {
   listConversationMessages,
   listConversations,
@@ -17,8 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { Send, BarChart3, BookOpen, Database, FileText, LayoutDashboard, Settings, LogOut, Plus, Shield, ThumbsDown, ThumbsUp, User } from "lucide-react";
+import { Send, BarChart3, Plus, ThumbsDown, ThumbsUp } from "lucide-react";
 
 interface StreamStage {
   stage: string;
@@ -56,11 +54,10 @@ const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/
 const CHAT_STREAM_URL = new URL("/chat/stream", API_BASE).toString();
 
 export function ChatView() {
-  const { user, token, logout } = useAuth();
+  const { token } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
   const chatEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -297,7 +294,7 @@ export function ChatView() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-full bg-gray-50">
       {/* Conversations sidebar (Phase 14) */}
       <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-gray-200 bg-white">
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
@@ -333,119 +330,6 @@ export function ChatView() {
       </aside>
 
       <div className="flex flex-col flex-1 min-w-0">
-      {/* Top navbar */}
-      <header className="flex items-center justify-between px-6 py-3 bg-white border-b border-gray-200 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
-            <BarChart3 className="w-5 h-5 text-white" />
-          </div>
-          <h1 className="text-lg font-semibold text-gray-900">GenBI</h1>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => router.push("/explore")}
-                  className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
-                >
-                  <Database className="w-5 h-5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>Explore metrics</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => router.push("/wiki")}
-                  className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
-                >
-                  <BookOpen className="w-5 h-5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>Knowledge base</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => router.push("/reports")}
-                  className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
-                >
-                  <FileText className="w-5 h-5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>Reports</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => router.push("/dashboards")}
-                  className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
-                >
-                  <LayoutDashboard className="w-5 h-5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>Dashboards</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          {/* Platform admin portal (Phase 22): superusers only */}
-          {user?.platform_admin && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => router.push("/admin")}
-                    className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
-                  >
-                    <Shield className="w-5 h-5" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>Admin portal</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => router.push("/settings")}
-                  className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
-                >
-                  <Settings className="w-5 h-5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>Settings</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <div className="flex items-center gap-2 pl-3 border-l border-gray-200">
-            <div className="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center">
-              <User className="w-4 h-4 text-brand-600" />
-            </div>
-            <span className="text-sm text-gray-600 hidden sm:inline">
-              {user?.name ?? "User"}
-            </span>
-            <button
-              onClick={logout}
-              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </header>
 
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto">

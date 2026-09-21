@@ -132,7 +132,7 @@ scripts/verify.sh
 
 | Service | URL | Notes |
 |---|---|---|
-| Frontend | http://localhost:3000 | Chat UI with SSE streaming |
+| Frontend | http://localhost:3003 | Chat UI with SSE streaming |
 | Backend API (Swagger) | http://localhost:8000/docs | Interactive OpenAPI docs |
 | Health | http://localhost:8000/api/v1/health | Liveness + readiness probes |
 | Cube (semantic layer) | http://localhost:4000 | Metrics API |

@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import {
   listMetrics,
   queryMetrics,
@@ -12,7 +11,9 @@ import {
 import { ChartCard, type ChartAssemblyInput } from "@/components/charts/chart-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, BarChart3, Play } from "lucide-react";
+import { BarChart3, Play } from "lucide-react";
+import { PageHeader } from "@/components/layout/page-header";
+
 
 const selectClass =
   "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white " +
@@ -121,25 +122,8 @@ export function ExploreView() {
   }, [result]);
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      <header className="shrink-0 flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center">
-            <BarChart3 className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-sm font-semibold text-gray-900">Explore</h1>
-            <p className="text-[11px] text-gray-500">Semantic layer metrics</p>
-          </div>
-        </div>
-        <Link
-          href="/chat"
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to chat
-        </Link>
-      </header>
+    <div className="flex flex-col h-full bg-gray-50">
+      <PageHeader title="Explore" description="Semantic layer metrics" icon={BarChart3} />
 
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">

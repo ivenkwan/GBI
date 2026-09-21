@@ -20,7 +20,8 @@ import { ChartCard, type ChartAssemblyInput } from "@/components/charts/chart-ca
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, LayoutDashboard, Pin, PinOff, Plus, Trash2 } from "lucide-react";
+import { LayoutDashboard, Pin, PinOff, Plus, Trash2 } from "lucide-react";
+import { PageHeader } from "@/components/layout/page-header";
 
 export function DashboardsView() {
   const [dashboards, setDashboards] = useState<DashboardSummary[]>([]);
@@ -132,7 +133,7 @@ export function DashboardsView() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-full bg-gray-50">
       {/* Dashboards sidebar */}
       <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-gray-200 bg-white">
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
@@ -172,32 +173,27 @@ export function DashboardsView() {
 
       {/* Main */}
       <div className="flex flex-col flex-1 min-w-0">
-        <header className="shrink-0 flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center">
-              <LayoutDashboard className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-sm font-semibold text-gray-900">Dashboards</h1>
-              <p className="text-[11px] text-gray-500">Pinned report sections on one board</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {active && (
-              <Button variant="outline" size="sm" onClick={handleDelete} disabled={busy}>
-                <Trash2 className="w-4 h-4 mr-1" />
-                Delete
-              </Button>
-            )}
-            <Link
-              href="/reports"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Reports
-            </Link>
-          </div>
-        </header>
+        <PageHeader
+          title="Dashboards"
+          description="Pinned report sections on one board"
+          icon={LayoutDashboard}
+          actions={
+            <>
+              {active && (
+                <Button variant="outline" size="sm" onClick={handleDelete} disabled={busy}>
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Delete
+                </Button>
+              )}
+              <Link
+                href="/reports"
+                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-gray-600 transition-colors hover:bg-gray-100"
+              >
+                Reports
+              </Link>
+            </>
+          }
+        />
 
         <main className="flex-1 overflow-y-auto">
           <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">

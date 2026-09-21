@@ -1,8 +1,14 @@
 @import "tailwindcss";
 
 :root {
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-200: #c7d2fe;
+  --color-brand-500: #6366f1;
   --color-brand-600: #4c6ef5;
   --color-brand-700: #4263eb;
+  --color-brand-800: #364fc7;
+  --color-brand-900: #2b3a9e;
 }
 
 body {
@@ -14,6 +20,27 @@ body {
     "Segoe UI",
     Roboto,
     sans-serif;
+}
+
+::selection {
+  background: var(--color-brand-200);
+}
+
+/* Slim, unobtrusive scrollbars for the app shell and page columns */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.35) transparent;
+}
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.35);
+  border-radius: 9999px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 /* Flint chart embedded SVG styling */

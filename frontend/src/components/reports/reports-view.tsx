@@ -19,7 +19,9 @@ import { ChartCard, type ChartAssemblyInput } from "@/components/charts/chart-ca
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, CalendarClock, Download, FileText, LayoutDashboard, Play, RefreshCw } from "lucide-react";
+import { CalendarClock, Download, FileText, LayoutDashboard, Play, RefreshCw } from "lucide-react";
+import { PageHeader } from "@/components/layout/page-header";
+
 
 export function ReportsView() {
   const [reports, setReports] = useState<ReportSummary[]>([]);
@@ -125,7 +127,7 @@ export function ReportsView() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-full bg-gray-50">
       {/* Reports sidebar */}
       <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-gray-200 bg-white">
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
@@ -158,33 +160,20 @@ export function ReportsView() {
 
       {/* Main */}
       <div className="flex flex-col flex-1 min-w-0">
-        <header className="shrink-0 flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center">
-              <FileText className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-sm font-semibold text-gray-900">Reports</h1>
-              <p className="text-[11px] text-gray-500">Multi-chart reports from a prompt</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
+        <PageHeader
+          title="Reports"
+          description="Multi-chart reports from a prompt"
+          icon={FileText}
+          actions={
             <Link
               href="/dashboards"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-gray-600 transition-colors hover:bg-gray-100"
             >
-              <LayoutDashboard className="w-4 h-4" />
+              <LayoutDashboard className="h-4 w-4" />
               Dashboards
             </Link>
-            <Link
-              href="/chat"
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to chat
-            </Link>
-          </div>
-        </header>
+          }
+        />
 
         <main className="flex-1 overflow-y-auto">
           <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">

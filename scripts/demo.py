@@ -111,7 +111,11 @@ def cmd_up(args) -> int:
     # Idempotency: a COMPLETE, healthy stack is a no-op. A partial stack
     # (e.g. one container failed mid-bring-up) falls through to the full
     # reconcile flow.
-    if common.backend_ready() and common.compose_all_services_running():
+    if (
+        common.backend_ready()
+        and common.compose_all_services_running()
+        and common.ports_match_running()
+    ):
         common.ok("stack already up (backend /health/ready green, all services running)")
         _print_urls()
         print("\nNext: make demo-seed to load demo data (or demo-status).")

@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     # Stored as a raw string (comma-separated) so pydantic-settings can parse it
     # from .env files without requiring JSON list syntax. Use `cors_origins_list`
     # to get the parsed list in code (e.g. CORSMiddleware).
-    CORS_ORIGINS: str = "http://localhost:3000"
+    CORS_ORIGINS: str = "http://localhost:3003"
 
     @property
     def cors_origins_list(self) -> list[str]:

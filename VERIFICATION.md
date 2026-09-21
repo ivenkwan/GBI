@@ -468,3 +468,28 @@ threaded the same env into compose + verify.sh.
   ANTHROPIC_API_KEY) — both degrade with documented warnings.
 - `--pull` prebuilt-image path (the CI-published ghcr image is private;
   pull denied — fell back to local build, which is the default path).
+
+---
+
+## Phase 27b — Workspace shell + frontend port 3003 (2026-09-21)
+
+- Frontend rebuild: `app/(app)/` route group renders every workspace page
+  (chat/explore/reports/dashboards/wiki/settings) inside a shared
+  `AppShell` — dark sidebar with sectioned nav (Workspace/Account + admin
+  portal for superusers), user card with sign-out, mobile drawer — and a
+  shared `PageHeader` replaces each view's bespoke header. Split-screen
+  login (brand panel + demo-credentials hint), gradient landing page,
+  brand palette + slim scrollbars. URLs unchanged; admin portal untouched.
+- Gates: `pnpm typecheck` 0 / `pnpm lint` clean / `next build` 15/15
+  routes; the recreated container runs the rebuilt image (ID match).
+- Port 3003: default changed in compose, demo CLI `PORT_ENV`, verify.sh,
+  backend `CORS_ORIGINS` (+`.env.example`), README/DEMO. Live: frontend
+  publishes 0.0.0.0:3003 (old 3002 refused); CORS preflight from
+  http://localhost:3003 echoes allow-origin; demo login from that origin
+  200; `verify.sh` **13/13** ("frontend served on :3003"); stack
+  reconciled via `GENBI_HOST_FRONTEND_PORT=3003 scripts/demo.py up`
+  (fast-path now reconciles port changes — `ports_match_running`).
+- Gotcha for bare compose users: outside the demo CLI, `docker compose`
+  interpolates the defaults (3003/5432/…) — on this shared machine pin the
+  ports (e.g. `GENBI_HOST_PG_PORT=5433`) or use the demo CLI, which
+  remembers running containers' ports.
