@@ -9,17 +9,26 @@ import { getStoredToken } from "@/lib/auth-storage";
 
 // Normalized to a trailing slash so relative paths resolve against the base
 // path (e.g. "chat" against "http://host:8000/api/v1/" keeps /api/v1).
+// A RELATIVE base ("/api/v1", the same-origin proxy in next.config.js) is
+// the supported configuration for cross-machine access — URL() rejects
+// relative input, so every construction below branches on absoluteness.
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1").replace(
   /\/?$/,
   "/",
 );
+const API_BASE_IS_ABSOLUTE = API_BASE.startsWith("http");
 
-// Every request URL must resolve to exactly this origin, http(s) only — a
+// Absolute bases pin every request to exactly this origin, http(s) only — a
 // path can never redirect the client to another host, scheme, or port.
-const API_ORIGIN = new URL(API_BASE).origin;
+// Relative bases are same-origin by construction; the pinning is inherent.
+const API_ORIGIN: string | null = API_BASE_IS_ABSOLUTE ? new URL(API_BASE).origin : null;
 
 function apiUrl(path: string): string {
-  const url = new URL(path.replace(/^\//, ""), API_BASE);
+  const relative = path.replace(/^\//, "");
+  if (API_ORIGIN === null) {
+    return `${API_BASE}${relative}`;
+  }
+  const url = new URL(relative, API_BASE);
   if (url.origin !== API_ORIGIN || !url.protocol.startsWith("http")) {
     throw new Error(`Refusing URL outside the configured API origin: ${url.origin}`);
   }
@@ -28,7 +37,9 @@ function apiUrl(path: string): string {
 
 // Fixed relative route resolved against the configured base at module load —
 // no runtime string can influence scheme, host, or port here.
-const CHAT_STREAM_URL = new URL("/chat/stream", API_BASE).toString();
+export const CHAT_STREAM_URL = API_BASE_IS_ABSOLUTE
+  ? new URL("/chat/stream", API_BASE).toString()
+  : `${API_BASE}chat/stream`;
 
 interface RequestOptions {
   method?: string;
