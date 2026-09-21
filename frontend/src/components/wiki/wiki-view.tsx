@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { MarkdownText } from "@/components/ui/markdown";
 import {
   deleteWikiPage,
   getWikiHistory,
@@ -348,8 +347,8 @@ export function WikiView() {
                     onChange={(e) => setForm({ ...form, content: e.target.value })}
                     spellCheck={false}
                   />
-                  <div className="h-72 overflow-y-auto border border-gray-200 rounded-lg p-3 prose prose-sm max-w-none">
-                    <Markdown remarkPlugins={[remarkGfm]}>{form.content || "_preview_"}</Markdown>
+                  <div className="h-72 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                    <MarkdownText>{form.content || "_preview_"}</MarkdownText>
                   </div>
                 </div>
                 {formError && <p className="text-xs text-red-600">{formError}</p>}
@@ -414,7 +413,7 @@ export function WikiView() {
                   )}
                 </div>
                 <div className="prose prose-sm max-w-none break-words">
-                  <Markdown remarkPlugins={[remarkGfm]}>{active.content_md}</Markdown>
+                  <MarkdownText>{active.content_md}</MarkdownText>
                 </div>
               </section>
             )}

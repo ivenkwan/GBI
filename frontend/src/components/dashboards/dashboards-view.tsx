@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LayoutDashboard, Pin, PinOff, Plus, Trash2 } from "lucide-react";
+import { MarkdownText } from "@/components/ui/markdown";
 import { PageHeader } from "@/components/layout/page-header";
 
 export function DashboardsView() {
@@ -330,9 +331,7 @@ export function DashboardsView() {
                           title={s.section_title}
                         />
                       )}
-                      {s.narrative && (
-                        <p className="text-sm text-gray-600 leading-relaxed">{s.narrative}</p>
-                      )}
+                      {s.narrative && <MarkdownText>{s.narrative}</MarkdownText>}
                     </div>
                   ))}
                 </div>

@@ -16,6 +16,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { MarkdownText } from "@/components/ui/markdown";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Send, BarChart3, Plus, ThumbsDown, ThumbsUp } from "lucide-react";
 
@@ -435,11 +436,7 @@ export function ChatView() {
                       )}
 
                       {/* Narrative */}
-                      {msg.narrative && !msg.streaming && (
-                        <p className="text-sm text-gray-700 leading-relaxed">
-                          {msg.narrative}
-                        </p>
-                      )}
+                      {msg.narrative && !msg.streaming && <MarkdownText>{msg.narrative}</MarkdownText>}
 
                       {/* Warnings */}
                       {msg.warnings.length > 0 && !msg.streaming && (
