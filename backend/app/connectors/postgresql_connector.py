@@ -216,7 +216,12 @@ class PostgreSQLConnector(BaseConnector):
                     text("SELECT set_config('app.current_tenant_id', :tid, true)"),
                     {"tid": str(self.tenant_id)},
                 )
-            result = await session.execute(text(sql))
+            # Same LLM-placeholder bind as execute(): EXPLAIN of generated SQL
+            # must survive a ":tenant_id" reference. text() drops unused params.
+            params: dict[str, Any] = {}
+            if self.tenant_id:
+                params["tenant_id"] = str(self.tenant_id)
+            result = await session.execute(text(sql), params)
             return result
 
     async def explain(self, sql: str) -> dict:
