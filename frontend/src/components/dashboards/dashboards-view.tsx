@@ -42,28 +42,39 @@ import { useSelectionParam } from "@/hooks/use-selection-param";
 function DashboardsSidebarContent({
   dashboards,
   activeId,
+  listError,
   onSelect,
   onCreate,
 }: {
   dashboards: DashboardSummary[];
   activeId: string | null;
+  listError?: string | null;
   onSelect: (id: string) => void;
   onCreate: () => void;
 }) {
   return (
-    <SidebarList
-      title="Dashboards"
-      items={dashboards.map((d) => ({
-        id: d.id,
-        label: d.title,
-        secondary: `${d.section_count} sections`,
-      }))}
-      activeKey={activeId}
-      onSelect={onSelect}
-      onCreate={onCreate}
-      createTitle="New dashboard"
-      emptyText="No dashboards yet"
-    />
+    <>
+      {listError && (
+        <Alert variant="error" className="m-2 text-xs">
+          {listError}
+        </Alert>
+      )}
+      <div className="min-h-0 flex-1">
+        <SidebarList
+          title="Dashboards"
+          items={dashboards.map((d) => ({
+            id: d.id,
+            label: d.title,
+            secondary: `${d.section_count} sections`,
+          }))}
+          activeKey={activeId}
+          onSelect={onSelect}
+          onCreate={onCreate}
+          createTitle="New dashboard"
+          emptyText="No dashboards yet"
+        />
+      </div>
+    </>
   );
 }
 
@@ -82,6 +93,7 @@ export function DashboardsView() {
   const [selectedSections, setSelectedSections] = useState<number[]>([]);
   const [busy, setBusy] = useState(false);
   const [listOpen, setListOpen] = useState(false);
+  const [listError, setListError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [unpinTarget, setUnpinTarget] = useState<string | null>(null);
   const [selected, setSelected] = useSelectionParam("dash");
@@ -91,8 +103,9 @@ export function DashboardsView() {
     try {
       const res = await listDashboards();
       setDashboards(res.dashboards);
+      setListError(null);
     } catch {
-      // Sidebar is best-effort
+      setListError("Dashboards couldn't be loaded.");
     }
   }, []);
 
@@ -219,6 +232,7 @@ export function DashboardsView() {
         <DashboardsSidebarContent
           dashboards={dashboards}
           activeId={active?.dashboard_id ?? null}
+          listError={listError}
           onSelect={handleSelect}
           onCreate={openCreate}
         />
@@ -229,6 +243,7 @@ export function DashboardsView() {
           <DashboardsSidebarContent
             dashboards={dashboards}
             activeId={active?.dashboard_id ?? null}
+            listError={listError}
             onSelect={handleSelect}
             onCreate={openCreate}
           />

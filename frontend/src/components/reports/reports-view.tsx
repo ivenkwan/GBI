@@ -33,24 +33,35 @@ import { useSelectionParam } from "@/hooks/use-selection-param";
 function ReportsSidebarContent({
   reports,
   activeId,
+  listError,
   onSelect,
 }: {
   reports: ReportSummary[];
   activeId: string | null;
+  listError?: string | null;
   onSelect: (id: string) => void;
 }) {
   return (
-    <SidebarList
-      title="Reports"
-      items={reports.map((r) => ({
-        id: r.id,
-        label: r.title,
-        secondary: `${r.section_count} sections`,
-      }))}
-      activeKey={activeId}
-      onSelect={onSelect}
-      emptyText="No reports yet"
-    />
+    <>
+      {listError && (
+        <Alert variant="error" className="m-2 text-xs">
+          {listError}
+        </Alert>
+      )}
+      <div className="min-h-0 flex-1">
+        <SidebarList
+          title="Reports"
+          items={reports.map((r) => ({
+            id: r.id,
+            label: r.title,
+            secondary: `${r.section_count} sections`,
+          }))}
+          activeKey={activeId}
+          onSelect={onSelect}
+          emptyText="No reports yet"
+        />
+      </div>
+    </>
   );
 }
 
@@ -66,6 +77,7 @@ export function ReportsView() {
   const [schedule, setSchedule] = useState<ReportSchedule | null>(null);
   const [scheduling, setScheduling] = useState(false);
   const [listOpen, setListOpen] = useState(false);
+  const [listError, setListError] = useState<string | null>(null);
   const [selected, setSelected] = useSelectionParam("report");
   const activeId = active?.report_id ?? null;
 
@@ -73,8 +85,9 @@ export function ReportsView() {
     try {
       const res = await listReports();
       setReports(res.reports);
+      setListError(null);
     } catch {
-      // Sidebar is best-effort
+      setListError("Reports couldn't be loaded.");
     }
   }, []);
 
@@ -192,6 +205,7 @@ export function ReportsView() {
         <ReportsSidebarContent
           reports={reports}
           activeId={active?.report_id ?? null}
+          listError={listError}
           onSelect={handleSelect}
         />
       </aside>
@@ -201,6 +215,7 @@ export function ReportsView() {
           <ReportsSidebarContent
             reports={reports}
             activeId={active?.report_id ?? null}
+            listError={listError}
             onSelect={handleSelect}
           />
         </div>
