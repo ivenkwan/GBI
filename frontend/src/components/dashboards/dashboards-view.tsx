@@ -28,6 +28,15 @@ import { Loader } from "@/components/ui/loader";
 import { MarkdownText } from "@/components/ui/markdown";
 import { PageHeader } from "@/components/layout/page-header";
 import { Sheet } from "@/components/ui/sheet";
+import { SidebarList } from "@/components/ui/sidebar-list";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useSelectionParam } from "@/hooks/use-selection-param";
 
 function DashboardsSidebarContent({
@@ -42,41 +51,19 @@ function DashboardsSidebarContent({
   onCreate: () => void;
 }) {
   return (
-    <>
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-        <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-          Dashboards
-        </span>
-        <button
-          onClick={onCreate}
-          title="New dashboard"
-          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-        </button>
-      </div>
-      <div className="flex-1 overflow-y-auto py-2">
-        {dashboards.length === 0 && (
-          <p className="px-4 py-2 text-xs text-gray-400">No dashboards yet</p>
-        )}
-        {dashboards.map((d) => (
-          <button
-            key={d.id}
-            onClick={() => onSelect(d.id)}
-            className={`w-full text-left px-4 py-2 transition-colors ${
-              activeId === d.id
-                ? "bg-brand-50 text-brand-700 border-l-2 border-brand-600"
-                : "text-gray-600 hover:bg-gray-50 border-l-2 border-transparent"
-            }`}
-          >
-            <div className="text-sm truncate">{d.title}</div>
-            <div className="text-[11px] text-gray-400">
-              {d.section_count} pinned section{d.section_count === 1 ? "" : "s"}
-            </div>
-          </button>
-        ))}
-      </div>
-    </>
+    <SidebarList
+      title="Dashboards"
+      items={dashboards.map((d) => ({
+        id: d.id,
+        label: d.title,
+        secondary: `${d.section_count} sections`,
+      }))}
+      activeKey={activeId}
+      onSelect={onSelect}
+      onCreate={onCreate}
+      createTitle="New dashboard"
+      emptyText="No dashboards yet"
+    />
   );
 }
 
@@ -88,12 +75,15 @@ export function DashboardsView() {
 
   // Create flow: title + source report + which sections to pin
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
   const [newTitle, setNewTitle] = useState("");
   const [reports, setReports] = useState<ReportSummary[]>([]);
   const [sourceReport, setSourceReport] = useState<Report | null>(null);
   const [selectedSections, setSelectedSections] = useState<number[]>([]);
   const [busy, setBusy] = useState(false);
   const [listOpen, setListOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [unpinTarget, setUnpinTarget] = useState<string | null>(null);
   const [selected, setSelected] = useSelectionParam("dash");
   const activeId = active?.dashboard_id ?? null;
 
@@ -113,6 +103,7 @@ export function DashboardsView() {
   const openCreate = async () => {
     setListOpen(false);
     setError("");
+    setCreateError("");
     setNewTitle("");
     setSourceReport(null);
     setSelectedSections([]);
@@ -137,7 +128,7 @@ export function DashboardsView() {
   const handleCreate = async () => {
     if (!newTitle.trim() || busy) return;
     setBusy(true);
-    setError("");
+    setCreateError("");
     try {
       const dashboard = await createDashboard(newTitle.trim());
       for (const position of selectedSections) {
@@ -147,7 +138,7 @@ export function DashboardsView() {
       setActive(await getDashboard(dashboard.dashboard_id));
       loadDashboards();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not create dashboard");
+      setCreateError(e instanceof Error ? e.message : "Could not create dashboard");
     } finally {
       setBusy(false);
     }
@@ -202,6 +193,7 @@ export function DashboardsView() {
       setError(e instanceof Error ? e.message : "Could not unpin section");
     } finally {
       setBusy(false);
+      setUnpinTarget(null);
     }
   };
 
@@ -216,6 +208,7 @@ export function DashboardsView() {
       setError(e instanceof Error ? e.message : "Could not delete dashboard");
     } finally {
       setBusy(false);
+      setConfirmDelete(false);
     }
   };
 
@@ -258,8 +251,17 @@ export function DashboardsView() {
               >
                 <List className="h-4 w-4" />
               </button>
+              <Button size="sm" onClick={openCreate}>
+                <Plus className="w-4 h-4 mr-1" />
+                New dashboard
+              </Button>
               {active && (
-                <Button variant="outline" size="sm" onClick={handleDelete} disabled={busy}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setConfirmDelete(true)}
+                  disabled={busy}
+                >
                   <Trash2 className="w-4 h-4 mr-1" />
                   Delete
                 </Button>
@@ -280,71 +282,8 @@ export function DashboardsView() {
 
             {loading && <Loader />}
 
-            {/* Create panel */}
-            {creating && (
-              <section className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
-                <h2 className="text-sm font-semibold text-gray-900">New dashboard</h2>
-                <Input
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder='e.g. "Weekly revenue board"'
-                />
-                <div className="space-y-1">
-                  <label className="text-xs text-gray-500">Pin sections from a report:</label>
-                  <select
-                    onChange={(e) => e.target.value && pickReport(e.target.value)}
-                    value={sourceReport?.report_id ?? ""}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-600"
-                  >
-                    <option value="">Choose a report…</option>
-                    {reports.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.title} ({r.section_count} sections)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {sourceReport && (
-                  <div className="space-y-1">
-                    {sourceReport.sections.map((s) => (
-                      <label
-                        key={s.position}
-                        className="flex items-center gap-2 text-sm text-gray-700"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedSections.includes(s.position)}
-                          onChange={(e) =>
-                            setSelectedSections((prev) =>
-                              e.target.checked
-                                ? [...prev, s.position]
-                                : prev.filter((p) => p !== s.position),
-                            )
-                          }
-                        />
-                        {s.section_title}
-                        <span className="text-[11px] text-gray-400">{s.metric_name}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleCreate}
-                    disabled={!newTitle.trim() || selectedSections.length === 0 || busy}
-                  >
-                    <Pin className="w-4 h-4 mr-1" />
-                    {busy ? "Creating…" : "Create dashboard"}
-                  </Button>
-                  <Button variant="outline" onClick={() => setCreating(false)} disabled={busy}>
-                    Cancel
-                  </Button>
-                </div>
-              </section>
-            )}
-
             {/* Dashboard display */}
-            {active && !loading && !creating && (
+            {active && !loading && (
               <section className="space-y-6">
                 <div>
                   <h2 className="text-xl font-semibold text-gray-900">{active.title}</h2>
@@ -389,7 +328,7 @@ export function DashboardsView() {
                           <p className="text-[11px] text-gray-400">from {s.report_title}</p>
                         </div>
                         <button
-                          onClick={() => handleUnpin(s.pin_id)}
+                          onClick={() => setUnpinTarget(s.pin_id)}
                           title="Unpin section"
                           className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-red-500 transition-colors"
                         >
@@ -412,6 +351,99 @@ export function DashboardsView() {
           </div>
         </main>
       </div>
+
+      {/* Create dialog (sidebar "+" and header action share this one) */}
+      <Dialog open={creating} onOpenChange={setCreating}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New dashboard</DialogTitle>
+          </DialogHeader>
+          <Input
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            placeholder='e.g. "Weekly revenue board"'
+            autoFocus
+          />
+          <div className="space-y-1">
+            <label className="text-xs text-gray-500">Pin sections from a report:</label>
+            <select
+              onChange={(e) => e.target.value && pickReport(e.target.value)}
+              value={sourceReport?.report_id ?? ""}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-600"
+            >
+              <option value="">Choose a report…</option>
+              {reports.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.title} ({r.section_count} sections)
+                </option>
+              ))}
+            </select>
+          </div>
+          {sourceReport && (
+            <div className="space-y-1 max-h-56 overflow-y-auto">
+              {sourceReport.sections.map((s) => (
+                <label
+                  key={s.position}
+                  className="flex items-center gap-2 text-sm text-gray-700"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedSections.includes(s.position)}
+                    onChange={(e) =>
+                      setSelectedSections((prev) =>
+                        e.target.checked
+                          ? [...prev, s.position]
+                          : prev.filter((p) => p !== s.position),
+                      )
+                    }
+                  />
+                  {s.section_title}
+                  <span className="text-[11px] text-gray-400">{s.metric_name}</span>
+                </label>
+              ))}
+            </div>
+          )}
+          {createError && <Alert>{createError}</Alert>}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreating(false)} disabled={busy}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreate}
+              disabled={!newTitle.trim() || selectedSections.length === 0 || busy}
+            >
+              <Pin className="w-4 h-4 mr-1" />
+              {busy ? "Creating…" : "Create dashboard"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete dashboard confirm */}
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={`Delete "${active?.title ?? ""}"?`}
+        description="The dashboard and its pinned sections are removed. The underlying reports are not affected."
+        confirmLabel="Delete"
+        onConfirm={handleDelete}
+        busy={busy}
+      />
+
+      {/* Unpin section confirm */}
+      <ConfirmDialog
+        open={unpinTarget !== null}
+        onOpenChange={(o) => {
+          if (!o) setUnpinTarget(null);
+        }}
+        title="Unpin this section?"
+        description="It is removed from this dashboard; the source report is unchanged."
+        confirmLabel="Unpin"
+        onConfirm={() => {
+          if (unpinTarget) handleUnpin(unpinTarget);
+        }}
+        busy={busy}
+      />
     </div>
   );
 }
