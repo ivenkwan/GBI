@@ -20,8 +20,9 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
-import { BookOpen, History, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { BookOpen, History, List, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
+import { Sheet } from "@/components/ui/sheet";
 
 
 interface TreeNode {
@@ -77,6 +78,80 @@ function TreeView({
   );
 }
 
+function WikiSidebarContent({
+  isEditor,
+  query,
+  onQueryChange,
+  onSearch,
+  hasPages,
+  tree,
+  activeSlug,
+  onSelect,
+  onNew,
+}: {
+  isEditor: boolean;
+  query: string;
+  onQueryChange: (query: string) => void;
+  onSearch: () => void;
+  hasPages: boolean;
+  tree: TreeNode[];
+  activeSlug: string | null;
+  onSelect: (slug: string) => void;
+  onNew: () => void;
+}) {
+  return (
+    <>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+        <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          Knowledge base
+        </span>
+        {isEditor && (
+          <button
+            onClick={onNew}
+            title="New page"
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+      <div className="px-3 py-2 border-b border-gray-100">
+        <div className="flex gap-1.5">
+          <Input
+            value={query}
+            onChange={(e) => onQueryChange(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && onSearch()}
+            placeholder="Search…"
+            className="text-xs"
+          />
+          <button
+            onClick={onSearch}
+            className="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
+            title="Search"
+          >
+            <Search className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto py-2">
+        {!hasPages && (
+          <EmptyState
+            variant="inline"
+            title="No pages yet"
+            description={isEditor ? " — write the first one." : "."}
+          />
+        )}
+        <TreeView
+          nodes={tree}
+          active={activeSlug}
+          depth={0}
+          onSelect={onSelect}
+        />
+      </div>
+    </>
+  );
+}
+
 export function WikiView() {
   const { user } = useAuth();
   const isEditor = (user?.roles ?? []).includes("admin") || !!user?.platform_admin;
@@ -98,6 +173,8 @@ export function WikiView() {
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<WikiSearchHit[] | null>(null);
 
+  const [listOpen, setListOpen] = useState(false);
+
   const load = useCallback(async () => {
     try {
       setPages(await listWikiPages());
@@ -111,6 +188,7 @@ export function WikiView() {
   }, [load]);
 
   const open = useCallback(async (slug: string) => {
+    setListOpen(false);
     setError("");
     setHistory(null);
     setHits(null);
@@ -123,6 +201,7 @@ export function WikiView() {
   }, []);
 
   const startNew = () => {
+    setListOpen(false);
     setActive(null);
     setHistory(null);
     setHits(null);
@@ -186,54 +265,34 @@ export function WikiView() {
     <div className="flex h-full bg-gray-50">
       {/* Sidebar: tree + search + new */}
       <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-gray-200 bg-white">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-            Knowledge base
-          </span>
-          {isEditor && (
-            <button
-              onClick={startNew}
-              title="New page"
-              className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-        <div className="px-3 py-2 border-b border-gray-100">
-          <div className="flex gap-1.5">
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && runSearch()}
-              placeholder="Search…"
-              className="text-xs"
-            />
-            <button
-              onClick={runSearch}
-              className="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
-              title="Search"
-            >
-              <Search className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-        <div className="flex-1 overflow-y-auto py-2">
-          {pages.length === 0 && (
-            <EmptyState
-              variant="inline"
-              title="No pages yet"
-              description={isEditor ? " — write the first one." : "."}
-            />
-          )}
-          <TreeView
-            nodes={tree}
-            active={active?.slug ?? null}
-            depth={0}
+        <WikiSidebarContent
+          isEditor={isEditor}
+          query={query}
+          onQueryChange={setQuery}
+          onSearch={runSearch}
+          hasPages={pages.length > 0}
+          tree={tree}
+          activeSlug={active?.slug ?? null}
+          onSelect={open}
+          onNew={startNew}
+        />
+      </aside>
+
+      <Sheet open={listOpen} onOpenChange={setListOpen} title="Pages">
+        <div className="flex h-full flex-col">
+          <WikiSidebarContent
+            isEditor={isEditor}
+            query={query}
+            onQueryChange={setQuery}
+            onSearch={runSearch}
+            hasPages={pages.length > 0}
+            tree={tree}
+            activeSlug={active?.slug ?? null}
             onSelect={open}
+            onNew={startNew}
           />
         </div>
-      </aside>
+      </Sheet>
 
       {/* Main */}
       <div className="flex flex-col flex-1 min-w-0">
@@ -241,6 +300,16 @@ export function WikiView() {
           title="Wiki"
           description="Tenant knowledge base — feeds the AI pipeline"
           icon={BookOpen}
+          actions={
+            <button
+              type="button"
+              onClick={() => setListOpen(true)}
+              title="Pages list"
+              className="md:hidden p-2 rounded-lg text-gray-600 transition-colors hover:bg-gray-100"
+            >
+              <List className="h-4 w-4" />
+            </button>
+          }
         />
 
         <main className="flex-1 overflow-y-auto">

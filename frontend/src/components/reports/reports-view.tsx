@@ -21,11 +21,53 @@ import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CalendarClock, Download, FileText, LayoutDashboard, Play, RefreshCw } from "lucide-react";
+import { CalendarClock, Download, FileText, LayoutDashboard, List, Play, RefreshCw } from "lucide-react";
 import { Loader } from "@/components/ui/loader";
 import { MarkdownText } from "@/components/ui/markdown";
 import { PageHeader } from "@/components/layout/page-header";
+import { Sheet } from "@/components/ui/sheet";
 
+
+function ReportsSidebarContent({
+  reports,
+  activeId,
+  onSelect,
+}: {
+  reports: ReportSummary[];
+  activeId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+        <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          Reports
+        </span>
+      </div>
+      <div className="flex-1 overflow-y-auto py-2">
+        {reports.length === 0 && (
+          <p className="px-4 py-2 text-xs text-gray-400">No reports yet</p>
+        )}
+        {reports.map((r) => (
+          <button
+            key={r.id}
+            onClick={() => onSelect(r.id)}
+            className={`w-full text-left px-4 py-2 transition-colors ${
+              activeId === r.id
+                ? "bg-brand-50 text-brand-700 border-l-2 border-brand-600"
+                : "text-gray-600 hover:bg-gray-50 border-l-2 border-transparent"
+            }`}
+          >
+            <div className="text-sm truncate">{r.title}</div>
+            <div className="text-[11px] text-gray-400">
+              {r.section_count} section{r.section_count === 1 ? "" : "s"}
+            </div>
+          </button>
+        ))}
+      </div>
+    </>
+  );
+}
 
 export function ReportsView() {
   const [reports, setReports] = useState<ReportSummary[]>([]);
@@ -38,6 +80,7 @@ export function ReportsView() {
   const [regenerating, setRegenerating] = useState(false);
   const [schedule, setSchedule] = useState<ReportSchedule | null>(null);
   const [scheduling, setScheduling] = useState(false);
+  const [listOpen, setListOpen] = useState(false);
 
   const loadReports = useCallback(async () => {
     try {
@@ -70,6 +113,7 @@ export function ReportsView() {
 
   const handleSelect = async (id: string) => {
     if (generating) return;
+    setListOpen(false);
     setLoadingReport(true);
     setError("");
     try {
@@ -134,33 +178,22 @@ export function ReportsView() {
     <div className="flex h-full bg-gray-50">
       {/* Reports sidebar */}
       <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-gray-200 bg-white">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-            Reports
-          </span>
-        </div>
-        <div className="flex-1 overflow-y-auto py-2">
-          {reports.length === 0 && (
-            <p className="px-4 py-2 text-xs text-gray-400">No reports yet</p>
-          )}
-          {reports.map((r) => (
-            <button
-              key={r.id}
-              onClick={() => handleSelect(r.id)}
-              className={`w-full text-left px-4 py-2 transition-colors ${
-                active?.report_id === r.id
-                  ? "bg-brand-50 text-brand-700 border-l-2 border-brand-600"
-                  : "text-gray-600 hover:bg-gray-50 border-l-2 border-transparent"
-              }`}
-            >
-              <div className="text-sm truncate">{r.title}</div>
-              <div className="text-[11px] text-gray-400">
-                {r.section_count} section{r.section_count === 1 ? "" : "s"}
-              </div>
-            </button>
-          ))}
-        </div>
+        <ReportsSidebarContent
+          reports={reports}
+          activeId={active?.report_id ?? null}
+          onSelect={handleSelect}
+        />
       </aside>
+
+      <Sheet open={listOpen} onOpenChange={setListOpen} title="Reports">
+        <div className="flex h-full flex-col">
+          <ReportsSidebarContent
+            reports={reports}
+            activeId={active?.report_id ?? null}
+            onSelect={handleSelect}
+          />
+        </div>
+      </Sheet>
 
       {/* Main */}
       <div className="flex flex-col flex-1 min-w-0">
@@ -169,13 +202,23 @@ export function ReportsView() {
           description="Multi-chart reports from a prompt"
           icon={FileText}
           actions={
-            <Link
-              href="/dashboards"
-              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-gray-600 transition-colors hover:bg-gray-100"
-            >
-              <LayoutDashboard className="h-4 w-4" />
-              Dashboards
-            </Link>
+            <>
+              <button
+                type="button"
+                onClick={() => setListOpen(true)}
+                title="Reports list"
+                className="md:hidden p-2 rounded-lg text-gray-600 transition-colors hover:bg-gray-100"
+              >
+                <List className="h-4 w-4" />
+              </button>
+              <Link
+                href="/dashboards"
+                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm text-gray-600 transition-colors hover:bg-gray-100"
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                Dashboards
+              </Link>
+            </>
           }
         />
 

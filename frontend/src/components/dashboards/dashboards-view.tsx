@@ -22,11 +22,62 @@ import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { LayoutDashboard, Pin, PinOff, Plus, Trash2 } from "lucide-react";
+import { LayoutDashboard, List, Pin, PinOff, Plus, Trash2 } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Loader } from "@/components/ui/loader";
 import { MarkdownText } from "@/components/ui/markdown";
 import { PageHeader } from "@/components/layout/page-header";
+import { Sheet } from "@/components/ui/sheet";
+
+function DashboardsSidebarContent({
+  dashboards,
+  activeId,
+  onSelect,
+  onCreate,
+}: {
+  dashboards: DashboardSummary[];
+  activeId: string | null;
+  onSelect: (id: string) => void;
+  onCreate: () => void;
+}) {
+  return (
+    <>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+        <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          Dashboards
+        </span>
+        <button
+          onClick={onCreate}
+          title="New dashboard"
+          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="flex-1 overflow-y-auto py-2">
+        {dashboards.length === 0 && (
+          <p className="px-4 py-2 text-xs text-gray-400">No dashboards yet</p>
+        )}
+        {dashboards.map((d) => (
+          <button
+            key={d.id}
+            onClick={() => onSelect(d.id)}
+            className={`w-full text-left px-4 py-2 transition-colors ${
+              activeId === d.id
+                ? "bg-brand-50 text-brand-700 border-l-2 border-brand-600"
+                : "text-gray-600 hover:bg-gray-50 border-l-2 border-transparent"
+            }`}
+          >
+            <div className="text-sm truncate">{d.title}</div>
+            <div className="text-[11px] text-gray-400">
+              {d.section_count} pinned section{d.section_count === 1 ? "" : "s"}
+            </div>
+          </button>
+        ))}
+      </div>
+    </>
+  );
+}
 
 export function DashboardsView() {
   const [dashboards, setDashboards] = useState<DashboardSummary[]>([]);
@@ -41,6 +92,7 @@ export function DashboardsView() {
   const [sourceReport, setSourceReport] = useState<Report | null>(null);
   const [selectedSections, setSelectedSections] = useState<number[]>([]);
   const [busy, setBusy] = useState(false);
+  const [listOpen, setListOpen] = useState(false);
 
   const loadDashboards = useCallback(async () => {
     try {
@@ -56,6 +108,7 @@ export function DashboardsView() {
   }, [loadDashboards]);
 
   const openCreate = async () => {
+    setListOpen(false);
     setError("");
     setNewTitle("");
     setSourceReport(null);
@@ -99,6 +152,7 @@ export function DashboardsView() {
 
   const handleSelect = async (id: string) => {
     if (busy) return;
+    setListOpen(false);
     setLoading(true);
     setError("");
     try {
@@ -141,40 +195,24 @@ export function DashboardsView() {
     <div className="flex h-full bg-gray-50">
       {/* Dashboards sidebar */}
       <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-gray-200 bg-white">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-            Dashboards
-          </span>
-          <button
-            onClick={openCreate}
-            title="New dashboard"
-            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto py-2">
-          {dashboards.length === 0 && (
-            <p className="px-4 py-2 text-xs text-gray-400">No dashboards yet</p>
-          )}
-          {dashboards.map((d) => (
-            <button
-              key={d.id}
-              onClick={() => handleSelect(d.id)}
-              className={`w-full text-left px-4 py-2 transition-colors ${
-                active?.dashboard_id === d.id
-                  ? "bg-brand-50 text-brand-700 border-l-2 border-brand-600"
-                  : "text-gray-600 hover:bg-gray-50 border-l-2 border-transparent"
-              }`}
-            >
-              <div className="text-sm truncate">{d.title}</div>
-              <div className="text-[11px] text-gray-400">
-                {d.section_count} pinned section{d.section_count === 1 ? "" : "s"}
-              </div>
-            </button>
-          ))}
-        </div>
+        <DashboardsSidebarContent
+          dashboards={dashboards}
+          activeId={active?.dashboard_id ?? null}
+          onSelect={handleSelect}
+          onCreate={openCreate}
+        />
       </aside>
+
+      <Sheet open={listOpen} onOpenChange={setListOpen} title="Dashboards">
+        <div className="flex h-full flex-col">
+          <DashboardsSidebarContent
+            dashboards={dashboards}
+            activeId={active?.dashboard_id ?? null}
+            onSelect={handleSelect}
+            onCreate={openCreate}
+          />
+        </div>
+      </Sheet>
 
       {/* Main */}
       <div className="flex flex-col flex-1 min-w-0">
@@ -184,6 +222,14 @@ export function DashboardsView() {
           icon={LayoutDashboard}
           actions={
             <>
+              <button
+                type="button"
+                onClick={() => setListOpen(true)}
+                title="Dashboards list"
+                className="md:hidden p-2 rounded-lg text-gray-600 transition-colors hover:bg-gray-100"
+              >
+                <List className="h-4 w-4" />
+              </button>
               {active && (
                 <Button variant="outline" size="sm" onClick={handleDelete} disabled={busy}>
                   <Trash2 className="w-4 h-4 mr-1" />
