@@ -140,7 +140,9 @@ scripts/verify.sh
 | Grafana | http://localhost:3001 | `admin` / `admin` |
 
 You'll need to set `ANTHROPIC_API_KEY` in `backend/.env` to enable the LLM
-features (NL2SQL, narrative generation).
+features (NL2SQL, narrative generation). Alternatively, each tenant can bring
+its own key (BYOK) — see the [Tenant Onboarding Guide](onboarding.md) for the
+full new-tenant walkthrough (provisioning, BYOK setup, first query).
 
 ---
 
@@ -258,6 +260,7 @@ genbi/
 
 ### Start here
 - **[ docs/index.md ](docs/index.md)** — curated entry point with quick links
+- **[Tenant Onboarding Guide](onboarding.md)** — step-by-step setup for a new tenant: provision → first login → BYOK LLM key → first query
 
 ### Architecture & Design
 - [Architecture Overview](docs/architecture-overview.md) — four-tier design, data flow, tech stack
