@@ -84,9 +84,18 @@ export default function HomePage() {
   const ctaHref = navHref;
   const ctaLabel = authed ? "Open GenBI" : "Sign in to the demo";
 
+  // Inline dark backgrounds below are hard fallbacks — the light text must
+  // stay readable even if the Tailwind sheet fails to load (stale tab /
+  // cached assets), instead of going white-on-white.
   return (
-    <div className="relative flex min-h-screen flex-col overflow-x-hidden bg-slate-900 text-slate-50">
-      <nav className="fixed top-0 z-50 w-full border-b border-slate-800 bg-slate-900/80 backdrop-blur-md">
+    <div
+      className="relative flex min-h-screen flex-col overflow-x-hidden bg-slate-900 text-slate-50"
+      style={{ backgroundColor: "#0f172a" }}
+    >
+      <nav
+        className="fixed top-0 z-50 w-full border-b border-slate-800 bg-slate-900/80 backdrop-blur-md"
+        style={{ backgroundColor: "rgba(15,23,42,0.8)" }}
+      >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <Link href="/" className="flex flex-shrink-0 items-center">
@@ -151,7 +160,10 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="relative border-t border-slate-800 bg-slate-900 py-20">
+        <section
+          className="relative border-t border-slate-800 bg-slate-900 py-20"
+          style={{ backgroundColor: "#0f172a" }}
+        >
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="mb-16 text-center">
               <h2 className="text-3xl font-bold text-white sm:text-4xl">Platform Capabilities</h2>
@@ -186,7 +198,10 @@ export default function HomePage() {
         </section>
       </main>
 
-      <footer className="border-t border-slate-800 bg-slate-950 py-8">
+      <footer
+        className="border-t border-slate-800 bg-slate-950 py-8"
+        style={{ backgroundColor: "#020617" }}
+      >
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 sm:flex-row sm:px-6 lg:px-8">
           <div className="flex items-center gap-2">
             <LogoMark box="h-6 w-6 rounded" icon="h-3 w-3" />
