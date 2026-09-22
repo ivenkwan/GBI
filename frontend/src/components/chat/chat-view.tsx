@@ -75,7 +75,7 @@ export function ChatView() {
         <MessageList
           messages={messages}
           loading={loading}
-          onSuggestion={(text) => send(text)}
+          onSuggestion={(text) => setInput(text)}
           onFeedback={setFeedback}
           onConfirm={handleConfirm}
         />
