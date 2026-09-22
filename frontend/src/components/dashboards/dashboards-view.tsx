@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   createDashboard,
@@ -28,6 +28,7 @@ import { Loader } from "@/components/ui/loader";
 import { MarkdownText } from "@/components/ui/markdown";
 import { PageHeader } from "@/components/layout/page-header";
 import { Sheet } from "@/components/ui/sheet";
+import { useSelectionParam } from "@/hooks/use-selection-param";
 
 function DashboardsSidebarContent({
   dashboards,
@@ -93,6 +94,8 @@ export function DashboardsView() {
   const [selectedSections, setSelectedSections] = useState<number[]>([]);
   const [busy, setBusy] = useState(false);
   const [listOpen, setListOpen] = useState(false);
+  const [selected, setSelected] = useSelectionParam("dash");
+  const activeId = active?.dashboard_id ?? null;
 
   const loadDashboards = useCallback(async () => {
     try {
@@ -150,19 +153,44 @@ export function DashboardsView() {
     }
   };
 
-  const handleSelect = async (id: string) => {
-    if (busy) return;
-    setListOpen(false);
-    setLoading(true);
-    setError("");
-    try {
-      setActive(await getDashboard(id));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not load dashboard");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const handleSelect = useCallback(
+    async (id: string, opts?: { silent?: boolean }) => {
+      if (busy) return;
+      setListOpen(false);
+      setLoading(true);
+      if (!opts?.silent) setError("");
+      try {
+        setActive(await getDashboard(id));
+      } catch (e) {
+        // A stale deep link falls back to the default view with no error
+        // banner; a sidebar click still surfaces the failure.
+        if (opts?.silent) setSelected(null);
+        else setError(e instanceof Error ? e.message : "Could not load dashboard");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [busy, setSelected],
+  );
+
+  // Param → state: adopt a deep-linked dashboard; invalid ids fall back to
+  // the default view silently (no error banner for a stale shared link).
+  // Only a param change can trigger this effect — comparing against the
+  // latest id ref (not the state value in deps) keeps a click-driven state
+  // change from re-firing it, which would ping-pong with the state → param
+  // effect.
+  const activeIdRef = useRef(activeId);
+  activeIdRef.current = activeId;
+  useEffect(() => {
+    if (!selected || selected === activeIdRef.current) return;
+    handleSelect(selected, { silent: true });
+  }, [selected, handleSelect]);
+
+  // State → param: selection changes (click, create, delete) sync the URL.
+  useEffect(() => {
+    if (selected === activeId) return;
+    setSelected(activeId);
+  }, [activeId, selected, setSelected]);
 
   const handleUnpin = async (pinId: string) => {
     if (!active || busy) return;

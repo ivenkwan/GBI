@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   exportReportPdf,
@@ -26,6 +26,7 @@ import { Loader } from "@/components/ui/loader";
 import { MarkdownText } from "@/components/ui/markdown";
 import { PageHeader } from "@/components/layout/page-header";
 import { Sheet } from "@/components/ui/sheet";
+import { useSelectionParam } from "@/hooks/use-selection-param";
 
 
 function ReportsSidebarContent({
@@ -81,6 +82,8 @@ export function ReportsView() {
   const [schedule, setSchedule] = useState<ReportSchedule | null>(null);
   const [scheduling, setScheduling] = useState(false);
   const [listOpen, setListOpen] = useState(false);
+  const [selected, setSelected] = useSelectionParam("report");
+  const activeId = active?.report_id ?? null;
 
   const loadReports = useCallback(async () => {
     try {
@@ -111,21 +114,45 @@ export function ReportsView() {
     }
   };
 
-  const handleSelect = async (id: string) => {
-    if (generating) return;
-    setListOpen(false);
-    setLoadingReport(true);
-    setError("");
-    try {
-      setActive(await getReport(id));
-      setSchedule(null);
-      getReportSchedule(id).then(setSchedule).catch(() => setSchedule(null));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not load report");
-    } finally {
-      setLoadingReport(false);
-    }
-  };
+  const handleSelect = useCallback(
+    async (id: string, opts?: { silent?: boolean }) => {
+      if (generating) return;
+      setListOpen(false);
+      setLoadingReport(true);
+      if (!opts?.silent) setError("");
+      try {
+        setActive(await getReport(id));
+        setSchedule(null);
+        getReportSchedule(id).then(setSchedule).catch(() => setSchedule(null));
+      } catch (e) {
+        // A stale deep link falls back to the default view with no error
+        // banner; a sidebar click still surfaces the failure.
+        if (opts?.silent) setSelected(null);
+        else setError(e instanceof Error ? e.message : "Could not load report");
+      } finally {
+        setLoadingReport(false);
+      }
+    },
+    [generating, setSelected],
+  );
+
+  // Param → state: adopt a deep-linked report; invalid ids fall back to the
+  // default view silently (no error banner for a stale shared link). Only a
+  // param change can trigger this effect — comparing against the latest id
+  // ref (not the state value in deps) keeps a click-driven state change
+  // from re-firing it, which would ping-pong with the state → param effect.
+  const activeIdRef = useRef(activeId);
+  activeIdRef.current = activeId;
+  useEffect(() => {
+    if (!selected || selected === activeIdRef.current) return;
+    handleSelect(selected, { silent: true });
+  }, [selected, handleSelect]);
+
+  // State → param: selection changes (click, generate, delete) sync the URL.
+  useEffect(() => {
+    if (selected === activeId) return;
+    setSelected(activeId);
+  }, [activeId, selected, setSelected]);
 
   const handleRegenerate = async () => {
     if (!active || regenerating) return;

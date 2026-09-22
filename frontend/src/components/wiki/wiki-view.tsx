@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MarkdownText } from "@/components/ui/markdown";
 import {
   deleteWikiPage,
@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { BookOpen, History, List, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Sheet } from "@/components/ui/sheet";
+import { useSelectionParam } from "@/hooks/use-selection-param";
 
 
 interface TreeNode {
@@ -174,6 +175,8 @@ export function WikiView() {
   const [hits, setHits] = useState<WikiSearchHit[] | null>(null);
 
   const [listOpen, setListOpen] = useState(false);
+  const [selected, setSelected] = useSelectionParam("page");
+  const activeSlug = active?.slug ?? null;
 
   const load = useCallback(async () => {
     try {
@@ -187,18 +190,43 @@ export function WikiView() {
     load();
   }, [load]);
 
-  const open = useCallback(async (slug: string) => {
-    setListOpen(false);
-    setError("");
-    setHistory(null);
-    setHits(null);
-    setEditing(false);
-    try {
-      setActive(await getWikiPage(slug));
-    } catch {
-      setError("Could not load page");
-    }
-  }, []);
+  const open = useCallback(
+    async (slug: string, opts?: { silent?: boolean }) => {
+      setListOpen(false);
+      if (!opts?.silent) setError("");
+      setHistory(null);
+      setHits(null);
+      setEditing(false);
+      try {
+        setActive(await getWikiPage(slug));
+      } catch {
+        // A stale deep link falls back to the default view with no error
+        // banner; a sidebar/search click still surfaces the failure.
+        if (opts?.silent) setSelected(null);
+        else setError("Could not load page");
+      }
+    },
+    [setSelected],
+  );
+
+  // Param → state: adopt a deep-linked page; invalid slugs fall back to the
+  // default view silently (no error banner for a stale shared link). Only a
+  // param change can trigger this effect — comparing against the latest slug
+  // ref (not the state value in deps) keeps a click-driven state change
+  // from re-firing it, which would ping-pong with the state → param effect.
+  const activeSlugRef = useRef(activeSlug);
+  activeSlugRef.current = activeSlug;
+  useEffect(() => {
+    if (!selected || selected === activeSlugRef.current) return;
+    open(selected, { silent: true });
+  }, [selected, open]);
+
+  // State → param: selection changes (open, new page, save, delete, search)
+  // sync the URL.
+  useEffect(() => {
+    if (selected === activeSlug) return;
+    setSelected(activeSlug);
+  }, [activeSlug, selected, setSelected]);
 
   const startNew = () => {
     setListOpen(false);
