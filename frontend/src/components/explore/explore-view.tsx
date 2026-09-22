@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { BarChart3, Play } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Loader } from "@/components/ui/loader";
 import { PageHeader } from "@/components/layout/page-header";
 
@@ -236,9 +237,9 @@ export function ExploreView() {
               </section>
 
               {/* Results */}
-              {result && (
+              {result && result.data.length > 0 && (
                 <section className="space-y-4">
-                  {chartSpec && result.data.length > 0 && (
+                  {chartSpec && (
                     <ChartCard spec={chartSpec} svg={chartSvg} title={selected?.title} />
                   )}
                   <DataTable
@@ -249,6 +250,14 @@ export function ExploreView() {
                     loading={running}
                   />
                 </section>
+              )}
+
+              {result && result.data.length === 0 && (
+                <EmptyState
+                  variant="card"
+                  title="No rows"
+                  description="Under tenant RLS this usually means the tenant has no data for this metric — try seeding (`make seed`)."
+                />
               )}
             </>
           )}
