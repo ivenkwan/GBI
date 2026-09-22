@@ -10,6 +10,7 @@ import {
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DataTable } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { Shield } from "lucide-react";
 
@@ -99,60 +100,64 @@ export default function AdminAdminsPage() {
         </p>
       </section>
 
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-200 text-left text-xs uppercase tracking-wide text-gray-400">
-              <th className="px-4 py-3">User</th>
-              <th className="px-4 py-3">Granted</th>
-              <th className="px-4 py-3">Revoked</th>
-              <th className="px-4 py-3">State</th>
-              <th className="px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody>
-            {grants.map((g) => (
-              <tr key={g.user_id} className="border-b border-gray-100">
-                <td className="px-4 py-3">
-                  <div className="text-gray-900">{g.email ?? "(deleted user)"}</div>
-                  <div className="text-[11px] text-gray-400 font-mono">{g.user_id.slice(0, 8)}…</div>
-                </td>
-                <td className="px-4 py-3 text-xs text-gray-500">
-                  {new Date(g.granted_at).toLocaleString()}
-                </td>
-                <td className="px-4 py-3 text-xs text-gray-500">
-                  {g.revoked_at ? new Date(g.revoked_at).toLocaleString() : "—"}
-                </td>
-                <td className="px-4 py-3">
-                  <Badge variant={g.active ? "success" : "secondary"}>
-                    {g.active ? "active" : "revoked"}
-                  </Badge>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  {g.active && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={busy}
-                      onClick={() => handleRevoke(g.user_id)}
-                    >
-                      Revoke
-                    </Button>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {grants.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
-                  No grants yet — bootstrap the first superuser with
-                  <code className="mx-1 text-xs">make admin-create</code>.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataTable<SuperadminGrant>
+        keyField="user_id"
+        rows={grants}
+        emptyText="No grants yet — bootstrap the first superuser with make admin-create."
+        columns={[
+          {
+            key: "user",
+            header: "User",
+            render: (g) => (
+              <>
+                <div className="text-gray-900">{g.email ?? "(deleted user)"}</div>
+                <div className="text-[11px] text-gray-400 font-mono">{g.user_id.slice(0, 8)}…</div>
+              </>
+            ),
+          },
+          {
+            key: "granted_by",
+            header: "Granted by",
+            className: "text-xs text-gray-500",
+            render: (g) => g.granted_by ?? "—",
+          },
+          {
+            key: "granted_at",
+            header: "Granted",
+            className: "text-xs text-gray-500",
+            render: (g) => new Date(g.granted_at).toLocaleString(),
+          },
+          {
+            key: "revoked",
+            header: "Revoked",
+            render: (g) =>
+              g.revoked_at ? (
+                <div className="space-y-1">
+                  <Badge variant="secondary">revoked</Badge>
+                  <div className="text-[11px] text-gray-500">{new Date(g.revoked_at).toLocaleString()}</div>
+                </div>
+              ) : (
+                <Badge variant="success">active</Badge>
+              ),
+          },
+          {
+            key: "actions",
+            header: "",
+            align: "right",
+            render: (g) =>
+              g.active && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => handleRevoke(g.user_id)}
+                >
+                  Revoke
+                </Button>
+              ),
+          },
+        ]}
+      />
     </div>
   );
 }
