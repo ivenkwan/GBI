@@ -11,7 +11,8 @@ import {
 import { useAuth } from "@/components/auth/auth-provider";
 import { ChatRequestSchema, SSEEventSchema } from "@/lib/validators";
 import type { SSEEvent } from "@/lib/validators";
-import { ChartCard, type ChartAssemblyInput } from "@/components/charts/chart-card";
+import { ChartCard } from "@/components/charts/chart-card";
+import type { ChartAssemblyInput } from "@/types/chart";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

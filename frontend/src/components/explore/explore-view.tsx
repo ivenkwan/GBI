@@ -8,7 +8,8 @@ import {
   type MetricQueryResponse,
   type MetricSummary,
 } from "@/lib/api-client";
-import { ChartCard, type ChartAssemblyInput } from "@/components/charts/chart-card";
+import { ChartCard } from "@/components/charts/chart-card";
+import type { ChartAssemblyInput } from "@/types/chart";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BarChart3, Play } from "lucide-react";

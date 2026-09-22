@@ -16,7 +16,8 @@ import {
   type Report,
   type ReportSummary,
 } from "@/lib/api-client";
-import { ChartCard, type ChartAssemblyInput } from "@/components/charts/chart-card";
+import { ChartCard } from "@/components/charts/chart-card";
+import type { ChartAssemblyInput } from "@/types/chart";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

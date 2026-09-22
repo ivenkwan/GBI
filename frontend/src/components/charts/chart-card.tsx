@@ -1,23 +1,16 @@
 "use client";
 
 import { useState } from "react";
-
-export interface ChartAssemblyInput {
-  chartType: string;
-  encodings: Record<string, { field: string }>;
-  baseSize: { width: number; height: number };
-  data: { values: Record<string, unknown>[] };
-}
+import type { ChartAssemblyInput } from "@/types/chart";
 
 interface ChartCardProps {
   spec: ChartAssemblyInput;
   imageBase64?: string;
   svg?: string;
   title?: string;
-  onDownload?: (format: "png" | "svg") => void;
 }
 
-export function ChartCard({ spec, imageBase64, svg, title, onDownload }: ChartCardProps) {
+export function ChartCard({ spec, imageBase64, svg, title }: ChartCardProps) {
   const [format, setFormat] = useState<"png" | "svg">("svg");
 
   return (
@@ -53,12 +46,6 @@ export function ChartCard({ spec, imageBase64, svg, title, onDownload }: ChartCa
           >
             PNG
           </button>
-          <button
-            onClick={() => onDownload?.(format)}
-            className="text-[10px] px-2 py-0.5 rounded text-gray-500 hover:bg-gray-200"
-          >
-            Download
-          </button>
         </div>
       </div>
 
@@ -81,25 +68,6 @@ export function ChartCard({ spec, imageBase64, svg, title, onDownload }: ChartCa
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-/** Render a grid of chart cards from an array of results. */
-export function ChartGrid({
-  charts,
-}: {
-  charts: { spec: ChartAssemblyInput; imageBase64?: string; svg?: string; title?: string }[];
-}) {
-  if (charts.length === 0) {
-    return null;
-  }
-
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {charts.map((chart, i) => (
-        <ChartCard key={i} {...chart} />
-      ))}
     </div>
   );
 }

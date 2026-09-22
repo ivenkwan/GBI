@@ -89,25 +89,6 @@ export interface ChatRequest {
   confirm_large_query?: boolean;
 }
 
-export interface ChatResponse {
-  conversation_id: string;
-  session_id?: string;
-  query: string;
-  sql?: string;
-  sql_explanation?: string;
-  chart_spec?: Record<string, unknown>;
-  narrative?: string;
-  chart_image_base64?: string;
-  chart_svg?: string;
-  warnings: string[];
-  requires_confirmation?: boolean;
-  row_estimate?: number | null;
-}
-
-export function sendChat(req: ChatRequest): Promise<ChatResponse> {
-  return request<ChatResponse>("/chat", { method: "POST", body: req });
-}
-
 /** Thumbs feedback on a completed response (score: 1 up, -1 down, 0 clear). */
 export function sendFeedback(
   sessionId: string,
@@ -230,17 +211,6 @@ export interface MetricQueryResponse {
 
 export function queryMetrics(req: MetricQueryRequest): Promise<MetricQueryResponse> {
   return request<MetricQueryResponse>("/metrics/query", { method: "POST", body: req });
-}
-
-export interface DatasourceSummary {
-  name: string;
-  title: string;
-  measures: number;
-  dimensions: number;
-}
-
-export function listDatasources(): Promise<{ datasources: DatasourceSummary[]; count: number }> {
-  return request<{ datasources: DatasourceSummary[]; count: number }>("/datasources");
 }
 
 // --- Conversations ---
@@ -816,8 +786,4 @@ export function patchTenantLLMStatus(
   });
 }
 
-// --- Health ---
 
-export function healthCheck(): Promise<{ status: string; version: string }> {
-  return request("/health");
-}
