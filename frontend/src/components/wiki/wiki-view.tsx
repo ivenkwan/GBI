@@ -62,10 +62,10 @@ function TreeView({
         <li key={n.slug}>
           <button
             onClick={() => onSelect(n.slug)}
-            className={`w-full text-left px-2 py-1 rounded text-sm truncate transition-colors ${
+            className={`w-full rounded-lg border-l-2 px-3 py-2 text-left text-sm truncate transition-colors ${
               active === n.slug
-                ? "bg-brand-50 text-brand-700 font-medium"
-                : "text-gray-600 hover:bg-gray-50"
+                ? "border-brand-600 bg-brand-50 text-gray-900"
+                : "border-transparent text-gray-700 hover:bg-gray-100"
             }`}
           >
             {n.title}
@@ -102,17 +102,17 @@ function WikiSidebarContent({
 }) {
   return (
     <>
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-        <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+      <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
           Knowledge base
-        </span>
+        </p>
         {isEditor && (
           <button
             onClick={onNew}
             title="New page"
-            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500"
+            className="rounded-lg p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="h-4 w-4" />
           </button>
         )}
       </div>
