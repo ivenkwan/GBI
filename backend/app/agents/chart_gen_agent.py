@@ -56,6 +56,22 @@ class ChartGenAgent(BaseAgent):
             data, preferred_chart_type, tenant_id=tenant_id, user_id=user_id
         )
 
+        # Validate + auto-correct BEFORE rendering: LLMs propose mismatched
+        # chart types (e.g. Scatter for categorical aggregates); rendering
+        # the corrected spec keeps image and spec consistent and lets the
+        # chat pipeline's re-validation pass cleanly instead of surfacing
+        # "uncorrectable errors" for a chart that actually rendered.
+        validation_warnings: list[str] = []
+        try:
+            from app.agents.validation.chart_validator import validate_chart_spec
+
+            validation = validate_chart_spec(spec=spec, data=data, auto_correct=True)
+            validation_warnings = validation.warnings + validation.fix_summary
+            if validation.corrected_spec is not None:
+                spec = validation.corrected_spec
+        except Exception as e:  # noqa: BLE001 — validation is advisory here
+            validation_warnings = [f"Chart validation skipped: {type(e).__name__}"]
+
         # Render via Flint MCP
         bridge = FlintChartBridge(tenant_id=tenant_id)
         render_result = await bridge.render(spec)
@@ -70,7 +86,7 @@ class ChartGenAgent(BaseAgent):
                     "svg": render_result.get("svg"),
                     "backend": render_result.get("backend"),
                 },
-                warnings=render_result.get("warnings", []),
+                warnings=render_result.get("warnings", []) + validation_warnings,
                 errors=render_result.get("errors", []),
             ),
             start,
@@ -106,6 +122,13 @@ SEMANTIC TYPES INFERRED:
 
 SUGGESTED CHART TYPE: {chart_type}
 SUGGESTED ENCODINGS: {json.dumps(encodings)}
+
+Choose the chart type from the data's shape — the suggestion is a hint, not a rule:
+- categorical dimension + aggregate measure → "Bar Chart" (the default for grouped totals)
+- values over a date/time column → "Line Chart"
+- two independent numeric measures (no category aggregation) → "Scatter Chart"
+- parts of one whole (≤6 slices) → "Pie Chart"
+Aggregated category data is NEVER a scatter plot.
 
 Return ONLY a valid JSON object with these keys: chartType, encodings, baseSize, data.
 The data key should contain the full data as inline values.

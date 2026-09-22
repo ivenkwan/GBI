@@ -827,14 +827,25 @@ class ChatService:
 
                     if not validation.is_valid:
                         error_codes = [i.code for i in validation.issues if i.severity == "error"]
-                        logger.warning(
-                            "Chart spec has uncorrectable errors",
-                            errors=error_codes,
+                        rendered = bool(
+                            result.output.get("image_base64") or result.output.get("svg")
                         )
-                        validation_warnings.insert(
-                            0,
-                            f"Chart spec has uncorrectable errors: {', '.join(error_codes)}",
-                        )
+                        if rendered:
+                            # The corrected spec produced a chart — report the
+                            # residual notes without claiming failure.
+                            validation_warnings.insert(
+                                0,
+                                f"Chart rendered with validation notes: {', '.join(error_codes)}",
+                            )
+                        else:
+                            logger.warning(
+                                "Chart spec has uncorrectable errors",
+                                errors=error_codes,
+                            )
+                            validation_warnings.insert(
+                                0,
+                                f"Chart spec has uncorrectable errors: {', '.join(error_codes)}",
+                            )
                     elif validation_warnings:
                         logger.info(
                             "Chart spec validated with warnings",
