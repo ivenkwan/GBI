@@ -7,14 +7,17 @@ import { useAuth } from "@/components/auth/auth-provider";
 import {
   BarChart3,
   BookOpen,
+  Building2,
   Database,
   FileText,
+  Gauge,
   LayoutDashboard,
   Menu,
   MessageSquare,
   MoreVertical,
+  ScrollText,
   Settings,
-  Shield,
+  ShieldCheck,
   X,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -38,8 +41,9 @@ import {
  * A dark navigation sidebar with the brand, sectioned nav, and a user card,
  * replacing the per-view top navbars (each page used to carry its own
  * copy-pasted header with a subset of links). Route-grouped under
- * `app/(app)/` so every workspace page shares it; the admin portal keeps
- * its own layout (different audience, different guard).
+ * `app/(app)/` so every workspace page shares it — including the admin
+ * portal, which adds a `PlatformAdminGuard` layout and shows its nav as a
+ * "Platform" section to superusers only.
  */
 
 const WORKSPACE_NAV = [
@@ -50,7 +54,17 @@ const WORKSPACE_NAV = [
   { href: "/wiki", label: "Wiki", icon: BookOpen },
 ];
 
+const ADMIN_NAV = [
+  { href: "/admin", label: "Overview", icon: Gauge },
+  { href: "/admin/tenants", label: "Tenants", icon: Building2 },
+  { href: "/admin/admins", label: "Superusers", icon: ShieldCheck },
+  { href: "/admin/audit", label: "Audit log", icon: ScrollText },
+];
+
 function isActive(pathname: string, href: string) {
+  // "/admin" is also a prefix of every other admin route, so it matches
+  // exactly; everything else highlights on the route itself or a child.
+  if (href === "/admin") return pathname === href;
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -90,9 +104,15 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
           Account
         </p>
         {item({ href: "/settings", label: "Settings", icon: Settings })}
-        {user?.platform_admin &&
-          item({ href: "/admin", label: "Admin portal", icon: Shield })}
       </div>
+      {user?.platform_admin && (
+        <div className="space-y-1">
+          <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+            Platform
+          </p>
+          {ADMIN_NAV.map(item)}
+        </div>
+      )}
     </nav>
   );
 }
