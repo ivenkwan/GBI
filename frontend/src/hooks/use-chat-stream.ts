@@ -146,7 +146,10 @@ export function useChatStream({
 
   // Large-query confirm (T19): reuse the pending turn — reset the same
   // assistant bubble and re-stream the last user query into it with
-  // confirm_large_query set, instead of appending a duplicate pair.
+  // confirm_large_query set, instead of appending a duplicate pair. The reset
+  // also wipes sql/chart artifacts the confirmation-required turn may already
+  // have streamed in — SqlBlock/ChartCard render unconditionally, so stale
+  // artifacts would otherwise stay visible during the confirmed re-stream.
   const confirmLargeQuery = useCallback(() => {
     const pending = [...messagesRef.current].reverse().find((m) => m.role === "assistant" && m.needsConfirm);
     const lastUser = [...messagesRef.current].reverse().find((m) => m.role === "user");
@@ -154,7 +157,20 @@ export function useChatStream({
     setMessages((prev) =>
       prev.map((m) =>
         m.id === pending.id
-          ? { ...m, streaming: true, needsConfirm: false, content: "", stages: [], warnings: [], streamError: undefined }
+          ? {
+              ...m,
+              streaming: true,
+              needsConfirm: false,
+              content: "",
+              stages: [],
+              warnings: [],
+              streamError: undefined,
+              sql: undefined,
+              chartSpec: undefined,
+              chartSvg: undefined,
+              chartBase64: undefined,
+              rowEstimate: null,
+            }
           : m,
       ),
     );
