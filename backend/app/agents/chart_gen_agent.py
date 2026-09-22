@@ -116,7 +116,7 @@ Do NOT include any explanatory text — only the JSON object."""
             use_reasoning=False,  # fast model for spec generation
             options=LLMCallOptions(
                 temperature=0,
-                max_tokens=2048,
+                max_tokens=4096,
                 response_format="json",
             ),
             tenant_id=tenant_id,

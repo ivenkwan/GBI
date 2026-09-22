@@ -48,7 +48,11 @@ class LLMCallOptions:
     """Options for an LLM call."""
 
     temperature: float = 0.0
-    max_tokens: int = 4096
+    # Generous default cap: reasoning-style models (deepseek-flash, R1-class)
+    # burn a hidden reasoning_content budget before any visible output —
+    # smaller caps produced empty completions on such providers. A cap costs
+    # nothing when unused.
+    max_tokens: int = 8192
     thinking: bool = False
     response_format: str | None = None  # "json" for structured output
     timeout_seconds: int = 60

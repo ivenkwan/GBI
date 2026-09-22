@@ -89,7 +89,11 @@ class NarrativeAgent(BaseAgent):
                 use_reasoning=False,  # Haiku — fast, direct generation
                 options=LLMCallOptions(
                     temperature=0.3,  # Slight warmth for natural prose
-                    max_tokens=512,  # 3-5 sentences
+                    # Generous ceiling: reasoning-style models (deepseek-flash,
+                    # R1-class) burn tokens on hidden reasoning_content before
+                    # any visible prose — the old 512 budget yielded empty
+                    # narratives on such providers.
+                    max_tokens=3072,
                     timeout_seconds=30,
                     max_retries=2,
                 ),

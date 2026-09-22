@@ -12,7 +12,11 @@ class AgentConfig:
 
     model_name: str
     temperature: float = 0.0
-    max_tokens: int = 4096
+    # Reasoning-style models (deepseek-flash, R1-class) spend a large hidden
+    # reasoning_content budget before any visible output — a small cap can be
+    # consumed entirely by reasoning and yield an empty response. Caps cost
+    # nothing when unused, so default generously.
+    max_tokens: int = 8192
     thinking: bool = False  # Use Claude extended thinking for reasoning tasks
 
 

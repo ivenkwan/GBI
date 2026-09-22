@@ -67,7 +67,7 @@ async def _plan_report(prompt: str, tenant_id: str, user_id: str, max_sections: 
         messages=user_message,
         system=system,
         use_reasoning=False,
-        options=LLMCallOptions(temperature=0.0, max_tokens=1024, response_format="json"),
+        options=LLMCallOptions(temperature=0.0, max_tokens=4096, response_format="json"),
         user_id=user_id,
         tenant_id=tenant_id,
         session_id=f"report-plan-{uuid.uuid4()}",

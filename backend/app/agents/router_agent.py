@@ -65,7 +65,9 @@ Return ONLY a JSON object with the key "intent"."""
             prompt,
             options=LLMCallOptions(
                 temperature=0,
-                max_tokens=256,
+                # Headroom for reasoning-style models whose hidden
+                # reasoning_content eats into the budget before the JSON.
+                max_tokens=2048,
                 response_format="json",
             ),
             tenant_id=tenant_id,
