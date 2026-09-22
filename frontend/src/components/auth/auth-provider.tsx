@@ -9,6 +9,7 @@ import {
   storeSession,
 } from "@/lib/auth-storage";
 import { login as apiLogin } from "@/lib/api-client";
+import { Loader } from "@/components/ui/loader";
 
 interface User {
   id: string;
@@ -112,15 +113,7 @@ export function AuthGuard({ children }: { children: ReactNode }) {
   }, [loading, isAuthenticated, router]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="flex space-x-2">
-          <div className="w-3 h-3 bg-brand-600 rounded-full animate-bounce" />
-          <div className="w-3 h-3 bg-brand-600 rounded-full animate-bounce delay-75" />
-          <div className="w-3 h-3 bg-brand-600 rounded-full animate-bounce delay-150" />
-        </div>
-      </div>
-    );
+    return <Loader fullScreen />;
   }
 
   if (!isAuthenticated) {
@@ -147,11 +140,7 @@ export function PlatformAdminGuard({ children }: { children: ReactNode }) {
   }, [loading, isAuthenticated, router]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="w-3 h-3 bg-brand-600 rounded-full animate-bounce" />
-      </div>
-    );
+    return <Loader fullScreen />;
   }
 
   if (!isAuthenticated || !user?.platform_admin) {
