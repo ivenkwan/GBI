@@ -10,6 +10,7 @@ import {
   type LLMProviderConfig,
 } from "@/lib/api-client";
 import { LLMConfigSchema } from "@/lib/validators";
+import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -113,7 +114,7 @@ export function LLMProviderSettings() {
         <Bot className="w-4 h-4 text-gray-400" /> AI Provider (bring your own key)
       </h2>
 
-      {loadError && <p className="text-xs text-red-600">{loadError}</p>}
+      {loadError && <Alert className="text-xs">{loadError}</Alert>}
 
       {/* Current state */}
       {configured ? (
@@ -252,7 +253,7 @@ export function LLMProviderSettings() {
         </Button>
       </div>
 
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <Alert className="text-xs">{error}</Alert>}
       {notice && <p className="text-xs text-green-700">{notice}</p>}
 
       <p className="text-[11px] text-gray-400 flex items-start gap-1.5">

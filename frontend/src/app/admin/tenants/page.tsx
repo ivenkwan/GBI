@@ -9,6 +9,7 @@ import {
   type TenantSummary,
 } from "@/lib/api-client";
 import { TenantProvisionSchema } from "@/lib/validators";
+import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -88,17 +89,11 @@ export default function AdminTenantsPage() {
         </Button>
       </div>
 
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-2">
-          {error}
-        </div>
-      )}
+      {error && <Alert>{error}</Alert>}
 
       {created && (
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4 space-y-2">
-          <p className="text-sm font-medium text-green-800">
-            {created.name} provisioned — initial admin {created.admin_email}
-          </p>
+        <Alert variant="success">
+          <p className="font-medium">{created.name} provisioned — initial admin {created.admin_email}</p>
           {created.temp_password ? (
             <div className="flex items-center gap-2 text-sm">
               <span className="text-gray-600">One-time password (shown never again):</span>
@@ -123,7 +118,7 @@ export default function AdminTenantsPage() {
               Password was set by you — nothing generated to display.
             </p>
           )}
-        </div>
+        </Alert>
       )}
 
       {loading ? (

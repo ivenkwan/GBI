@@ -16,6 +16,7 @@ import {
   type WikiSearchHit,
 } from "@/lib/api-client";
 import { useAuth } from "@/components/auth/auth-provider";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BookOpen, History, Pencil, Plus, Search, Trash2 } from "lucide-react";
@@ -241,11 +242,7 @@ export function WikiView() {
 
         <main className="flex-1 overflow-y-auto">
           <div className="max-w-3xl mx-auto px-6 py-6 space-y-5">
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-2">
-                {error}
-              </div>
-            )}
+            {error && <Alert>{error}</Alert>}
 
             {/* Search results */}
             {hits && (

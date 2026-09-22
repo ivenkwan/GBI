@@ -18,6 +18,7 @@ import {
 } from "@/lib/api-client";
 import { ChartCard } from "@/components/charts/chart-card";
 import type { ChartAssemblyInput } from "@/types/chart";
+import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -199,11 +200,7 @@ export function DashboardsView() {
 
         <main className="flex-1 overflow-y-auto">
           <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-2">
-                {error}
-              </div>
-            )}
+            {error && <Alert>{error}</Alert>}
 
             {loading && (
               <div className="flex items-center justify-center py-16">

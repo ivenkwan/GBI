@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getAdminStats, type PlatformStats } from "@/lib/api-client";
+import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 
 function StatCard({
@@ -45,11 +46,7 @@ export default function AdminOverviewPage() {
         </p>
       </div>
 
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-2">
-          {error}
-        </div>
-      )}
+      {error && <Alert>{error}</Alert>}
 
       {!stats && !error && (
         <div className="flex items-center justify-center py-16">

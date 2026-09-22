@@ -9,6 +9,7 @@ import {
   updateTenantAdmin,
   type TenantDetail,
 } from "@/lib/api-client";
+import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -117,16 +118,8 @@ export default function TenantDetailPage() {
         </Badge>
       </div>
 
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-2">
-          {error}
-        </div>
-      )}
-      {notice && (
-        <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-4 py-2">
-          {notice}
-        </div>
-      )}
+      {error && <Alert>{error}</Alert>}
+      {notice && <Alert variant="success">{notice}</Alert>}
 
       {/* Lifecycle actions */}
       <section className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
@@ -222,7 +215,7 @@ export default function TenantDetailPage() {
           onChange={(e) => setSettingsText(e.target.value)}
           spellCheck={false}
         />
-        {settingsError && <p className="text-xs text-red-600">{settingsError}</p>}
+        {settingsError && <Alert className="text-xs">{settingsError}</Alert>}
         <Button variant="outline" disabled={busy} onClick={saveSettings}>
           Save settings (merged)
         </Button>

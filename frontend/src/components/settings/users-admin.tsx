@@ -9,6 +9,7 @@ import {
   updateUser,
   type TenantUserRow,
 } from "@/lib/api-client";
+import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -101,7 +102,7 @@ export function UsersAdmin({
         </Button>
       </div>
 
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <Alert className="text-xs">{error}</Alert>}
       {notice && <p className="text-xs text-green-700">{notice}</p>}
 
       <table className="w-full text-sm">
@@ -229,7 +230,7 @@ export function UsersAdmin({
               />
               Tenant admin role
             </label>
-            {formError && <p className="text-xs text-red-600">{formError}</p>}
+            {formError && <Alert className="text-xs">{formError}</Alert>}
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setCreateOpen(false)}>
                 Cancel

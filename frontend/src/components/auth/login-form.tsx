@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/auth/auth-provider";
+import { Alert } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -117,11 +118,7 @@ export function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
           <p className="mt-1 text-sm text-gray-500">Sign in to your workspace</p>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-4">
-            {error && (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
-                {error}
-              </div>
-            )}
+            {error && <Alert>{error}</Alert>}
 
             <div>
               <label htmlFor="login-email" className="mb-1 block text-sm font-medium text-gray-700">
