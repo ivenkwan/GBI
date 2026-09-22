@@ -17,7 +17,7 @@ export function MessageList({
   loading: boolean;
   onSuggestion: (text: string) => void;
   onFeedback: (msgId: string, score: 1 | -1) => void;
-  onConfirm: (msgId: string) => void;
+  onConfirm: () => void;
 }) {
   const chatEndRef = useRef<HTMLDivElement>(null);
 

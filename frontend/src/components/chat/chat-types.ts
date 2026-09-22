@@ -27,7 +27,6 @@ export interface ChatMessage {
   // status "confirmation_required"; the panel offers Confirm and run.
   needsConfirm?: boolean;
   rowEstimate?: number | null;
-  confirmQuery?: string;
   streamError?: string;
 }
 

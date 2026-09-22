@@ -7,10 +7,10 @@ import type { SSEEvent } from "@/lib/validators";
 import { newMessageId, type ChatMessage } from "@/components/chat/chat-types";
 
 /** Chat message state + SSE streaming lifecycle, extracted from chat-view.tsx.
- *  Parity extraction: semantics match the pre-refactor ChatView exactly,
- *  including the known quirks later tasks flip deliberately — confirm sends a
- *  fresh pair via send(query, true) (T19 replaces with turn-reuse), feedback
- *  always POSTs the pressed score (T20), invalid input rejects silently (T21). */
+ *  Parity extraction: semantics match the pre-refactor ChatView except where
+ *  the deliberate flips have landed — confirm reuses the pending turn via
+ *  confirmLargeQuery (T19); feedback always POSTs the pressed score (T20) and
+ *  invalid input rejects silently (T21) are still parity quirks. */
 export function useChatStream({
   conversationId,
   onConversationId,
@@ -111,14 +111,11 @@ export function useChatStream({
   );
 
   const send = useCallback(
-    (query: string, confirmLarge = false) => {
+    (query: string) => {
       if (!query.trim() || loading) return;
 
       // Validate input
-      const parsed = ChatRequestSchema.safeParse({
-        query,
-        confirm_large_query: confirmLarge || undefined,
-      });
+      const parsed = ChatRequestSchema.safeParse({ query });
       if (!parsed.success) {
         return; // silently reject invalid input
       }
@@ -142,10 +139,27 @@ export function useChatStream({
       };
 
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
-      startStream(query, msgId, confirmLarge);
+      startStream(query, msgId, false);
     },
     [loading, startStream],
   );
+
+  // Large-query confirm (T19): reuse the pending turn — reset the same
+  // assistant bubble and re-stream the last user query into it with
+  // confirm_large_query set, instead of appending a duplicate pair.
+  const confirmLargeQuery = useCallback(() => {
+    const pending = [...messagesRef.current].reverse().find((m) => m.role === "assistant" && m.needsConfirm);
+    const lastUser = [...messagesRef.current].reverse().find((m) => m.role === "user");
+    if (!pending || !lastUser || loading) return;
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === pending.id
+          ? { ...m, streaming: true, needsConfirm: false, content: "", stages: [], warnings: [], streamError: undefined }
+          : m,
+      ),
+    );
+    startStream(lastUser.content, pending.id, true);
+  }, [loading, startStream]);
 
   const cancel = useCallback(() => {
     abortRef.current?.abort();
@@ -206,5 +220,5 @@ export function useChatStream({
     });
   }, []);
 
-  return { messages, loading, send, cancel, loadHistory, reset, setFeedback };
+  return { messages, loading, send, confirmLargeQuery, cancel, loadHistory, reset, setFeedback };
 }

@@ -17,12 +17,20 @@ export function ChatView() {
     startNewChat,
     handleServerAssignedId,
   } = useConversations();
-  const { messages, loading, send, cancel, loadHistory, reset, setFeedback } =
-    useChatStream({
-      conversationId,
-      onConversationId: handleServerAssignedId,
-      onTurnComplete: refresh,
-    });
+  const {
+    messages,
+    loading,
+    send,
+    confirmLargeQuery,
+    cancel,
+    loadHistory,
+    reset,
+    setFeedback,
+  } = useChatStream({
+    conversationId,
+    onConversationId: handleServerAssignedId,
+    onTurnComplete: refresh,
+  });
   const [input, setInput] = useState("");
 
   const handleSelect = useCallback(
@@ -46,20 +54,6 @@ export function ChatView() {
     setInput("");
   }, [input, send]);
 
-  // Large-query confirm (Phase 13): resend the original query with
-  // confirm_large_query set. Task 19 replaces this with stream.confirmLargeQuery().
-  const handleConfirm = useCallback(
-    (msgId: string) => {
-      const idx = messages.findIndex((m) => m.id === msgId);
-      if (idx < 0) return;
-      const query =
-        messages[idx].confirmQuery ??
-        (idx > 0 ? messages[idx - 1].content : "");
-      if (query) send(query, true);
-    },
-    [messages, send],
-  );
-
   return (
     <div className="flex h-full bg-gray-50">
       {/* Conversations sidebar (Phase 14) */}
@@ -77,7 +71,7 @@ export function ChatView() {
           loading={loading}
           onSuggestion={(text) => setInput(text)}
           onFeedback={setFeedback}
-          onConfirm={handleConfirm}
+          onConfirm={confirmLargeQuery}
         />
         <ChatInput
           value={input}

@@ -22,7 +22,7 @@ export function AssistantMessageCard({
   message: ChatMessage;
   loading: boolean;
   onFeedback: (msgId: string, score: 1 | -1) => void;
-  onConfirm: (msgId: string) => void;
+  onConfirm: () => void;
 }) {
   return (
     <Card>
@@ -88,7 +88,7 @@ export function AssistantMessageCard({
           <LargeQueryConfirm
             rowEstimate={message.rowEstimate ?? null}
             loading={loading}
-            onConfirm={() => onConfirm(message.id)}
+            onConfirm={onConfirm}
           />
         )}
       </CardContent>
