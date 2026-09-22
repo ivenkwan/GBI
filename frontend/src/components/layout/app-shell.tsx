@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -178,6 +178,11 @@ function UserCard({ onNavigate }: { onNavigate?: () => void }) {
 export function AppShell({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
+  const mainRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    mainRef.current?.scrollTo(0, 0);
+  }, [pathname]);
 
   // Close the drawer on navigation.
   const closeDrawer = () => setMobileOpen(false);
@@ -257,7 +262,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className="w-9" aria-hidden />
           </header>
 
-          <main key={pathname} className="min-h-0 flex-1">
+          <main ref={mainRef} className="min-h-0 flex-1">
             {children}
           </main>
         </div>
