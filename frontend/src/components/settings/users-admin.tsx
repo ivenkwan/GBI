@@ -249,13 +249,14 @@ export function UsersAdmin({
         confirmLabel="Reset"
         confirmVariant="default"
         onConfirm={async () => {
-          if (!resetTarget || resetPw.length < 8) return;
+          if (!resetTarget) return;
           await run("Password reset", () =>
             resetUserPassword(resetTarget.id, resetPw, tenantId),
           );
           setResetTarget(null);
         }}
         busy={busy}
+        confirmDisabled={resetPw.length < 8}
       >
         <div className="flex gap-2">
           <Input value={resetPw} onChange={(e) => setResetPw(e.target.value)} />

@@ -16,6 +16,7 @@ export function ConfirmDialog({
   requireTextLabel,
   onConfirm,
   busy = false,
+  confirmDisabled = false,
   children,
 }: {
   open: boolean;
@@ -30,6 +31,8 @@ export function ConfirmDialog({
   requireTextLabel?: string;
   onConfirm: () => void;
   busy?: boolean;
+  /** Extra caller-side disable condition for the confirm button. */
+  confirmDisabled?: boolean;
   children?: ReactNode;
 }) {
   const [typed, setTyped] = useState("");
@@ -54,7 +57,7 @@ export function ConfirmDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
             Cancel
           </Button>
-          <Button variant={confirmVariant} onClick={onConfirm} disabled={blocked || busy}>
+          <Button variant={confirmVariant} onClick={onConfirm} disabled={blocked || busy || confirmDisabled}>
             {busy ? "Working…" : confirmLabel}
           </Button>
         </DialogFooter>
