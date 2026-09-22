@@ -12,12 +12,14 @@ export function MessageList({
   onSuggestion,
   onFeedback,
   onConfirm,
+  onRetry,
 }: {
   messages: ChatMessage[];
   loading: boolean;
   onSuggestion: (text: string) => void;
   onFeedback: (msgId: string, score: 1 | -1) => void;
   onConfirm: () => void;
+  onRetry: (msgId: string) => void;
 }) {
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -78,6 +80,7 @@ export function MessageList({
                   loading={loading}
                   onFeedback={onFeedback}
                   onConfirm={onConfirm}
+                  onRetry={onRetry}
                 />
               )}
             </div>

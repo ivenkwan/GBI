@@ -9,9 +9,9 @@ import { newMessageId, type ChatMessage } from "@/components/chat/chat-types";
 /** Chat message state + SSE streaming lifecycle, extracted from chat-view.tsx.
  *  Parity extraction: semantics match the pre-refactor ChatView except where
  *  the deliberate flips have landed — confirm reuses the pending turn via
- *  confirmLargeQuery (T19); invalid input rejects silently (T21) is still a
- *  parity quirk; feedback now posts the resulting score and rolls back on
- *  failure (T20). */
+ *  confirmLargeQuery (T19); invalid input surfaces a hint under the input and
+ *  stream failures surface a retryable error Alert (T21); feedback now posts
+ *  the resulting score and rolls back on failure (T20). */
 export function useChatStream({
   conversationId,
   onConversationId,
@@ -23,6 +23,7 @@ export function useChatStream({
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
+  const [inputError, setInputError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const streamingMsgRef = useRef<string | null>(null);
   const messagesRef = useRef<ChatMessage[]>([]);
@@ -74,7 +75,14 @@ export function useChatStream({
   const startStream = useCallback(
     (query: string, assistantId: string, confirmLarge: boolean) => {
       setLoading(true);
-      abortRef.current = streamChat(
+      let controller: AbortController | null = null;
+      // T16 review note (addressed in T21): only finalize when this stream is
+      // still the tracked one — a superseded stream settling late must not
+      // clear the loading state of the stream that replaced it.
+      const finalizeIfCurrent = () => {
+        if (abortRef.current === controller) finalize();
+      };
+      controller = streamChat(
         {
           query,
           confirm_large_query: confirmLarge || undefined,
@@ -90,36 +98,43 @@ export function useChatStream({
           }
           if (event.event === "done") {
             onTurnComplete();
-            finalize();
+            finalizeIfCurrent();
           }
         },
-        () => {
-          // Parity for Task 16 (Task 21 replaces this with streamError):
+        (error) => {
+          // T21: surface the failure on the bubble as a retryable error
+          // Alert instead of faking a "Sorry, something went wrong." answer.
           setMessages((prev) =>
             prev.map((m) =>
               m.id === assistantId
-                ? { ...m, content: "Sorry, something went wrong.", streaming: false }
+                ? { ...m, streaming: false, streamError: error.message }
                 : m,
             ),
           );
-          finalize();
+          finalizeIfCurrent();
         },
-        () => finalize(), // onClose without done: never leave the spinner running (Review Focus 2)
+        // onClose without done: never leave the spinner running (Review Focus 2)
+        () => finalizeIfCurrent(),
       );
+      abortRef.current = controller;
       streamingMsgRef.current = assistantId;
     },
     [conversationId, onConversationId, onTurnComplete, updateMessageStage, finalize],
   );
 
   const send = useCallback(
-    (query: string) => {
-      if (!query.trim() || loading) return;
+    (query: string): boolean => {
+      if (loading) return false;
 
-      // Validate input
-      const parsed = ChatRequestSchema.safeParse({ query });
+      // Validate input (T21): failures surface a hint under the input instead
+      // of rejecting silently. The trimmed query is validated so whitespace-
+      // only input hits the schema's min(1) message; the original text is sent.
+      const parsed = ChatRequestSchema.safeParse({ query: query.trim() });
       if (!parsed.success) {
-        return; // silently reject invalid input
+        setInputError(parsed.error.issues[0]?.message ?? "Invalid query");
+        return false;
       }
+      setInputError(null);
 
       const msgId = newMessageId();
       const userMessage: ChatMessage = {
@@ -141,6 +156,7 @@ export function useChatStream({
 
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
       startStream(query, msgId, false);
+      return true;
     },
     [loading, startStream],
   );
@@ -177,6 +193,39 @@ export function useChatStream({
     );
     startStream(lastUser.content, pending.id, true);
   }, [loading, startStream]);
+
+  // Stream-error retry (T21): re-stream the last user query into the failed
+  // assistant bubble. As with the confirm reset (T19 review fix), the reset
+  // also wipes sql/chart/row-estimate artifacts — SqlBlock/ChartCard render
+  // unconditionally, so stale artifacts would otherwise leak into the re-stream.
+  const retry = useCallback(
+    (msgId: string) => {
+      const failed = messagesRef.current.find((m) => m.id === msgId);
+      const lastUser = [...messagesRef.current].reverse().find((m) => m.role === "user");
+      if (!failed || !lastUser || loading) return;
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === msgId
+            ? {
+                ...m,
+                streaming: true,
+                streamError: undefined,
+                content: "",
+                stages: [],
+                warnings: [],
+                sql: undefined,
+                chartSpec: undefined,
+                chartSvg: undefined,
+                chartBase64: undefined,
+                rowEstimate: null,
+              }
+            : m,
+        ),
+      );
+      startStream(lastUser.content, msgId, false);
+    },
+    [loading, startStream],
+  );
 
   const cancel = useCallback(() => {
     abortRef.current?.abort();
@@ -222,6 +271,7 @@ export function useChatStream({
 
   const reset = useCallback(() => {
     setMessages([]);
+    setInputError(null);
   }, []);
 
   // Feedback (Phase 20): thumbs up/down on a completed response. The score
@@ -241,5 +291,5 @@ export function useChatStream({
     });
   }, []);
 
-  return { messages, loading, send, confirmLargeQuery, cancel, loadHistory, reset, setFeedback };
+  return { messages, loading, inputError, send, confirmLargeQuery, retry, cancel, loadHistory, reset, setFeedback };
 }

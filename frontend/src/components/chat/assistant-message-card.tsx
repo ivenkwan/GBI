@@ -2,6 +2,7 @@
 
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MarkdownText } from "@/components/ui/markdown";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,12 +19,34 @@ export function AssistantMessageCard({
   loading,
   onFeedback,
   onConfirm,
+  onRetry,
 }: {
   message: ChatMessage;
   loading: boolean;
   onFeedback: (msgId: string, score: 1 | -1) => void;
   onConfirm: () => void;
+  onRetry: (msgId: string) => void;
 }) {
+  // Stream failure (T21): a retryable error Alert replaces the content area.
+  if (message.streamError) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <Alert
+            variant="error"
+            action={
+              <Button size="sm" variant="outline" onClick={() => onRetry(message.id)}>
+                Retry
+              </Button>
+            }
+          >
+            {message.streamError}
+          </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card>
       <CardContent className="pt-6 space-y-4">

@@ -20,8 +20,10 @@ export function ChatView() {
   const {
     messages,
     loading,
+    inputError,
     send,
     confirmLargeQuery,
+    retry,
     cancel,
     loadHistory,
     reset,
@@ -50,8 +52,9 @@ export function ChatView() {
   }, [loading, startNewChat, reset]);
 
   const handleSend = useCallback(() => {
-    send(input);
-    setInput("");
+    // Keep the typed text when send rejects it (T21) — the validation hint
+    // is useless if the query it refers to has been wiped.
+    if (send(input)) setInput("");
   }, [input, send]);
 
   return (
@@ -72,6 +75,7 @@ export function ChatView() {
           onSuggestion={(text) => setInput(text)}
           onFeedback={setFeedback}
           onConfirm={confirmLargeQuery}
+          onRetry={retry}
         />
         <ChatInput
           value={input}
@@ -79,6 +83,7 @@ export function ChatView() {
           onSend={handleSend}
           onCancel={cancel}
           loading={loading}
+          error={inputError}
         />
       </div>
     </div>

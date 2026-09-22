@@ -140,7 +140,14 @@ export function streamChat(
 
       if (!res.ok) {
         const error = await res.json().catch(() => ({ message: res.statusText }));
-        throw new ApiError(res.status, error.code ?? "UNKNOWN", error.message ?? "Request failed");
+        // FastAPI wraps HTTPException payloads as {"detail": {code, message}}
+        // (or a string/array for 422s) — unwrap so the real message surfaces.
+        const detail = typeof error.detail === "object" && error.detail !== null ? error.detail : undefined;
+        throw new ApiError(
+          res.status,
+          error.code ?? detail?.code ?? "UNKNOWN",
+          error.message ?? detail?.message ?? (typeof error.detail === "string" ? error.detail : "Request failed"),
+        );
       }
       const reader = res.body?.getReader();
       if (!reader) throw new ApiError(0, "NO_STREAM", "No response stream");
