@@ -95,6 +95,13 @@ class FlintChartBridge:
         """If inline data is large, write it to a temp file and use data.url instead.
         This avoids hitting Flint's inline row limits."""
         data = spec.get("data", {})
+        if isinstance(data, list):
+            # LLMs sometimes emit the rows as a bare array — wrap onto the
+            # canonical {"values": [...]} form before anything reads .get().
+            data = {"values": data}
+            spec["data"] = data
+        if not isinstance(data, dict):
+            spec["data"] = data = {}
         values = data.get("values", [])
 
         if len(values) > 100:  # Threshold for file-based data
