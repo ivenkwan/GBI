@@ -223,7 +223,7 @@ export function WikiView() {
             <EmptyState
               variant="inline"
               title="No pages yet"
-              description={isEditor ? "Write the first one." : "Ask your admin to add content."}
+              description={isEditor ? " — write the first one." : "."}
             />
           )}
           <TreeView
