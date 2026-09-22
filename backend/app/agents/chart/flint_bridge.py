@@ -17,8 +17,6 @@ The bridge also supports:
 - Backend selection per-render (Vega-Lite for SVG, ECharts for complex, Chart.js for speed)
 """
 
-import subprocess
-import tempfile
 from pathlib import Path
 
 from app.core.config import settings
@@ -69,6 +67,14 @@ class FlintChartBridge:
         )
 
         # Write data to temp file if inline values exceed threshold
+        if not isinstance(spec, dict):
+            return {
+                "success": False,
+                "format": output_format,
+                "backend": backend,
+                "warnings": [],
+                "errors": [f"Chart spec must be an object, got {type(spec).__name__}"],
+            }
         spec = self._prepare_data(spec)
 
         try:
@@ -185,44 +191,47 @@ class FlintChartBridge:
                 "errors": ["No data provided for chart rendering"],
             }
 
-        encodings = spec.get("encodings", {})
+        encodings = self._normalize_encodings(spec.get("encodings", {}))
         chart_type = spec.get("chartType", "Bar Chart")
-        base_size = spec.get("baseSize", {"width": 600, "height": 400})
+        raw_base_size = spec.get("baseSize", {})
+        base_size = raw_base_size if isinstance(raw_base_size, dict) else {}
 
         import pandas as pd
 
         df = pd.DataFrame(data)
+        # vl-convert serializes the spec to JSON — DB values like UUIDs must
+        # be stringified first ("unsupported type UUID" otherwise).
+        df = df.map(
+            lambda v: v if isinstance(v, (str, int, float, bool, type(None))) else str(v)
+        )
 
         chart = self._build_altair_chart(df, chart_type, encodings, base_size)
 
-        if output_format == "svg":
-            svg_str = chart.to_json(format="svg")
+        # Export via vl-convert (altair's own serialization path —
+        # Chart.to_json's format arg is the SCHEMA format, never "svg").
+        try:
+            import vl_convert as vlc
+        except ImportError:
             return {
-                "success": True,
-                "format": "svg",
-                "svg": svg_str,
+                "success": False,
+                "format": output_format,
                 "warnings": [],
-                "errors": [],
+                "errors": ["vl-convert-python not installed — install with: uv add vl-convert-python"],
             }
 
-        # PNG via Vega-Lite -> SVG -> resvg
-
-        with tempfile.NamedTemporaryFile(suffix=".svg", delete=False) as f:
-            f.write(chart.to_json(format="svg").encode())
-            svg_path = f.name
-
-        png_path = svg_path.replace(".svg", ".png")
         try:
-            subprocess.run(
-                ["resvg", svg_path, png_path, "-w", str(base_size["width"] * scale)],
-                check=True,
-                capture_output=True,
-                timeout=30,
-            )
-            png_data = Path(png_path).read_bytes()
-            image_base64 = base64.b64encode(png_data).decode()
-            Path(svg_path).unlink(missing_ok=True)
-            Path(png_path).unlink(missing_ok=True)
+            if output_format == "svg":
+                svg_str = vlc.vegalite_to_svg(chart.to_dict())
+                return {
+                    "success": True,
+                    "format": "svg",
+                    "svg": svg_str,
+                    "warnings": [],
+                    "errors": [],
+                }
+
+            png_bytes = vlc.vegalite_to_png(chart.to_dict(), scale=scale)
+            image_base64 = base64.b64encode(png_bytes).decode()
             return {
                 "success": True,
                 "format": "png",
@@ -230,17 +239,47 @@ class FlintChartBridge:
                 "warnings": [],
                 "errors": [],
             }
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            # resvg not available — return SVG even for PNG requests
-            svg_data = Path(svg_path).read_text()
-            Path(svg_path).unlink(missing_ok=True)
+        except Exception as e:  # noqa: BLE001 — surfaced as a chart error
             return {
-                "success": True,
-                "format": "svg",
-                "svg": svg_data,
-                "warnings": ["resvg not installed — returned SVG instead of PNG"],
-                "errors": [],
+                "success": False,
+                "format": output_format,
+                "warnings": [],
+                "errors": [f"vega-lite export failed: {type(e).__name__}: {e}"],
             }
+
+    @staticmethod
+    def _normalize_encodings(encodings) -> dict:
+        """Coerce the LLM-generated encodings onto the canonical dict form.
+
+        Expected: {"x": {"field": ...}, "y": {...}, "color": {...}?}. Models
+        deviate — a list of channel items ([{"channel": "x", "field": ...}],
+        [{"x": "region"}]) or string values ({"x": "region"}) all appear.
+        Anything unrecognized is dropped; missing channels fall back to the
+        data-frame column order in _build_altair_chart.
+        """
+        out: dict = {}
+
+        def _set(channel: str, value) -> None:
+            channel = str(channel).lower()
+            if isinstance(value, str):
+                out[channel] = {"field": value}
+            elif isinstance(value, dict) and value.get("field"):
+                out[channel] = value
+
+        if isinstance(encodings, dict):
+            for k, v in encodings.items():
+                _set(k, v)
+        elif isinstance(encodings, list):
+            for item in encodings:
+                if not isinstance(item, dict):
+                    continue
+                channel = item.get("channel") or item.get("role") or item.get("axis")
+                if channel:
+                    _set(channel, item.get("field") or item.get("column") or item.get("value"))
+                else:
+                    for k, v in item.items():
+                        _set(k, v)
+        return out
 
     def _build_altair_chart(self, df, chart_type: str, encodings: dict, base_size: dict):
         """Build an Altair/Vega-Lite chart from a simplified Flint-inspired spec."""

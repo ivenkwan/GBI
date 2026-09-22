@@ -5,6 +5,9 @@ It produces Flint-first ChartAssemblyInput specs but can fall back to the
 GPT-Vis protocol for interactive dashboard charts.
 """
 
+import contextlib
+import json
+
 from app.agents.base import AgentResult, BaseAgent
 from app.agents.chart.flint_bridge import FlintChartBridge
 from app.agents.registry import register_agent
@@ -86,8 +89,6 @@ class ChartGenAgent(BaseAgent):
         call gets retry, token-budget enforcement, JSON extraction, and audit
         logging — required by CLAUDE.md §6 for every LLM call.
         """
-        import json
-
         from app.core.llm_client import LLMCallOptions, get_llm_client
 
         # Infer semantic types from data
@@ -123,18 +124,23 @@ Do NOT include any explanatory text — only the JSON object."""
         )
 
         # The client already extracts JSON via _extract_json; fall back only if
-        # the model returned nothing parseable.
-        if result.parsed:
-            return result.parsed
-        try:
-            return json.loads(result.content)
-        except (json.JSONDecodeError, TypeError):
-            return {
-                "chartType": chart_type,
-                "encodings": encodings,
-                "baseSize": {"width": 600, "height": 400},
-                "data": {"values": data},
-            }
+        # the model returned nothing parseable. Some models wrap the object in
+        # a JSON array — take the first dict rather than leaking the list into
+        # the renderer (which expects spec.get(...)).
+        candidates = [result.parsed]
+        with contextlib.suppress(json.JSONDecodeError, TypeError):
+            candidates.append(json.loads(result.content))
+        for candidate in candidates:
+            if isinstance(candidate, list) and candidate and isinstance(candidate[0], dict):
+                candidate = candidate[0]
+            if isinstance(candidate, dict) and candidate.get("chartType"):
+                return candidate
+        return {
+            "chartType": chart_type,
+            "encodings": encodings,
+            "baseSize": {"width": 600, "height": 400},
+            "data": {"values": data},
+        }
 
     def _infer_semantic_types(self, data: list[dict]) -> dict[str, str]:
         """Infer Flint semantic types (Category, Quantity, Temporal) from column data."""
