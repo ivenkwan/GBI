@@ -47,19 +47,9 @@ export function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      {/* Brand panel — inline background as a hard fallback: white headline
-          text must stay readable even if the Tailwind sheet fails to load
-          (stale tabs / proxied access), not vanish on a white panel. */}
-      <div
-        className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-slate-900 p-12 lg:flex"
-        style={{ backgroundColor: "#0f172a" }}
-      >
+      <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-slate-900 p-12 lg:flex">
         <div
-          className="pointer-events-none absolute inset-0 opacity-40"
-          style={{
-            background:
-              "radial-gradient(600px circle at 20% 20%, rgba(76,110,245,0.45), transparent 60%), radial-gradient(500px circle at 80% 80%, rgba(67,211,151,0.25), transparent 60%)",
-          }}
+          className="pointer-events-none absolute inset-0 opacity-40 bg-[radial-gradient(600px_circle_at_20%_20%,rgba(76,110,245,0.45),transparent_60%),radial-gradient(500px_circle_at_80%_80%,rgba(67,211,151,0.25),transparent_60%)]"
           aria-hidden
         />
         <Link
