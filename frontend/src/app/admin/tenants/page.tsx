@@ -11,6 +11,7 @@ import {
 import { TenantProvisionSchema } from "@/lib/validators";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Loader } from "@/components/ui/loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -168,52 +169,44 @@ export default function AdminTenantsPage() {
         </div>
       )}
 
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-xl w-full max-w-md p-6 space-y-4">
-            <h2 className="text-base font-semibold text-gray-900">Provision a new tenant</h2>
-            <p className="text-xs text-gray-500">
-              Creates the tenant and its initial admin user in one transaction. A one-time
-              password is generated and shown once.
-            </p>
-            <div className="space-y-3">
-              <Input
-                placeholder="Tenant name (e.g. Acme Corp)"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-              />
-              <Input
-                placeholder="Slug (e.g. acme-corp)"
-                value={form.slug}
-                onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase() })}
-              />
-              <Input
-                placeholder="Initial admin email"
-                type="email"
-                value={form.admin_email}
-                onChange={(e) => setForm({ ...form, admin_email: e.target.value })}
-              />
-              <label className="flex items-center gap-2 text-sm text-gray-600">
-                <input
-                  type="checkbox"
-                  checked={form.seed}
-                  onChange={(e) => setForm({ ...form, seed: e.target.checked })}
-                />
-                Seed sample sales data
-              </label>
-            </div>
-            {formError && <p className="text-xs text-red-600">{formError}</p>}
-            <div className="flex justify-end gap-2 pt-1">
-              <Button variant="outline" onClick={() => setOpen(false)} disabled={busy}>
-                Cancel
-              </Button>
-              <Button onClick={handleProvision} disabled={busy}>
-                {busy ? "Provisioning…" : "Provision"}
-              </Button>
-            </div>
-          </div>
+      <ConfirmDialog
+        open={open}
+        onOpenChange={setOpen}
+        title="Provision a new tenant"
+        description="Creates the tenant and its initial admin user in one transaction. A one-time password is generated and shown once."
+        confirmLabel="Provision"
+        confirmVariant="default"
+        onConfirm={handleProvision}
+        busy={busy}
+      >
+        <div className="space-y-3">
+          <Input
+            placeholder="Tenant name (e.g. Acme Corp)"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+          />
+          <Input
+            placeholder="Slug (e.g. acme-corp)"
+            value={form.slug}
+            onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase() })}
+          />
+          <Input
+            placeholder="Initial admin email"
+            type="email"
+            value={form.admin_email}
+            onChange={(e) => setForm({ ...form, admin_email: e.target.value })}
+          />
+          <label className="flex items-center gap-2 text-sm text-gray-600">
+            <input
+              type="checkbox"
+              checked={form.seed}
+              onChange={(e) => setForm({ ...form, seed: e.target.checked })}
+            />
+            Seed sample sales data
+          </label>
         </div>
-      )}
+        {formError && <p className="text-xs text-red-600">{formError}</p>}
+      </ConfirmDialog>
     </div>
   );
 }

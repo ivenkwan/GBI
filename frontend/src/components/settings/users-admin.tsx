@@ -12,6 +12,7 @@ import {
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { KeyRound, Plus, Trash2 } from "lucide-react";
 
@@ -201,113 +202,88 @@ export function UsersAdmin({
       </table>
 
       {/* Create dialog */}
-      {createOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-xl w-full max-w-sm p-6 space-y-4">
-            <h3 className="text-sm font-semibold text-gray-900">Add a user</h3>
-            <Input
-              type="email"
-              placeholder="email@tenant.example"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-            />
-            <div className="flex gap-2">
-              <Input
-                type="text"
-                placeholder="initial password (min 8)"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-              />
-              <Button variant="outline" size="sm" onClick={() => setForm({ ...form, password: generatePassword() })}>
-                Generate
-              </Button>
-            </div>
-            <label className="flex items-center gap-2 text-sm text-gray-600">
-              <input
-                type="checkbox"
-                checked={form.admin}
-                onChange={(e) => setForm({ ...form, admin: e.target.checked })}
-              />
-              Tenant admin role
-            </label>
-            {formError && <Alert className="text-xs">{formError}</Alert>}
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setCreateOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleCreate} disabled={busy}>
-                Create
-              </Button>
-            </div>
-          </div>
+      <ConfirmDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        title="Add a user"
+        confirmLabel="Create"
+        confirmVariant="default"
+        onConfirm={handleCreate}
+        busy={busy}
+      >
+        <Input
+          type="email"
+          placeholder="email@tenant.example"
+          value={form.email}
+          onChange={(e) => setForm({ ...form, email: e.target.value })}
+        />
+        <div className="flex gap-2">
+          <Input
+            type="text"
+            placeholder="initial password (min 8)"
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
+          />
+          <Button variant="outline" size="sm" onClick={() => setForm({ ...form, password: generatePassword() })}>
+            Generate
+          </Button>
         </div>
-      )}
+        <label className="flex items-center gap-2 text-sm text-gray-600">
+          <input
+            type="checkbox"
+            checked={form.admin}
+            onChange={(e) => setForm({ ...form, admin: e.target.checked })}
+          />
+          Tenant admin role
+        </label>
+        {formError && <Alert className="text-xs">{formError}</Alert>}
+      </ConfirmDialog>
 
       {/* Reset-password dialog */}
-      {resetTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-xl w-full max-w-sm p-6 space-y-4">
-            <h3 className="text-sm font-semibold text-gray-900">
-              Reset password for {resetTarget.email}
-            </h3>
-            <div className="flex gap-2">
-              <Input value={resetPw} onChange={(e) => setResetPw(e.target.value)} />
-              <Button variant="outline" size="sm" onClick={() => setResetPw(generatePassword())}>
-                Regenerate
-              </Button>
-            </div>
-            <p className="text-xs text-gray-400">
-              Share the new password securely — it is not shown again.
-            </p>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setResetTarget(null)}>
-                Cancel
-              </Button>
-              <Button
-                disabled={busy || resetPw.length < 8}
-                onClick={async () => {
-                  await run("Password reset", () =>
-                    resetUserPassword(resetTarget.id, resetPw, tenantId),
-                  );
-                  setResetTarget(null);
-                }}
-              >
-                Reset
-              </Button>
-            </div>
-          </div>
+      <ConfirmDialog
+        open={resetTarget !== null}
+        onOpenChange={(o) => {
+          if (!o) setResetTarget(null);
+        }}
+        title={`Reset password for ${resetTarget?.email ?? ""}`}
+        confirmLabel="Reset"
+        confirmVariant="default"
+        onConfirm={async () => {
+          if (!resetTarget || resetPw.length < 8) return;
+          await run("Password reset", () =>
+            resetUserPassword(resetTarget.id, resetPw, tenantId),
+          );
+          setResetTarget(null);
+        }}
+        busy={busy}
+      >
+        <div className="flex gap-2">
+          <Input value={resetPw} onChange={(e) => setResetPw(e.target.value)} />
+          <Button variant="outline" size="sm" onClick={() => setResetPw(generatePassword())}>
+            Regenerate
+          </Button>
         </div>
-      )}
+        <p className="text-xs text-gray-400">
+          Share the new password securely — it is not shown again.
+        </p>
+      </ConfirmDialog>
 
       {/* Delete confirm */}
-      {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-          <div className="bg-white rounded-2xl border border-red-200 shadow-xl w-full max-w-sm p-6 space-y-4">
-            <h3 className="text-sm font-semibold text-gray-900">
-              Delete {deleteTarget.email}?
-            </h3>
-            <p className="text-xs text-gray-500">
-              Hard delete. Their conversations, reports, and dashboards remain (tenant
-              assets); audit history is retained. The last active admin cannot be deleted.
-            </p>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setDeleteTarget(null)}>
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                disabled={busy}
-                onClick={async () => {
-                  await run("User deleted", () => deleteUser(deleteTarget.id, tenantId));
-                  setDeleteTarget(null);
-                }}
-              >
-                Delete
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(o) => {
+          if (!o) setDeleteTarget(null);
+        }}
+        title={`Delete ${deleteTarget?.email ?? ""}?`}
+        description="Hard delete. Their conversations, reports, and dashboards remain (tenant assets); audit history is retained. The last active admin cannot be deleted."
+        confirmLabel="Delete"
+        onConfirm={async () => {
+          if (!deleteTarget) return;
+          await run("User deleted", () => deleteUser(deleteTarget.id, tenantId));
+          setDeleteTarget(null);
+        }}
+        busy={busy}
+      />
     </section>
   );
 }
