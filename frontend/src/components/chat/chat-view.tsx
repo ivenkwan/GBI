@@ -56,6 +56,7 @@ export function ChatView() {
   const [loading, setLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const streamingMsgRef = useRef<string | null>(null);
 
   // Conversations (Phase 14): sidebar list + the active thread. A null id
   // means "new chat" — the backend creates the conversation on first send
@@ -186,6 +187,7 @@ export function ChatView() {
     try {
       const controller = new AbortController();
       abortRef.current = controller;
+      streamingMsgRef.current = msgId;
 
       const res = await fetch(CHAT_STREAM_URL, {
         method: "POST",
@@ -254,12 +256,25 @@ export function ChatView() {
     } finally {
       setLoading(false);
       abortRef.current = null;
+      streamingMsgRef.current = null;
     }
   };
 
   const handleCancel = () => {
     abortRef.current?.abort();
     setLoading(false);
+    // End the in-flight assistant bubble — otherwise its streaming spinner
+    // outlives the cancelled request.
+    const msgId = streamingMsgRef.current;
+    if (msgId) {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === msgId && m.streaming
+            ? { ...m, streaming: false, content: m.content || "Cancelled." }
+            : m,
+        ),
+      );
+    }
   };
 
   // Feedback (Phase 20): thumbs up/down on a completed response. The score
@@ -539,7 +554,6 @@ export function ChatView() {
             ) : (
               <Button
                 onClick={() => handleSend()}
-                disabled={!input.trim()}
                 size="lg"
                 className="rounded-xl"
               >

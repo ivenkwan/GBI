@@ -1,7 +1,14 @@
 "use client";
 
-import Markdown from "react-markdown";
+import Markdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
+
+/** Allow normal URLs plus inline data: images — persisted chat messages
+ *  embed their rendered chart as a data-URI markdown image. */
+function urlTransform(url: string): string {
+  if (url.startsWith("data:image/")) return url;
+  return defaultUrlTransform(url);
+}
 
 /**
  * MarkdownText — shared renderer for LLM-generated narratives and wiki
@@ -14,7 +21,16 @@ export function MarkdownText({ children }: { children: string }) {
     <div className="markdown-text text-sm leading-relaxed text-gray-700">
       <Markdown
         remarkPlugins={[remarkGfm]}
+        urlTransform={urlTransform}
         components={{
+          img: ({ src, alt }) => (
+            /* eslint-disable-next-line @next/next/no-img-element -- inline data-URI charts, no asset pipeline */
+            <img
+              src={typeof src === "string" ? src : undefined}
+              alt={alt ?? "chart"}
+              className="my-2 max-w-full rounded-lg border border-gray-100 bg-white"
+            />
+          ),
           p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
           h1: ({ children }) => (
             <h1 className="mb-2 mt-4 text-lg font-semibold text-gray-900 first:mt-0">{children}</h1>

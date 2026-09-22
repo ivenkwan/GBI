@@ -13,6 +13,7 @@ Flow:
 Supports both synchronous and streaming (SSE) response modes.
 """
 
+import base64
 import json
 from uuid import uuid4
 
@@ -187,7 +188,9 @@ class ChatService:
             await self._persist_turn(
                 conversation_id,
                 "assistant",
-                narrative.get("narrative") or "Here's what I found.",
+                self._content_with_chart(
+                    narrative.get("narrative") or "Here's what I found.", chart_output
+                ),
                 generated_sql=sql,
             )
             return self._build_response(
@@ -390,7 +393,9 @@ class ChatService:
             await self._persist_turn(
                 conversation_id,
                 "assistant",
-                narrative.get("narrative") or "Here's what I found.",
+                self._content_with_chart(
+                    narrative.get("narrative") or "Here's what I found.", chart_output
+                ),
                 generated_sql=sql,
             )
             yield _emit("done", {"status": "complete", "warnings": warnings})
@@ -428,6 +433,26 @@ class ChatService:
         except Exception as e:
             logger.warning("Conversation history unavailable — cold start: %s", e)
             return []
+
+    @staticmethod
+    def _content_with_chart(narrative: str, chart_output: dict) -> str:
+        """Narrative + rendered chart as one persistable markdown blob.
+
+        Live streams deliver the chart as a separate SSE event; the persisted
+        message is all a resumed conversation has, so embed the chart as a
+        data-URI markdown image to keep history visually complete.
+        """
+        svg = chart_output.get("svg")
+        image = chart_output.get("image_base64")
+        try:
+            if svg:
+                encoded = base64.b64encode(str(svg).encode()).decode()
+                return f"{narrative}\n\n![chart](data:image/svg+xml;base64,{encoded})"
+            if image:
+                return f"{narrative}\n\n![chart](data:image/png;base64,{image})"
+        except Exception:  # noqa: BLE001 — chart embedding is best-effort
+            pass
+        return narrative
 
     async def _persist_turn(
         self,
@@ -761,7 +786,7 @@ class ChatService:
                 AgentConfig(
                     model_name=settings.LLM_FAST_MODEL,
                     temperature=0,
-                    max_tokens=2048,
+                    max_tokens=4096,
                 )
             )
             result = await agent.execute(
@@ -863,7 +888,7 @@ class ChatService:
                 AgentConfig(
                     model_name=settings.LLM_FAST_MODEL,
                     temperature=0.3,
-                    max_tokens=512,
+                    max_tokens=3072,
                 )
             )
 
