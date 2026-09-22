@@ -136,6 +136,14 @@ class PostgreSQLConnector(BaseConnector):
         if not self._connected:
             raise ConnectionError("Not connected. Call connect() first.")
 
+        # LLM-generated SQL sometimes emits a ":tenant_id" placeholder even
+        # though the prompt never asks for one. Bind it to this connector's
+        # tenant when present; SQLAlchemy text() drops unused params, so this
+        # is a no-op for SQL without the placeholder.
+        params = dict(params or {})
+        if self.tenant_id:
+            params.setdefault("tenant_id", str(self.tenant_id))
+
         # Sanity check — must be SELECT. Statement constructs are compiled
         # from select() internally, so they are read-only by construction.
         if isinstance(sql, str):
@@ -162,7 +170,10 @@ class PostgreSQLConnector(BaseConnector):
             # RLS scopes every SELECT to this tenant.
             if self.tenant_id:
                 await session.execute(
-                    text("SET LOCAL app.current_tenant_id = :tid"),
+                    # SET rejects bind parameters under asyncpg ("syntax error
+                    # at or near $1"); set_config(...) is the parameterized
+                    # equivalent of SET LOCAL (true = transaction-scoped).
+                    text("SELECT set_config('app.current_tenant_id', :tid, true)"),
                     {"tid": str(self.tenant_id)},
                 )
 
@@ -202,7 +213,7 @@ class PostgreSQLConnector(BaseConnector):
             await session.execute(text("SET LOCAL statement_timeout = '30s'"))
             if self.tenant_id:
                 await session.execute(
-                    text("SET LOCAL app.current_tenant_id = :tid"),
+                    text("SELECT set_config('app.current_tenant_id', :tid, true)"),
                     {"tid": str(self.tenant_id)},
                 )
             result = await session.execute(text(sql))
