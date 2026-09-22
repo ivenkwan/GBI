@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { MessageSquare } from "lucide-react";
 import { useConversations } from "@/hooks/use-conversations";
 import { useChatStream } from "@/hooks/use-chat-stream";
 import { ConversationSidebar } from "@/components/chat/conversation-sidebar";
 import { MessageList } from "@/components/chat/message-list";
 import { ChatInput } from "@/components/chat/chat-input";
+import { Sheet } from "@/components/ui/sheet";
 
 export function ChatView() {
   const {
@@ -34,12 +36,14 @@ export function ChatView() {
     onTurnComplete: refresh,
   });
   const [input, setInput] = useState("");
+  const [listOpen, setListOpen] = useState(false);
 
   const handleSelect = useCallback(
     (id: string) => {
       if (loading) return;
       selectConversation(id);
       loadHistory(id);
+      setListOpen(false);
     },
     [loading, selectConversation, loadHistory],
   );
@@ -49,6 +53,7 @@ export function ChatView() {
     startNewChat();
     reset();
     setInput("");
+    setListOpen(false);
   }, [loading, startNewChat, reset]);
 
   const handleSend = useCallback(() => {
@@ -69,6 +74,25 @@ export function ChatView() {
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
+        <button
+          type="button"
+          onClick={() => setListOpen(true)}
+          className="flex md:hidden items-center gap-2 border-b border-gray-200 bg-white px-4 py-2 text-sm text-gray-700"
+        >
+          <MessageSquare className="h-4 w-4" />
+          Conversations
+        </button>
+
+        <Sheet open={listOpen} onOpenChange={setListOpen} title="Conversations">
+          <ConversationSidebar
+            conversations={conversations}
+            activeId={conversationId}
+            listError={listError}
+            onSelect={handleSelect}
+            onNewChat={handleNewChat}
+          />
+        </Sheet>
+
         <MessageList
           messages={messages}
           loading={loading}
