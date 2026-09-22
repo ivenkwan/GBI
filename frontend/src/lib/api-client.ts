@@ -6,7 +6,12 @@
 
 import type { ChartAssemblyInput } from "@/types/chart";
 import { getStoredToken } from "@/lib/auth-storage";
-import { LoginResponseSchema, SSEEventSchema } from "@/lib/validators";
+import {
+  LoginResponseSchema,
+  MetricListResponseSchema,
+  MetricQueryResponseSchema,
+  SSEEventSchema,
+} from "@/lib/validators";
 import type { SSEEvent } from "@/lib/validators";
 
 // Normalized to a trailing slash so relative paths resolve against the base
@@ -221,8 +226,8 @@ export interface MetricListResponse {
   count: number;
 }
 
-export function listMetrics(): Promise<MetricListResponse> {
-  return request<MetricListResponse>("/metrics/list");
+export async function listMetrics(): Promise<MetricListResponse> {
+  return MetricListResponseSchema.parse(await request<unknown>("/metrics/list"));
 }
 
 export interface MetricQueryRequest {
@@ -245,8 +250,10 @@ export interface MetricQueryResponse {
   cached: boolean;
 }
 
-export function queryMetrics(req: MetricQueryRequest): Promise<MetricQueryResponse> {
-  return request<MetricQueryResponse>("/metrics/query", { method: "POST", body: req });
+export async function queryMetrics(req: MetricQueryRequest): Promise<MetricQueryResponse> {
+  return MetricQueryResponseSchema.parse(
+    await request<unknown>("/metrics/query", { method: "POST", body: req }),
+  );
 }
 
 // --- Conversations ---

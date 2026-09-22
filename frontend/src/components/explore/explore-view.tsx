@@ -13,8 +13,8 @@ import type { ChartAssemblyInput } from "@/types/chart";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DataTable, type Column } from "@/components/ui/data-table";
 import { BarChart3, Play } from "lucide-react";
-import { EmptyState } from "@/components/ui/empty-state";
 import { Loader } from "@/components/ui/loader";
 import { PageHeader } from "@/components/layout/page-header";
 
@@ -120,9 +120,13 @@ export function ExploreView() {
     }
   }, [selected, dimension, granularity, limit]);
 
-  const columns = useMemo(() => {
+  const columns = useMemo<Column<Record<string, unknown>>[]>(() => {
     if (!result || result.data.length === 0) return [];
-    return Object.keys(result.data[0]);
+    return Object.keys(result.data[0]).map((key) => ({
+      key,
+      header: key.split(".").pop() ?? key,
+      render: (row) => formatCell(row[key]),
+    }));
   }, [result]);
 
   return (
@@ -232,44 +236,19 @@ export function ExploreView() {
               </section>
 
               {/* Results */}
-              {result && result.data.length > 0 && (
+              {result && (
                 <section className="space-y-4">
-                  {chartSpec && (
+                  {chartSpec && result.data.length > 0 && (
                     <ChartCard spec={chartSpec} svg={chartSvg} title={selected?.title} />
                   )}
-                  <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="bg-gray-50 border-b border-gray-200">
-                          {columns.map((c) => (
-                            <th key={c} className="text-left px-4 py-2 text-xs font-medium text-gray-600">
-                              {c}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {result.data.map((row, i) => (
-                          <tr key={i} className="border-b border-gray-100 last:border-0">
-                            {columns.map((c) => (
-                              <td key={c} className="px-4 py-2 text-gray-700">
-                                {formatCell(row[c])}
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                  <DataTable
+                    columns={columns}
+                    rows={result.data}
+                    keyField={(row) => JSON.stringify(row)}
+                    emptyText="Under tenant RLS this usually means the tenant has no data for this metric — try seeding (make seed)."
+                    loading={running}
+                  />
                 </section>
-              )}
-
-              {result && result.data.length === 0 && (
-                <EmptyState
-                  variant="card"
-                  title="No rows"
-                  description="Under tenant RLS this usually means the tenant has no data for this metric — try seeding (`make seed`)."
-                />
               )}
             </>
           )}
