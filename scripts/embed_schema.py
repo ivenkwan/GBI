@@ -164,55 +164,73 @@ async def sync_schema(
         embedding_text = build_embedding_text(table)
         columns_json = json.dumps(table["columns"], default=str)
 
+        if dry_run:
+            continue
+
+        # Best-effort vector: the metadata row must always land so lexical
+        # retrieval has something to search — a dead/unconfigured embedding
+        # API degrades ranking, not the whole sync.
+        embedding_vector = None
         try:
-            if not dry_run:
-                # Generate embedding
-                embedding_vector = await generate_embedding(embedding_text)
-                embeddings += 1
+            embedding_vector = await generate_embedding(embedding_text)
+            embeddings += 1
+        except Exception as e:
+            errors += 1
+            logger.warning(
+                f"Embedding API unavailable for {table['full_name']} "
+                f"— storing metadata only: {e}"
+            )
 
-                # Upsert (single transaction per table; embedding API call
-                # must not hold a transaction open).
-                async with conn.transaction():
-                    await conn.execute(
-                        """
-                        INSERT INTO schema_embeddings (
-                            id, tenant_id, table_schema, table_name,
-                            full_name, table_description, columns_json,
-                            embedding_text, embedding, created_at, updated_at
-                        ) VALUES (
-                            $1, $2, $3, $4,
-                            $5, $6, $7,
-                            $8, $9::vector(1536), $10, $10
-                        )
-                        ON CONFLICT (tenant_id, table_schema, table_name)
-                        DO UPDATE SET
-                            columns_json = EXCLUDED.columns_json,
-                            table_description = EXCLUDED.table_description,
-                            embedding_text = EXCLUDED.embedding_text,
-                            embedding = EXCLUDED.embedding,
-                            updated_at = EXCLUDED.updated_at
-                        """,
-                        str(uuid4()),
-                        tenant_id,
-                        table["table_schema"],
-                        table["table_name"],
-                        table["full_name"],
-                        table.get("table_description", ""),
-                        columns_json,
-                        embedding_text,
-                        str(embedding_vector),
-                        datetime.now(UTC),
+        # Upsert (single transaction per table; embedding API call
+        # must not hold a transaction open).
+        try:
+            async with conn.transaction():
+                await conn.execute(
+                    """
+                    INSERT INTO schema_embeddings (
+                        id, tenant_id, table_schema, table_name,
+                        full_name, table_description, columns_json,
+                        embedding_text, embedding, created_at, updated_at
+                    ) VALUES (
+                        $1, $2, $3, $4,
+                        $5, $6, $7,
+                        $8, $9::vector(1536), $10, $10
                     )
+                    ON CONFLICT (tenant_id, table_schema, table_name)
+                    DO UPDATE SET
+                        columns_json = EXCLUDED.columns_json,
+                        table_description = EXCLUDED.table_description,
+                        embedding_text = EXCLUDED.embedding_text,
+                        embedding = EXCLUDED.embedding,
+                        updated_at = EXCLUDED.updated_at
+                    """,
+                    str(uuid4()),
+                    tenant_id,
+                    table["table_schema"],
+                    table["table_name"],
+                    table["full_name"],
+                    table.get("table_description", ""),
+                    columns_json,
+                    embedding_text,
+                    str(embedding_vector) if embedding_vector is not None else None,
+                    datetime.now(UTC),
+                )
 
+            if embedding_vector is not None:
                 logger.info(
                     f"Embedded table {table['full_name']} "
                     f"({len(table['columns'])} columns, "
                     f"{len(embedding_vector)}-dim vector)"
                 )
+            else:
+                logger.info(
+                    f"Stored table {table['full_name']} metadata "
+                    f"({len(table['columns'])} columns, no vector)"
+                )
 
         except Exception as e:
             errors += 1
-            logger.error(f"Failed to embed table {table['full_name']}: {e}")
+            logger.error(f"Failed to upsert table {table['full_name']}: {e}")
 
     return {
         "tables_processed": processed,
@@ -252,7 +270,17 @@ async def sync_examples(conn, examples_file: str, tenant_id: str = DEFAULT_TENAN
             expected_sql = case.get("expected_sql", "")
             if not nl_query or not expected_sql:
                 continue
-            embedding = await generate_embedding(nl_query)
+            # Best-effort vector (see sync_schema): the example text lands
+            # even when the embedding API is unavailable, so lexical
+            # few-shot retrieval still finds it.
+            embedding = None
+            try:
+                embedding = await generate_embedding(nl_query)
+            except Exception as e:
+                logger.warning(
+                    f"Embedding unavailable for example '{nl_query[:50]}' "
+                    f"— inserting without vector: {e}"
+                )
             await conn.execute(
                 "INSERT INTO agent_examples "
                 "(agent_name, nl_query, expected_sql, tags, embedding, tenant_id) "
@@ -261,7 +289,7 @@ async def sync_examples(conn, examples_file: str, tenant_id: str = DEFAULT_TENAN
                 nl_query,
                 expected_sql,
                 json.dumps([case.get("category", "golden")]),
-                vector_literal(embedding),
+                vector_literal(embedding) if embedding is not None else None,
                 tenant_id,
             )
 
