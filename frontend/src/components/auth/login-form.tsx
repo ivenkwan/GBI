@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
-import { BarChart3, Lock, Mail, Sparkles, ShieldCheck, Zap } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { BarChart3, LifeBuoy, Lock, Mail, Sparkles, ShieldCheck, Zap } from "lucide-react";
 
 /** Email/password sign-in form. Calls onSuccess after a successful login. */
 export function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
@@ -118,9 +126,51 @@ export function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
             </div>
 
             <div>
-              <label htmlFor="login-password" className="mb-1 block text-sm font-medium text-gray-700">
-                Password
-              </label>
+              <div className="mb-1 flex items-center justify-between">
+                <label htmlFor="login-password" className="block text-sm font-medium text-gray-700">
+                  Password
+                </label>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <button
+                      type="button"
+                      className="text-xs font-medium text-brand-600 transition-colors hover:text-brand-700 hover:underline"
+                    >
+                      Forgot password?
+                    </button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <LifeBuoy className="h-4 w-4 text-gray-400" />
+                        Reset your password
+                      </DialogTitle>
+                      <DialogDescription className="pt-1 text-left">
+                        GenBI accounts are managed by your workspace administrators —
+                        there is no email-based self-reset.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-3 text-sm text-gray-600">
+                      <div className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
+                        <p className="font-medium text-gray-800">Still know your password?</p>
+                        <p className="mt-1 text-xs leading-relaxed text-gray-500">
+                          Sign in and change it any time under{" "}
+                          <span className="font-medium">Settings → Change password</span>.
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
+                        <p className="font-medium text-gray-800">Locked out?</p>
+                        <p className="mt-1 text-xs leading-relaxed text-gray-500">
+                          Ask your tenant admin to reset it for you{" "}
+                          (<span className="font-medium">Settings → Users → Reset password</span>
+                          ), or contact the platform administrator if your tenant admin
+                          is unavailable.
+                        </p>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
               <div className="relative">
                 <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <input

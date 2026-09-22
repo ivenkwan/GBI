@@ -80,7 +80,7 @@ export default function HomePage() {
   const authed = isAuthenticated && !loading;
 
   const navHref = authed ? "/chat" : "/login";
-  const navLabel = authed ? "Open GenBI" : "Sign in";
+  const navLabel = authed ? "Open GenBI" : "Login";
   const ctaHref = navHref;
   const ctaLabel = authed ? "Open GenBI" : "Sign in to the demo";
 
