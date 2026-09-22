@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TenantLLMPanel } from "@/components/admin/tenant-llm-panel";
 import { UsersAdmin } from "@/components/settings/users-admin";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Loader } from "@/components/ui/loader";
 import { AlertTriangle, ArrowLeft, RefreshCw, Trash2 } from "lucide-react";
 
@@ -231,7 +232,9 @@ export default function TenantDetailPage() {
             </li>
           ))}
           {tenant.recent_admin_actions.length === 0 && (
-            <li className="text-gray-400 text-sm">No recorded actions.</li>
+            <li>
+              <EmptyState variant="inline" title="No recorded actions." />
+            </li>
           )}
         </ul>
       </section>

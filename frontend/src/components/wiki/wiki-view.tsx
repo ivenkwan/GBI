@@ -18,6 +18,7 @@ import {
 import { useAuth } from "@/components/auth/auth-provider";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { BookOpen, History, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
@@ -219,9 +220,11 @@ export function WikiView() {
         </div>
         <div className="flex-1 overflow-y-auto py-2">
           {pages.length === 0 && (
-            <p className="px-4 py-2 text-xs text-gray-400">
-              No pages yet{isEditor ? " — write the first one." : "."}
-            </p>
+            <EmptyState
+              variant="inline"
+              title="No pages yet"
+              description={isEditor ? "Write the first one." : "Ask your admin to add content."}
+            />
           )}
           <TreeView
             nodes={tree}

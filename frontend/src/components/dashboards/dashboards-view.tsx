@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LayoutDashboard, Pin, PinOff, Plus, Trash2 } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Loader } from "@/components/ui/loader";
 import { MarkdownText } from "@/components/ui/markdown";
 import { PageHeader } from "@/components/layout/page-header";
@@ -293,9 +294,11 @@ export function DashboardsView() {
                 )}
 
                 {active.sections.length === 0 && (
-                  <p className="text-sm text-gray-400 py-8 text-center">
-                    Nothing pinned yet — create a dashboard from a report&apos;s sections.
-                  </p>
+                  <EmptyState
+                    variant="centered"
+                    title="Nothing pinned yet"
+                    description="Create a dashboard from a report's sections."
+                  />
                 )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

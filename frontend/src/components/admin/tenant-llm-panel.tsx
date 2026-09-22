@@ -12,6 +12,7 @@ import {
 import { LLMConfigSchema } from "@/lib/validators";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Bot } from "lucide-react";
@@ -155,7 +156,7 @@ export function TenantLLMPanel({ tenantId }: { tenantId: string }) {
           </span>
         </div>
         {usage.length === 0 ? (
-          <p className="text-xs text-gray-400">No audited LLM calls in the window.</p>
+          <EmptyState variant="inline" title="No audited LLM calls in the window." />
         ) : (
           <table className="w-full text-xs">
             <thead>

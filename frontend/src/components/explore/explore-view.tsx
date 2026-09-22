@@ -14,6 +14,7 @@ import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BarChart3, Play } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Loader } from "@/components/ui/loader";
 import { PageHeader } from "@/components/layout/page-header";
 
@@ -264,10 +265,11 @@ export function ExploreView() {
               )}
 
               {result && result.data.length === 0 && (
-                <div className="bg-white border border-gray-200 rounded-xl px-4 py-8 text-center text-sm text-gray-500">
-                  No rows. Under tenant RLS this usually means the tenant has no data
-                  for this metric — try seeding (`make seed`).
-                </div>
+                <EmptyState
+                  variant="card"
+                  title="No rows"
+                  description="Under tenant RLS this usually means the tenant has no data for this metric — try seeding (`make seed`)."
+                />
               )}
             </>
           )}
