@@ -70,8 +70,8 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   });
 
   if (!res.ok) {
-    const error = await res.json().catch(() => ({ message: res.statusText }));
-    throw new ApiError(res.status, error.code ?? "UNKNOWN", error.message ?? "Request failed");
+    const body = await res.json().catch(() => ({ message: res.statusText }));
+    throw toApiError(res.status, body);
   }
 
   return res.json();
@@ -86,6 +86,40 @@ export class ApiError extends Error {
     super(message);
     this.name = "ApiError";
   }
+}
+
+/** Normalize a non-2xx response body into an ApiError. FastAPI wraps
+ * HTTPException payloads as {"detail": {code, message}} (a string for plain
+ * raises, a validation-error array for 422s); older bodies may carry
+ * top-level {code, message}. */
+function toApiError(status: number, body: unknown): ApiError {
+  const error = (body ?? {}) as {
+    code?: unknown;
+    message?: unknown;
+    detail?: unknown;
+  };
+  const detail =
+    typeof error.detail === "object" && error.detail !== null && !Array.isArray(error.detail)
+      ? (error.detail as { code?: unknown; message?: unknown })
+      : undefined;
+  const code =
+    typeof error.code === "string"
+      ? error.code
+      : typeof detail?.code === "string"
+        ? detail.code
+        : "UNKNOWN";
+  let message: string | undefined;
+  if (typeof error.message === "string") {
+    message = error.message;
+  } else if (typeof detail?.message === "string") {
+    message = detail.message;
+  } else if (typeof error.detail === "string") {
+    message = error.detail;
+  } else if (Array.isArray(error.detail)) {
+    const first = error.detail[0] as { msg?: unknown } | undefined;
+    message = typeof first?.msg === "string" ? first.msg : undefined;
+  }
+  return new ApiError(status, code, message ?? "Request failed");
 }
 
 // --- Chat ---
@@ -144,15 +178,8 @@ export function streamChat(
       });
 
       if (!res.ok) {
-        const error = await res.json().catch(() => ({ message: res.statusText }));
-        // FastAPI wraps HTTPException payloads as {"detail": {code, message}}
-        // (or a string/array for 422s) — unwrap so the real message surfaces.
-        const detail = typeof error.detail === "object" && error.detail !== null ? error.detail : undefined;
-        throw new ApiError(
-          res.status,
-          error.code ?? detail?.code ?? "UNKNOWN",
-          error.message ?? detail?.message ?? (typeof error.detail === "string" ? error.detail : "Request failed"),
-        );
+        const body = await res.json().catch(() => ({ message: res.statusText }));
+        throw toApiError(res.status, body);
       }
       const reader = res.body?.getReader();
       if (!reader) throw new ApiError(0, "NO_STREAM", "No response stream");
@@ -377,8 +404,8 @@ export async function exportReportPdf(reportId: string): Promise<Blob> {
   if (token) headers["Authorization"] = `Bearer ${token}`;
   const res = await fetch(apiUrl(`reports/${reportId}/pdf`), { headers });
   if (!res.ok) {
-    const error = await res.json().catch(() => ({ message: res.statusText }));
-    throw new ApiError(res.status, error.code ?? "UNKNOWN", error.message ?? "Export failed");
+    const body = await res.json().catch(() => ({ message: res.statusText }));
+    throw toApiError(res.status, body);
   }
   return res.blob();
 }
