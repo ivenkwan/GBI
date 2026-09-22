@@ -7,7 +7,6 @@ Classifies the user's natural language query into one or more agent pipelines:
 - chat_explore: Schema exploration and data profiling
 """
 
-import json
 
 from app.agents.base import AgentResult, BaseAgent
 from app.agents.registry import register_agent
@@ -30,7 +29,7 @@ class RouterAgent(BaseAgent):
 
         start = time.time()
 
-        intent = await self._classify_intent(query)
+        intent = await self._classify_intent(query, tenant_id=kwargs.get("tenant_id"))
         plan = self._build_dispatch_plan(intent, query)
 
         return self._timed_result(
@@ -42,18 +41,14 @@ class RouterAgent(BaseAgent):
             start,
         )
 
-    async def _classify_intent(self, query: str) -> str:
-        """Classify query intent using a fast LLM call."""
-        from langchain_anthropic import ChatAnthropic
+    async def _classify_intent(self, query: str, tenant_id: str | None = None) -> str:
+        """Classify query intent using a fast LLM call.
 
-        from app.core.config import settings
-
-        llm = ChatAnthropic(
-            model=settings.LLM_FAST_MODEL,
-            temperature=0,
-            max_tokens=256,
-            api_key=settings.ANTHROPIC_API_KEY,
-        )
+        Rides the shared LLMClient so tenant BYOK resolution applies — a
+        tenant on a non-Anthropic provider must not ping the platform
+        Anthropic key (403 with a placeholder key) on every query.
+        """
+        from app.core.llm_client import LLMCallOptions, get_llm_client
 
         prompt = f"""Classify this user query into exactly one intent category:
 - chat_data: asking for data from a database (SQL query needed)
@@ -66,12 +61,20 @@ Query: {query}
 
 Return ONLY a JSON object with the key "intent"."""
 
-        response = await llm.ainvoke(prompt)
-        try:
-            result = json.loads(response.content)
-            return result.get("intent", "chat_data")
-        except json.JSONDecodeError:
-            return "chat_data"  # Default fallback
+        result = await get_llm_client().invoke(
+            prompt,
+            options=LLMCallOptions(
+                temperature=0,
+                max_tokens=256,
+                response_format="json",
+            ),
+            tenant_id=tenant_id,
+        )
+        intent = (result.parsed or {}).get("intent", "")
+        if intent in self.INTENTS:
+            return intent
+        # Unparseable or out-of-vocabulary answer — safe default.
+        return "chat_data"
 
     def _build_dispatch_plan(self, intent: str, query: str) -> list[dict]:
         """Build an ordered list of agent calls based on intent."""

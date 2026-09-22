@@ -466,7 +466,7 @@ class ChatService:
                 return "chat_data", []
 
             agent = agent_cls(AgentConfig(model_name=settings.LLM_FAST_MODEL))
-            result = await agent.execute(query=query)
+            result = await agent.execute(query=query, tenant_id=self.tenant_id)
             intent = result.output.get("intent", "chat_data")
             plan = result.output.get("dispatch_plan", [])
             return intent, plan
