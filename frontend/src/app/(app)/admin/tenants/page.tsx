@@ -12,7 +12,7 @@ import { TenantProvisionSchema } from "@/lib/validators";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Loader } from "@/components/ui/loader";
+import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Copy, Plus, Building2 } from "lucide-react";
@@ -125,51 +125,48 @@ export default function AdminTenantsPage() {
             </Alert>
           )}
 
-          {loading ? (
-            <Loader />
-          ) : (
-            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-200 text-left text-xs uppercase tracking-wide text-gray-400">
-                    <th className="px-4 py-3">Tenant</th>
-                    <th className="px-4 py-3">Slug</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Users</th>
-                    <th className="px-4 py-3">Created</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tenants.map((t) => (
-                    <tr key={t.id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <Link href={`/admin/tenants/${t.id}`} className="text-gray-900 hover:text-brand-600 font-medium">
-                          {t.name}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3 text-gray-500 font-mono text-xs">{t.slug ?? "—"}</td>
-                      <td className="px-4 py-3">
-                        <Badge variant={t.status === "active" ? "success" : "warning"}>
-                          {t.status}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">{t.user_count}</td>
-                      <td className="px-4 py-3 text-gray-400 text-xs">
-                        {new Date(t.created_at).toLocaleDateString()}
-                      </td>
-                    </tr>
-                  ))}
-                  {tenants.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
-                        No tenants yet — provision the first one.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <DataTable<TenantSummary>
+            keyField="id"
+            rows={tenants}
+            loading={loading}
+            emptyText="No tenants yet — provision the first one."
+            columns={[
+              {
+                key: "name",
+                header: "Tenant",
+                render: (t) => (
+                  <Link
+                    href={`/admin/tenants/${t.id}`}
+                    className="text-gray-900 hover:text-brand-600 font-medium"
+                  >
+                    {t.name}
+                  </Link>
+                ),
+              },
+              {
+                key: "slug",
+                header: "Slug",
+                className: "text-gray-500 font-mono text-xs",
+                render: (t) => t.slug ?? "—",
+              },
+              {
+                key: "status",
+                header: "Status",
+                render: (t) => (
+                  <Badge variant={t.status === "active" ? "success" : "warning"}>
+                    {t.status}
+                  </Badge>
+                ),
+              },
+              { key: "user_count", header: "Users", className: "text-gray-600" },
+              {
+                key: "created_at",
+                header: "Created",
+                className: "text-gray-400 text-xs",
+                render: (t) => new Date(t.created_at).toLocaleDateString(),
+              },
+            ]}
+          />
 
           <ConfirmDialog
             open={open}

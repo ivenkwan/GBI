@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { listAdminAudit, type AdminAuditEntry } from "@/lib/api-client";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Loader } from "@/components/ui/loader";
+import { DataTable } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { PageContainer } from "@/components/layout/page-container";
 import { PageHeader } from "@/components/layout/page-header";
@@ -78,56 +78,52 @@ export default function AdminAuditPage() {
             />
           </div>
 
-          {loading ? (
-            <Loader />
-          ) : (
-            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-200 text-left text-xs uppercase tracking-wide text-gray-400">
-                    <th className="px-4 py-3">Action</th>
-                    <th className="px-4 py-3">Target</th>
-                    <th className="px-4 py-3">Detail</th>
-                    <th className="px-4 py-3">Actor</th>
-                    <th className="px-4 py-3">When</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((e, i) => (
-                    <tr key={i} className="border-b border-gray-100 align-top">
-                      <td className="px-4 py-3">
-                        <Badge variant={actionVariant(e.action)}>{e.action}</Badge>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-600">
-                        {e.target_type}
-                        {e.target_id && (
-                          <div className="font-mono text-[10px] text-gray-400">
-                            {e.target_id.slice(0, 13)}…
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-[11px] text-gray-500 font-mono max-w-[220px] truncate">
-                        {e.detail ? JSON.stringify(e.detail) : "—"}
-                      </td>
-                      <td className="px-4 py-3 text-[11px] text-gray-400 font-mono">
-                        {e.actor_user_id.slice(0, 8)}…
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">
-                        {new Date(e.created_at).toLocaleString()}
-                      </td>
-                    </tr>
-                  ))}
-                  {filtered.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
-                        No matching audit entries.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <DataTable<AdminAuditEntry>
+            keyField={(e) => `${e.created_at}:${e.action}:${e.target_id ?? ""}`}
+            rows={filtered}
+            loading={loading}
+            emptyText="No matching audit entries."
+            columns={[
+              {
+                key: "action",
+                header: "Action",
+                render: (e) => <Badge variant={actionVariant(e.action)}>{e.action}</Badge>,
+              },
+              {
+                key: "target",
+                header: "Target",
+                className: "text-xs text-gray-600",
+                render: (e) => (
+                  <>
+                    {e.target_type}
+                    {e.target_id && (
+                      <div className="font-mono text-[10px] text-gray-400">
+                        {e.target_id.slice(0, 13)}…
+                      </div>
+                    )}
+                  </>
+                ),
+              },
+              {
+                key: "detail",
+                header: "Detail",
+                className: "text-[11px] text-gray-500 font-mono max-w-[220px] truncate",
+                render: (e) => (e.detail ? JSON.stringify(e.detail) : "—"),
+              },
+              {
+                key: "actor",
+                header: "Actor",
+                className: "text-[11px] text-gray-400 font-mono",
+                render: (e) => `${e.actor_user_id.slice(0, 8)}…`,
+              },
+              {
+                key: "created_at",
+                header: "When",
+                className: "text-xs text-gray-400 whitespace-nowrap",
+                render: (e) => new Date(e.created_at).toLocaleString(),
+              },
+            ]}
+          />
         </div>
       </PageContainer>
     </div>

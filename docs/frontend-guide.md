@@ -2,7 +2,7 @@
 
 > Next.js 15 App Router, TypeScript 5.9, Tailwind CSS v4, shadcn/ui components.
 >
-> **Guide status:** rewritten after the UX refactor Tasks 1–3. It will be updated again as refactor Phases 1–4 land.
+> **Guide status:** current through the frontend UX refactor (Tasks 1–34): `@theme` tokens, the shared primitive set, the unified `(app)` shell (including the admin pages), and the decomposed chat architecture are all landed.
 
 ## Tech Stack
 
@@ -56,10 +56,14 @@ frontend/src/
 │   ├── globals.css              ← Tailwind v4 import + @theme tokens
 │   ├── layout.tsx               ← RootLayout (metadata, AuthProvider)
 │   ├── page.tsx                 ← Landing page (dark hero)
+│   ├── error.tsx                ← Root error boundary (Alert + retry)
+│   ├── not-found.tsx            ← 404 page
 │   ├── login/
 │   │   └── page.tsx             ← Login page (LoginForm → redirects to /chat)
 │   └── (app)/                   ← Workspace route group (no URL prefix)
-│       ├── layout.tsx           ← AuthGuard + AppShell wrapper
+│       ├── layout.tsx           ← AuthGuard + AppShell wrapper (every workspace page)
+│       ├── error.tsx            ← In-shell error boundary
+│       ├── loading.tsx          ← In-shell route loading state (Loader)
 │       ├── chat/
 │       │   └── page.tsx         ← ChatView
 │       ├── explore/
@@ -70,44 +74,60 @@ frontend/src/
 │       │   └── page.tsx         ← DashboardsView
 │       ├── wiki/
 │       │   └── page.tsx         ← WikiView
-│       └── settings/
-│           └── page.tsx         ← SettingsView
-│   └── admin/                   ← Platform superuser portal
-│       ├── layout.tsx           ← AuthGuard + PlatformAdminGuard
-│       ├── page.tsx             ← Admin overview stats
-│       ├── tenants/
-│       │   ├── page.tsx         ← Tenant list + provision
-│       │   └── [id]/page.tsx    ← Tenant detail / users / LLM
-│       ├── admins/
-│       │   └── page.tsx         ← Superuser grants
-│       └── audit/
-│           └── page.tsx         ← Admin audit log
+│       ├── settings/
+│       │   └── page.tsx         ← SettingsView (tabs)
+│       └── admin/               ← Platform superuser pages (render inside AppShell)
+│           ├── layout.tsx       ← PlatformAdminGuard
+│           ├── page.tsx         ← Admin overview stats
+│           ├── tenants/
+│           │   ├── page.tsx     ← Tenant list (DataTable) + provision dialog
+│           │   └── [id]/page.tsx← Tenant detail / users / LLM
+│           ├── admins/
+│           │   └── page.tsx     ← Superuser grants (DataTable)
+│           └── audit/
+│               └── page.tsx     ← Admin audit log (DataTable + client filters)
 ├── components/
 │   ├── admin/
-│   │   └── tenant-llm-panel.tsx ← BYOK LLM panel for a tenant
+│   │   └── tenant-llm-panel.tsx ← BYOK LLM panel + spend DataTable for a tenant
 │   ├── auth/
 │   │   ├── auth-provider.tsx    ← AuthProvider + AuthGuard + PlatformAdminGuard
 │   │   └── login-form.tsx       ← Email/password sign-in form
 │   ├── charts/
 │   │   └── chart-card.tsx       ← ChartCard + ChartGrid
-│   ├── chat/
-│   │   └── chat-view.tsx        ← Full ChatView with SSE consumption
+│   ├── chat/                    ← Decomposed ChatView (see Chat View section)
+│   │   ├── chat-view.tsx        ← Thin composition root (hooks + components)
+│   │   ├── chat-types.ts        ← ChatMessage type + id helpers
+│   │   ├── conversation-sidebar.tsx
+│   │   ├── message-list.tsx
+│   │   ├── assistant-message-card.tsx
+│   │   ├── stage-badges.tsx
+│   │   ├── sql-block.tsx
+│   │   ├── feedback-thumbs.tsx
+│   │   ├── large-query-confirm.tsx
+│   │   └── chat-input.tsx
 │   ├── dashboards/
 │   │   └── dashboards-view.tsx  ← Dashboard list + builder
 │   ├── explore/
 │   │   └── explore-view.tsx     ← Metric catalog + native query builder
 │   ├── layout/
 │   │   ├── app-shell.tsx        ← Persistent workspace sidebar + user card
+│   │   ├── page-container.tsx   ← Centered max-w-5xl scroll container
 │   │   └── page-header.tsx      ← Shared in-page header component
+│   ├── llm/
+│   │   └── llm-provider-form.tsx← Shared BYOK form ("self" / "tenant" modes)
 │   ├── reports/
 │   │   └── reports-view.tsx     ← Multi-chart report workbench
 │   ├── settings/
-│   │   ├── llm-provider.tsx     ← BYOK LLM provider settings
-│   │   ├── settings-view.tsx    ← Profile / password / users / LLM
+│   │   ├── llm-provider.tsx     ← BYOK section wrapper (self mode) for /settings
+│   │   ├── settings-view.tsx    ← Profile / password / users / AI-provider tabs
 │   │   └── users-admin.tsx      ← Shared tenant user management table
 │   ├── wiki/
 │   │   └── wiki-view.tsx        ← Tenant knowledge base editor
-│   └── ui/                      ← 12 shadcn/ui primitives
+│   └── ui/                      ← 19 shared primitives (see UI Components)
+├── hooks/
+│   ├── use-chat-stream.ts       ← Chat message state + SSE streaming lifecycle
+│   ├── use-conversations.ts     ← Conversation list + active conversation id
+│   └── use-selection-param.ts   ← Two-way bind a selection id to a URL param
 ├── lib/
 │   ├── api-client.ts            ← Centralized API client with JWT + SSE
 │   ├── auth-storage.ts          ← localStorage helpers (genbi_token / genbi_user)
@@ -258,16 +278,21 @@ All schemas use `z.object(...)` with inferred types:
 
 ## App Shell and Page Header
 
+### The unified `(app)` group
+
+Every authenticated page — Chat, Explore, Reports, Dashboards, Wiki, Settings, **and the platform admin pages** — lives under `app/(app)/` and renders inside the shared `AppShell` behind a single `AuthGuard` (`app/(app)/layout.tsx`). There is no separate admin portal layout: `app/(app)/admin/layout.tsx` adds only a `PlatformAdminGuard`, so superusers see admin pages in the same shell with the same sidebar. The group also carries an in-shell `error.tsx` boundary and a `loading.tsx` route state; a root `app/error.tsx` and `app/not-found.tsx` cover the rest.
+
 ### `AppShell` (`src/components/layout/app-shell.tsx`)
 
-The persistent workspace layout introduced in Phase 27b.
+The persistent workspace layout.
 
 - Wraps every route under `(app)` via `app/(app)/layout.tsx`
 - Dark left sidebar (desktop) / drawer (mobile) with workspace nav: **Chat**, **Explore**, **Reports**, **Dashboards**, **Wiki**
-- Account section with **Settings** and **Admin portal** (only for `platform_admin`)
-- User card at the bottom showing initials, name/email, and logout
-- Mobile hamburger top bar
-- Centralizes workspace navigation, user identity, and logout
+- Account section with **Settings**; a **Platform** section (**Overview**, **Tenants**, **Superusers**, **Audit log**) renders only when `user.platform_admin` is true
+- Active nav item uses the brand token (`bg-brand-600`)
+- User card at the bottom showing initials, name/email, and a dropdown with Settings + sign out
+- Mobile hamburger top bar opens the nav drawer
+- Centralizes workspace navigation, user identity, and logout; pages mount once and navigation does not remount the shell
 
 ### `PageHeader` (`src/components/layout/page-header.tsx`)
 
@@ -276,28 +301,43 @@ Shared in-page header for workspace views:
 - Arbitrary actions slot on the right
 - Rendered as the first child of a view's content column
 
+### `PageContainer` (`src/components/layout/page-container.tsx`)
+
+Centered `max-w-5xl` scroll container used by the form-style pages (settings, admin) below their `PageHeader`.
+
 ---
 
 ## Chat View (SSE Streaming)
 
-**File:** `src/components/chat/chat-view.tsx`
+**Composition root:** `src/components/chat/chat-view.tsx` — a thin wiring layer with no fetch or stream logic of its own. State lives in hooks; rendering lives in presentational components.
 
-The main application component. Full-height flex layout inside the AppShell content column.
+### Hooks (`src/hooks/`)
 
-### State
-```typescript
-messages: ChatMessage[];     // User + assistant message pairs
-loading: boolean;             // In-flight request indicator
-abortRef: AbortController;   // SSE cancellation
-```
+| Hook | Owns |
+|---|---|
+| `useConversations()` | Conversation list, active conversation id, list error, `refresh` / `selectConversation` / `startNewChat` / `handleServerAssignedId` |
+| `useChatStream({ conversationId, onConversationId, onTurnComplete })` | `messages`, `loading`, `inputError`, the SSE `AbortController`, and the actions `send`, `confirmLargeQuery`, `retry`, `cancel`, `loadHistory`, `reset`, `setFeedback` |
+| `useSelectionParam(param)` | Two-way binds the active conversation id to the `?conv=` URL param (deep links, refresh restore, back/forward) |
 
-### Pipeline Progress (Stage Badges)
+`send(input)` validates against `ChatRequestSchema` first — invalid input keeps the typed text and surfaces a hint under the input. `confirmLargeQuery` reuses the pending turn's bubble (no duplicate user message). `setFeedback` posts the resulting score (clicking the active thumb clears to 0) and rolls back on failure. Stream failures surface a retryable error `Alert`.
 
-A row of `Badge` components shows real-time pipeline progress: **Intent** → **SQL** → **Validated** → **Results** → **Chart** → **Insight** → **Done**. A pulsing badge appears while the corresponding stage is streaming.
+### Components (`src/components/chat/`)
+
+| Component | Role |
+|---|---|
+| `ConversationSidebar` | Conversation list + "New chat", rendered in a desktop `<aside>` and in a mobile `Sheet` ("Conversations" toggle below `md`) |
+| `MessageList` | Scroll container, empty-state suggestions, auto-scroll; maps messages to cards |
+| `AssistantMessageCard` | One assistant turn: stage badges, streaming skeleton, `SqlBlock`, `ChartCard`, narrative `MarkdownText`, warnings `Alert`, `FeedbackThumbs`, `LargeQueryConfirm` |
+| `StageBadges` | Pipeline progress badges: **Intent** → **SQL** → **Validated** → **Results** → **Chart** → **Insight** → **Done**; pulsing badge while a stage streams |
+| `SqlBlock` | Dark terminal-style SQL panel with copy button |
+| `FeedbackThumbs` | Thumbs up/down on completed messages (`sendFeedback`) |
+| `LargeQueryConfirm` | In-bubble confirm for `confirmation_required` turns (row estimate + confirm/cancel) |
+| `ChatInput` | Bottom input bar with Send/Cancel and the validation hint slot |
+| `chat-types.ts` | `ChatMessage` type + `newMessageId` helper |
 
 ### SSE Event Handling
 
-`updateMessageStage(msg, event)` incrementally populates the assistant message:
+`updateMessageStage(msg, event)` (inside `useChatStream`) incrementally populates the assistant message:
 
 | Event | Populates |
 |---|---|
@@ -306,14 +346,14 @@ A row of `Badge` components shows real-time pipeline progress: **Intent** → **
 | `data` | Row count, data preview |
 | `chart` | `msg.chartSpec`, `msg.chartSvg`, `msg.chartBase64` |
 | `narrative` | `msg.narrative` |
-| `done` | Finalizes content, sets `streaming: false` |
+| `done` | Finalizes content, sets `streaming: false`; `confirmation_required` sets `needsConfirm` + `rowEstimate` |
 
 ### Layout
 
-- No standalone top navbar (navigation moved to `AppShell` sidebar)
+- No standalone top navbar (navigation is the `AppShell` sidebar)
+- Desktop conversations `<aside>` at `md` and up; below `md` a "Conversations" toggle opens the same sidebar in a `Sheet`
 - Messages area with scrolling container, empty state suggestions, user/assistant message styling
 - Input bar at the bottom with Send/Cancel
-- Feedback thumbs on completed assistant messages (`sendFeedback`)
 
 ---
 
@@ -350,13 +390,13 @@ interface AuthState {
 
 - **Login:** POST to `/auth/login`, stores `genbi_token` + `genbi_user` in `localStorage`
 - **Session restoration:** On mount, reads from `localStorage`. If parsing fails, clears both.
-- **Loading guard:** While `loading` is true, renders bouncing dots.
+- **Loading guard:** While `loading` is true, renders `<Loader fullScreen />`.
 - **User object** includes `platform_admin` flag minted at login.
 
 ### `AuthGuard` Component
 
 Wraps protected pages. Shows:
-- Loading: bouncing dots animation
+- Loading: `<Loader fullScreen />`
 - Unauthenticated: `router.replace("/login")` redirect
 - Authenticated: children
 
@@ -378,15 +418,22 @@ Radix-based components use Tailwind CSS with class-variance-authority (CVA) for 
 
 | Component | Primitive | Variants / Notes |
 |---|---|---|
+| `Alert` | Plain div + CVA | `error` (default), `success`, `warning`. Icon + optional title/dismiss/action; `role="alert"`. The only place `bg-red-50`/`bg-green-50` banners live |
 | `Avatar` | `@radix-ui/react-avatar` | Root (40x40, rounded-full), Image, Fallback (gray bg, centered initials) |
 | `Badge` | Plain div | `default` (brand), `secondary`, `destructive`, `outline`, `success`, `warning`. Pill shape, text-xs |
 | `Button` | `@radix-ui/react-slot` (asChild) | `default` (brand+shadow), `destructive`, `outline`, `secondary`, `ghost`, `link`. Sizes: `default`, `sm`, `lg`, `icon` |
 | `Card` | Plain HTML | Compound: Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter. Rounded-xl border shadow |
+| `ConfirmDialog` | `Dialog` | Shared confirm/submit modal: `confirmLabel`, `confirmVariant` (`destructive`/`default`), optional `requireText` typed-confirmation, `busy`, form children slot |
+| `DataTable` | Plain `<table>` | Generic `<T>` columns/`render` API with `keyField`, `emptyText`, `loading` (renders `Loader`), right/center alignment. The only hand-built table in the app besides `MarkdownText` |
 | `Dialog` | `@radix-ui/react-dialog` | Overlay (bg-black/50), Content (centered, rounded-xl), with X close button |
 | `DropdownMenu` | `@radix-ui/react-dropdown-menu` | Content (z-50, min-w-8rem), Items with keyboard shortcuts, Separator |
+| `EmptyState` | Plain div | `card` / `inline` / `centered` variants; optional lucide icon, title, description, action slot |
 | `Input` | Plain `<input>` | h-10, rounded-lg border, focus ring-brand-600 |
+| `Loader` | Plain div | Three brand-colored bouncing dots; `size` (`sm`/`md`/`lg`), `fullScreen`, `label`. The only `animate-bounce` in the app |
 | `MarkdownText` | `react-markdown` | Shared markdown renderer for chat narratives and wiki content; allows `data:image/` URIs |
 | `Separator` | Plain div | Horizontal (`h-px w-full`) or Vertical |
+| `Sheet` | `@radix-ui/react-dialog` | Side-anchored panel (left/right) hosting in-view sidebar lists below their breakpoint; focus trap + Escape via Radix |
+| `SidebarList` | Plain div | Shared "label + '+' + selectable rows" sidebar block (`SidebarListItem`: id/label/secondary); used in `<aside>` on desktop and `Sheet` on mobile |
 | `Skeleton` | Plain div | `animate-pulse rounded-md bg-gray-200` |
 | `Tabs` | `@radix-ui/react-tabs` | List (inline-flex, bg-gray-100), Trigger (pill, active=white bg+shadow), Content |
 | `Tooltip` | `@radix-ui/react-tooltip` | Content (bg-gray-900, text-xs, white text, shadow-md) |
@@ -439,9 +486,13 @@ Dark full-page hero with feature cards. The CTA routes to `/chat` when signed in
 
 Redirects to `/chat` if already authenticated; otherwise renders `LoginForm`, which navigates to `/chat` on success.
 
+### `error.tsx` / `not-found.tsx` — Root Boundaries
+
+`app/error.tsx` is the root error boundary (centered `Alert` + Try again / back-home buttons); `app/not-found.tsx` is the 404 page. Inside the shell, `(app)/error.tsx` and `(app)/loading.tsx` provide the same treatment without dropping the sidebar.
+
 ### `(app)/layout.tsx` — Workspace Layout
 
-Wraps workspace pages in a single `AuthGuard` and the shared `AppShell`. Pages inside this group no longer carry their own guards or top navbars.
+Wraps every workspace page (including `/admin/*`) in a single `AuthGuard` and the shared `AppShell`. Pages inside this group no longer carry their own guards or top navbars. `(app)/error.tsx` renders an in-shell `Alert` with retry; `(app)/loading.tsx` renders a `Loader` during route transitions.
 
 ### `(app)/chat/page.tsx` — Chat Page
 
@@ -453,7 +504,7 @@ Wraps `ExploreView`. The semantic-layer workbench:
 
 - **Catalog**: metrics from `GET /metrics/list` as clickable cards
 - **Query builder**: native `<select>` elements for measure, group-by dimension, optional time granularity, and row limit
-- **Run**: `POST /metrics/query` → results table + bar chart rendered via `ChartCard`
+- **Run**: `POST /metrics/query` → results `DataTable` + bar chart rendered via `ChartCard`
 - Empty results show an RLS-aware hint
 
 ### `(app)/reports/page.tsx` — Reports Page
@@ -483,42 +534,83 @@ Wraps `WikiView`. Tenant knowledge base:
 
 ### `(app)/settings/page.tsx` — Settings Page
 
-Wraps `SettingsView`. Four sections:
+Wraps `SettingsView`. A `Tabs` layout:
 
 - **Profile** from `GET /auth/me` (email, tenant, roles, platform-superuser badge)
-- **Change password** (`POST /auth/change-password`)
-- **AI provider / BYOK** (`LLMProviderSettings`, tenant admins only)
-- **Tenant users** (`UsersAdmin`, tenant admins only) — create, role select, enable/disable, reset password, delete with confirm
+- **Password** (`POST /auth/change-password`)
+- **Users** (tenant admins only) — `UsersAdmin` DataTable: create, role select, enable/disable, reset password, delete with `ConfirmDialog`
+- **AI Provider** (tenant admins only) — `LLMProviderSettings`, the shared `LLMProviderForm` in `self` mode (BYOK save / live validate / revert-to-platform)
 
-### `admin/layout.tsx` — Admin Portal Layout
+### `(app)/admin/layout.tsx` — Admin Section Layout
 
-Wraps `/admin/*` in `AuthGuard` + `PlatformAdminGuard`. Own sidebar nav: **Overview**, **Tenants**, **Superusers**, **Audit log**. A "Back to GenBI" link returns to `/chat`.
+Adds only a `PlatformAdminGuard` on top of the workspace shell — the admin pages render inside the same `AppShell`, with the **Platform** nav section visible to superusers. The backend re-verifies the grant on every `/admin` call.
 
-### `admin/page.tsx` — Platform Overview
+### `(app)/admin/page.tsx` — Platform Overview
 
 Stat cards from `GET /admin/stats`: tenants, users, LLM calls/tokens (24h), platform superusers.
 
-### `admin/tenants/page.tsx` — Tenant List
+### `(app)/admin/tenants/page.tsx` — Tenant List
 
-Lists tenants, shows status badges, provisions new tenants with a one-time generated password.
+`DataTable` of tenants (name link, slug, status badge, user count, created date) with a `ConfirmDialog`-based provision flow that shows the one-time generated password once in a success `Alert`.
 
-### `admin/tenants/[id]/page.tsx` — Tenant Detail
+### `(app)/admin/tenants/[id]/page.tsx` — Tenant Detail
 
 Single-tenant management:
 
-- Suspend / activate / rename / decommission
-- Counters, recent admin actions
-- User management via `UsersAdmin` with `?tenant_id=` superuser path
-- BYOK LLM panel (`TenantLLMPanel`)
+- Suspend / activate / rename / decommission (typed-slug `ConfirmDialog`)
+- Counters, recent admin actions list
+- User management via `UsersAdmin` with the `?tenant_id=` superuser path
+- BYOK LLM panel (`TenantLLMPanel`): shared `LLMProviderForm` in `tenant` mode (force-set) plus the spend-attribution `DataTable` (day × model grain)
 - JSON tenant settings editor
 
-### `admin/admins/page.tsx` — Superuser Grants
+### `(app)/admin/admins/page.tsx` — Superuser Grants
 
-Lists `platform_admins` grants with history, grants/revokes by email.
+`DataTable` of `platform_admins` grants with history; grants/revokes by email.
 
-### `admin/audit/page.tsx` — Admin Audit Log
+### `(app)/admin/audit/page.tsx` — Admin Audit Log
 
-Append-only control-plane audit feed from `GET /admin/audit`. Client-side filters for actor and action/target.
+Append-only control-plane audit feed from `GET /admin/audit`, rendered as a `DataTable`. Two client-side filter inputs (actor id; action/target) filter the rows before they reach the table.
+
+---
+
+## LLM Provider Form (BYOK)
+
+**File:** `src/components/llm/llm-provider-form.tsx`
+
+One shared implementation of the BYOK LLM key form, in two modes:
+
+- **`self`** — tenant-admin self-service at `/settings` (wrapped by `LLMProviderSettings`). Load/save via `/settings/llm`; includes live Validate (1-token ping) and Revert-to-platform.
+- **`tenant`** — platform-admin force-set at `/admin/tenants/[id]` (inside `TenantLLMPanel`, above the spend `DataTable`). Load/save via `/admin/tenants/:id/llm`; no validate ping, no revert.
+
+The key is write-only in both modes: saved state shows `last4` + version only. Section shells, headings, and mode-specific extras live in the wrappers.
+
+---
+
+## Verification
+
+The refactor's exit gates, all expected green with 0 errors:
+
+```bash
+cd frontend
+pnpm typecheck   # tsc --noEmit
+pnpm lint        # eslint .
+pnpm build       # production build — every route compiles
+```
+
+Consistency sweep (run from `frontend/`; everything must come back CLEAN — a desktop `<aside>` listed by the sidebar check is acceptable only when the same view also renders it in a `Sheet`):
+
+```bash
+grep -rn "bg-red-50\|bg-green-50" src/ || echo CLEAN_ALERTS
+grep -rn "animate-bounce" src/ | grep -v "ui/loader.tsx" || echo CLEAN_LOADERS
+grep -rn "fixed inset-0" src/ --include=*.tsx | grep -v "ui/sheet.tsx\|ui/dialog.tsx\|layout/app-shell.tsx" || echo CLEAN_MODALS
+grep -rn "hidden md:flex" src/ --include=*.tsx | grep -v "Sheet\|sheet" || echo CHECK_SIDEBARS
+grep -rn "style={{" src/ | grep -i "#[0-9a-f]\{3,6\}\|rgba(" || echo CLEAN_INLINE
+grep -rn "<table" src/ --include=*.tsx | grep -v "ui/data-table.tsx\|ui/markdown.tsx" || echo CLEAN_TABLES
+```
+
+Accepted remnants: the `Alert` primitive's own variant classes, `bg-red-500` (substring false positive), destructive-hover states, and the feedback thumbs' active colors match the alerts grep; chat/reports/dashboards/wiki sidebars each have a `Sheet` counterpart.
+
+The backend suite (`make verify`) is untouched by the refactor and stays green.
 
 ---
 

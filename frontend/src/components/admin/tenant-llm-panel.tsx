@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { getTenantLLM, type LLMUsageRow } from "@/lib/api-client";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { EmptyState } from "@/components/ui/empty-state";
+import { DataTable } from "@/components/ui/data-table";
 import { LLMProviderForm } from "@/components/llm/llm-provider-form";
 import { Bot } from "lucide-react";
 
@@ -54,38 +54,35 @@ export function TenantLLMPanel({ tenantId }: { tenantId: string }) {
           </span>
         </div>
         {loadError && <Alert className="text-xs">{loadError}</Alert>}
-        {usage.length === 0 ? (
-          <EmptyState variant="inline" title="No audited LLM calls in the window." />
-        ) : (
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="text-left text-gray-400 border-b border-gray-100">
-                <th className="py-1 font-normal">Day</th>
-                <th className="py-1 font-normal">Model</th>
-                <th className="py-1 font-normal">Source</th>
-                <th className="py-1 font-normal text-right">Calls</th>
-                <th className="py-1 font-normal text-right">In</th>
-                <th className="py-1 font-normal text-right">Out</th>
-              </tr>
-            </thead>
-            <tbody>
-              {usage.map((row, i) => (
-                <tr key={i} className="border-b border-gray-50">
-                  <td className="py-1 text-gray-500 font-mono">{row.day}</td>
-                  <td className="py-1 font-mono text-gray-700">{row.model_name}</td>
-                  <td className="py-1">
-                    <Badge variant={row.key_source === "tenant" ? "default" : "secondary"}>
-                      {row.key_source ?? "—"}
-                    </Badge>
-                  </td>
-                  <td className="py-1 text-right text-gray-700">{row.calls}</td>
-                  <td className="py-1 text-right text-gray-500">{row.input_tokens}</td>
-                  <td className="py-1 text-right text-gray-500">{row.output_tokens}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <DataTable<LLMUsageRow>
+          keyField={(row) => `${row.day}:${row.model_name}:${row.key_source ?? ""}`}
+          rows={usage}
+          emptyText="No audited LLM calls in the window."
+          columns={[
+            {
+              key: "day",
+              header: "Day",
+              className: "text-gray-500 font-mono",
+            },
+            {
+              key: "model_name",
+              header: "Model",
+              className: "font-mono text-gray-700",
+            },
+            {
+              key: "key_source",
+              header: "Source",
+              render: (row) => (
+                <Badge variant={row.key_source === "tenant" ? "default" : "secondary"}>
+                  {row.key_source ?? "—"}
+                </Badge>
+              ),
+            },
+            { key: "calls", header: "Calls", align: "right", className: "text-gray-700" },
+            { key: "input_tokens", header: "In", align: "right", className: "text-gray-500" },
+            { key: "output_tokens", header: "Out", align: "right", className: "text-gray-500" },
+          ]}
+        />
       </div>
     </section>
   );
