@@ -23,7 +23,8 @@ import { Input } from "@/components/ui/input";
  * - "self": tenant admin self-service (/settings). Load/save via the
  *   /settings/llm endpoints; includes live Validate and Revert-to-platform.
  * - "tenant": platform admin force-set (/admin/tenants/[id]). Load/save via
- *   the /admin/tenants/:id/llm endpoints; no validate ping, no revert.
+ *   the /admin/tenants/:id/llm endpoints; Validate is available too (the
+ *   /settings/llm/validate ping admits platform superusers); no revert.
  *
  * The key is write-only in both modes: saved state shows last4 + version
  * only. The section shell, heading, and mode-specific extras (security note,
@@ -275,15 +276,13 @@ export function LLMProviderForm({
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {mode === "self" && (
-          <Button
-            variant="outline"
-            disabled={busy || apiKey.trim().length < 8}
-            onClick={handleValidate}
-          >
-            Validate
-          </Button>
-        )}
+        <Button
+          variant="outline"
+          disabled={busy || apiKey.trim().length < 8}
+          onClick={handleValidate}
+        >
+          Validate
+        </Button>
         <Button disabled={busy || apiKey.trim().length < 8} onClick={handleSave}>
           {busy ? "Working…" : mode === "self" ? "Save" : "Force-set"}
         </Button>
