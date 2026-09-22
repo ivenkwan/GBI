@@ -352,8 +352,15 @@ class CubeClient:
             # Measures → MetricDefinitions
             for measure in cube.get("measures", []):
                 measure_name = measure.get("name", "")
-                # Build metric key: cube.measure or just measure
-                key = f"{cube_name}.{measure_name}"
+                # Build metric key: cube.measure or just measure. Cube /meta
+                # already returns cube-qualified member names
+                # ("Sales.revenue_total") — don't prefix the cube again (the
+                # old double prefix produced "Sales.Sales.revenue_total",
+                # which Cube's /load endpoint rejects with a 400).
+                if measure_name.startswith(f"{cube_name}."):
+                    key = measure_name
+                else:
+                    key = f"{cube_name}.{measure_name}"
 
                 metric = MetricDefinition(
                     name=key,
@@ -401,6 +408,17 @@ class CubeClient:
     # Metric resolution
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _member(name: str) -> str:
+        """Normalize a member reference to Cube's two-part Cube.member form.
+
+        Accepts legacy catalog keys that carried an extra prefix
+        ("Sales.Sales.revenue_total" → "Sales.revenue_total"); two-part and
+        bare names pass through unchanged.
+        """
+        parts = name.split(".")
+        return ".".join(parts[-2:]) if len(parts) > 2 else name
+
     async def list_metrics(self, force_refresh: bool = False) -> dict[str, MetricDefinition]:
         """List all available metrics from the semantic layer.
 
@@ -437,7 +455,7 @@ class CubeClient:
 
         # Fetch
         metrics = await self.list_metrics()
-        metric = metrics.get(name)
+        metric = metrics.get(name) or metrics.get(self._member(name))
 
         if metric:
             self._metric_cache[name] = (metric, datetime.now(UTC).timestamp())
@@ -484,6 +502,26 @@ class CubeClient:
         import time
 
         start_time = time.time()
+
+        # Normalize members to Cube's two-part Cube.member form — callers
+        # (and stored report sections) may carry legacy triple-prefixed keys.
+        metrics = [self._member(m) for m in metrics]
+        if dimensions:
+            dimensions = [self._member(d) for d in dimensions]
+        if time_dimensions:
+            time_dimensions = [
+                {**td, "dimension": self._member(td["dimension"])}
+                if td.get("dimension")
+                else td
+                for td in time_dimensions
+            ]
+        if filters:
+            filters = [
+                {**f, "member": self._member(f["member"])} if f.get("member") else f
+                for f in filters
+            ]
+        if order:
+            order = [[self._member(o[0]), o[1]] for o in order]
 
         # Build the Cube query
         cube_query: dict[str, Any] = {
