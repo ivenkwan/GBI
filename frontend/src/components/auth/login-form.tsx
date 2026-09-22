@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/components/auth/auth-provider";
 import {
   Dialog,
@@ -10,7 +11,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { BarChart3, LifeBuoy, Lock, Mail, Sparkles, ShieldCheck, Zap } from "lucide-react";
+import {
+  ArrowLeft,
+  BarChart3,
+  LifeBuoy,
+  Lock,
+  Mail,
+  Sparkles,
+  ShieldCheck,
+  UserPlus,
+  Zap,
+} from "lucide-react";
 
 /** Email/password sign-in form. Calls onSuccess after a successful login. */
 export function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
@@ -46,12 +57,15 @@ export function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
           }}
           aria-hidden
         />
-        <div className="relative flex items-center gap-2.5">
+        <Link
+          href="/"
+          className="relative flex items-center gap-2.5 transition-opacity hover:opacity-80"
+        >
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600">
             <BarChart3 className="h-5 w-5 text-white" />
           </div>
           <span className="text-lg font-semibold text-white">GenBI</span>
-        </div>
+        </Link>
 
         <div className="relative max-w-md space-y-8">
           <div className="space-y-4">
@@ -87,13 +101,21 @@ export function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
       {/* Form panel */}
       <div className="flex w-full items-center justify-center px-6 lg:w-1/2">
         <div className="w-full max-w-sm">
+          <Link
+            href="/"
+            className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 transition-colors hover:text-gray-800"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to home
+          </Link>
+
           <div className="mb-8 lg:hidden">
-            <div className="mb-4 flex items-center gap-2.5">
+            <Link href="/" className="mb-4 flex items-center gap-2.5">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600">
                 <BarChart3 className="h-5 w-5 text-white" />
               </div>
               <span className="text-lg font-semibold text-gray-900">GenBI</span>
-            </div>
+            </Link>
           </div>
 
           <h1 className="text-2xl font-bold text-gray-900">Welcome back</h1>
@@ -193,6 +215,51 @@ export function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
               {submitting ? "Signing in…" : "Sign in"}
             </button>
           </form>
+
+          <div className="mt-6 text-center text-sm text-gray-500">
+            Need an account?{" "}
+            <Dialog>
+              <DialogTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 font-medium text-brand-600 transition-colors hover:text-brand-700 hover:underline"
+                >
+                  <UserPlus className="h-3.5 w-3.5" />
+                  Get access
+                </button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <UserPlus className="h-4 w-4 text-gray-400" />
+                    Get access to GenBI
+                  </DialogTitle>
+                  <DialogDescription className="pt-1 text-left">
+                    GenBI accounts are provisioned by administrators — there is
+                    no self-service sign-up.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-3 text-sm text-gray-600">
+                  <div className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
+                    <p className="font-medium text-gray-800">Join an existing workspace</p>
+                    <p className="mt-1 text-xs leading-relaxed text-gray-500">
+                      Ask your tenant admin to add you under{" "}
+                      <span className="font-medium">Settings → Users</span> — they
+                      set your email and an initial password.
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-gray-100 bg-gray-50 px-4 py-3">
+                    <p className="font-medium text-gray-800">New workspace</p>
+                    <p className="mt-1 text-xs leading-relaxed text-gray-500">
+                      Contact the platform administrator to provision a new tenant
+                      (see the <span className="font-medium">Tenant Onboarding Guide</span>{" "}
+                      in the repository for the full process).
+                    </p>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
 
           <div className="mt-6 rounded-lg border border-dashed border-gray-300 bg-white px-4 py-3">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
