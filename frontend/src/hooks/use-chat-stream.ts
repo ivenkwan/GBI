@@ -229,10 +229,15 @@ export function useChatStream({
   const setFeedback = useCallback((msgId: string, score: 1 | -1) => {
     const msg = messagesRef.current.find((m) => m.id === msgId);
     if (!msg?.sessionId) return;
-    const next: 1 | -1 | 0 = msg.feedback === score ? 0 : score;
+    const prior = msg.feedback ?? 0;
+    const next: 1 | -1 | 0 = prior === score ? 0 : score;
+    messagesRef.current = messagesRef.current.map((m) => (m.id === msgId ? { ...m, feedback: next } : m));
     setMessages((prev) => prev.map((m) => (m.id === msgId ? { ...m, feedback: next } : m)));
     sendFeedback(msg.sessionId, next).catch(() => {
-      setMessages((prev) => prev.map((m) => (m.id === msgId ? { ...m, feedback: msg.feedback ?? 0 } : m)));
+      setMessages((prev) => prev.map((m) => (m.id === msgId && m.feedback === next ? { ...m, feedback: prior } : m)));
+      messagesRef.current = messagesRef.current.map((m) =>
+        m.id === msgId && m.feedback === next ? { ...m, feedback: prior } : m,
+      );
     });
   }, []);
 
