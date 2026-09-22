@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getAdminStats, type PlatformStats } from "@/lib/api-client";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Loader } from "@/components/ui/loader";
 
 function StatCard({
   label,
@@ -48,11 +49,7 @@ export default function AdminOverviewPage() {
 
       {error && <Alert>{error}</Alert>}
 
-      {!stats && !error && (
-        <div className="flex items-center justify-center py-16">
-          <div className="w-3 h-3 bg-brand-600 rounded-full animate-bounce" />
-        </div>
-      )}
+      {!stats && !error && <Loader />}
 
       {stats && (
         <>

@@ -11,6 +11,7 @@ import {
 import { TenantProvisionSchema } from "@/lib/validators";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Loader } from "@/components/ui/loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Copy, Plus } from "lucide-react";
@@ -122,9 +123,7 @@ export default function AdminTenantsPage() {
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <div className="w-3 h-3 bg-brand-600 rounded-full animate-bounce" />
-        </div>
+        <Loader />
       ) : (
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
           <table className="w-full text-sm">

@@ -8,6 +8,7 @@ import { UsersAdmin } from "@/components/settings/users-admin";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Loader } from "@/components/ui/loader";
 import { Input } from "@/components/ui/input";
 import { KeyRound, Settings2, Shield, User } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
@@ -107,7 +108,7 @@ export function SettingsView() {
                 )}
               </dl>
             ) : (
-              <div className="w-3 h-3 bg-brand-600 rounded-full animate-bounce" />
+              <Loader />
             )}
           </section>
 

@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CalendarClock, Download, FileText, LayoutDashboard, Play, RefreshCw } from "lucide-react";
+import { Loader } from "@/components/ui/loader";
 import { MarkdownText } from "@/components/ui/markdown";
 import { PageHeader } from "@/components/layout/page-header";
 
@@ -216,11 +217,7 @@ export function ReportsView() {
               </p>
             </section>
 
-            {loadingReport && (
-              <div className="flex items-center justify-center py-16">
-                <div className="w-3 h-3 bg-brand-600 rounded-full animate-bounce" />
-              </div>
-            )}
+            {loadingReport && <Loader />}
 
             {/* Report display */}
             {active && !loadingReport && (

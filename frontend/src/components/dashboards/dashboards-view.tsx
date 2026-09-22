@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LayoutDashboard, Pin, PinOff, Plus, Trash2 } from "lucide-react";
+import { Loader } from "@/components/ui/loader";
 import { MarkdownText } from "@/components/ui/markdown";
 import { PageHeader } from "@/components/layout/page-header";
 
@@ -202,11 +203,7 @@ export function DashboardsView() {
           <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
             {error && <Alert>{error}</Alert>}
 
-            {loading && (
-              <div className="flex items-center justify-center py-16">
-                <div className="w-3 h-3 bg-brand-600 rounded-full animate-bounce" />
-              </div>
-            )}
+            {loading && <Loader />}
 
             {/* Create panel */}
             {creating && (

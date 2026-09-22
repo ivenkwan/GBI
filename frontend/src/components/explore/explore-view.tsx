@@ -14,6 +14,7 @@ import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BarChart3, Play } from "lucide-react";
+import { Loader } from "@/components/ui/loader";
 import { PageHeader } from "@/components/layout/page-header";
 
 
@@ -132,9 +133,7 @@ export function ExploreView() {
           {error && <Alert>{error}</Alert>}
 
           {loading ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="w-3 h-3 bg-brand-600 rounded-full animate-bounce" />
-            </div>
+            <Loader />
           ) : (
             <>
               {/* Catalog */}

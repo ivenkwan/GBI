@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TenantLLMPanel } from "@/components/admin/tenant-llm-panel";
 import { UsersAdmin } from "@/components/settings/users-admin";
+import { Loader } from "@/components/ui/loader";
 import { AlertTriangle, ArrowLeft, RefreshCw, Trash2 } from "lucide-react";
 
 export default function TenantDetailPage() {
@@ -78,11 +79,7 @@ export default function TenantDetailPage() {
   };
 
   if (!tenant && !error) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <div className="w-3 h-3 bg-brand-600 rounded-full animate-bounce" />
-      </div>
-    );
+    return <Loader />;
   }
 
   if (!tenant) {
