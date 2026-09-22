@@ -48,6 +48,18 @@ interface ChatMessage {
   confirmQuery?: string;
 }
 
+/** Message ids only need in-session uniqueness — but crypto.randomUUID
+ *  exists only in secure contexts (HTTPS / localhost), so plain-HTTP LAN
+ *  access would otherwise throw and silently kill every send. */
+function uuid(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `m-${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}-${Math.random()
+    .toString(16)
+    .slice(2, 8)}`;
+}
+
 
 export function ChatView() {
   const { token } = useAuth();
@@ -162,9 +174,9 @@ export function ChatView() {
       return; // silently reject invalid input
     }
 
-    const msgId = crypto.randomUUID();
+    const msgId = uuid();
     const userMessage: ChatMessage = {
-      id: crypto.randomUUID(),
+      id: uuid(),
       role: "user",
       content: outgoing,
       streaming: false,
