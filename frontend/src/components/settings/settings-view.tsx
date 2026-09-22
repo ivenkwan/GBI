@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ChangePasswordSchema } from "@/lib/validators";
 import { KeyRound, Settings2, Shield, User } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 
@@ -39,8 +41,12 @@ export function SettingsView() {
   }, [loadProfile]);
 
   const handleChangePassword = async () => {
-    if (newPw.length < 8) {
-      setPwError("New password must be at least 8 characters");
+    const parsed = ChangePasswordSchema.safeParse({
+      current_password: currentPw,
+      new_password: newPw,
+    });
+    if (!parsed.success) {
+      setPwError(parsed.error.issues[0]?.message ?? "Invalid input");
       return;
     }
     setPwBusy(true);
@@ -71,92 +77,105 @@ export function SettingsView() {
         <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
           {error && <Alert>{error}</Alert>}
 
-          {/* Profile */}
-          <section className="bg-white border border-gray-200 rounded-xl p-5 space-y-3">
-            <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-              <User className="w-4 h-4 text-gray-400" /> Profile
-            </h2>
-            {profile ? (
-              <dl className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <dt className="text-xs text-gray-400">Email</dt>
-                  <dd className="text-gray-800">{profile.email}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-gray-400">Tenant</dt>
-                  <dd className="text-gray-800 font-mono text-xs">{profile.tenant_id}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-gray-400">Roles</dt>
-                  <dd className="flex gap-1 mt-1">
-                    {profile.roles.map((r) => (
-                      <Badge key={r} variant="secondary">
-                        {r}
-                      </Badge>
-                    ))}
-                  </dd>
-                </div>
-                {profile.platform_admin && (
-                  <div>
-                    <dt className="text-xs text-gray-400">Platform</dt>
-                    <dd className="mt-1">
-                      <Badge variant="default">
-                        <Shield className="w-3 h-3 mr-1" /> superuser
-                      </Badge>
-                    </dd>
-                  </div>
+          <Tabs defaultValue="profile">
+            <TabsList>
+              <TabsTrigger value="profile">Profile</TabsTrigger>
+              <TabsTrigger value="password">Password</TabsTrigger>
+              {isTenantAdmin && <TabsTrigger value="users">Users</TabsTrigger>}
+              {isTenantAdmin && <TabsTrigger value="ai-provider">AI Provider</TabsTrigger>}
+            </TabsList>
+
+            {/* Profile */}
+            <TabsContent value="profile">
+              <section className="bg-white border border-gray-200 rounded-xl p-5 space-y-3">
+                <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                  <User className="w-4 h-4 text-gray-400" /> Profile
+                </h2>
+                {profile ? (
+                  <dl className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <dt className="text-xs text-gray-400">Email</dt>
+                      <dd className="text-gray-800">{profile.email}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-gray-400">Tenant</dt>
+                      <dd className="text-gray-800 font-mono text-xs">{profile.tenant_id}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-gray-400">Roles</dt>
+                      <dd className="flex gap-1 mt-1">
+                        {profile.roles.map((r) => (
+                          <Badge key={r} variant="secondary">
+                            {r}
+                          </Badge>
+                        ))}
+                      </dd>
+                    </div>
+                    {profile.platform_admin && (
+                      <div>
+                        <dt className="text-xs text-gray-400">Platform</dt>
+                        <dd className="mt-1">
+                          <Badge variant="default">
+                            <Shield className="w-3 h-3 mr-1" /> superuser
+                          </Badge>
+                        </dd>
+                      </div>
+                    )}
+                  </dl>
+                ) : (
+                  <Loader />
                 )}
-              </dl>
-            ) : (
-              <Loader />
+              </section>
+            </TabsContent>
+
+            {/* Change password */}
+            <TabsContent value="password">
+              <section className="bg-white border border-gray-200 rounded-xl p-5 space-y-3">
+                <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                  <KeyRound className="w-4 h-4 text-gray-400" /> Change password
+                </h2>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Input
+                    type="password"
+                    placeholder="Current password"
+                    value={currentPw}
+                    onChange={(e) => setCurrentPw(e.target.value)}
+                  />
+                  <Input
+                    type="password"
+                    placeholder="New password (min 8)"
+                    value={newPw}
+                    onChange={(e) => setNewPw(e.target.value)}
+                  />
+                  <Button
+                    onClick={handleChangePassword}
+                    disabled={pwBusy || !currentPw || newPw.length < 8}
+                  >
+                    {pwBusy ? "Changing…" : "Change"}
+                  </Button>
+                </div>
+                {pwError && <p className="text-xs text-red-600">{pwError}</p>}
+                {pwNotice && <p className="text-xs text-green-700">{pwNotice}</p>}
+                <p className="text-[11px] text-gray-400">
+                  A wrong current password counts toward the login lockout.
+                </p>
+              </section>
+            </TabsContent>
+
+            {/* Tenant users (admins only) */}
+            {isTenantAdmin && (
+              <TabsContent value="users">
+                {profile && <UsersAdmin currentUserId={profile.id} />}
+              </TabsContent>
             )}
-          </section>
 
-          {/* Change password */}
-          <section className="bg-white border border-gray-200 rounded-xl p-5 space-y-3">
-            <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-              <KeyRound className="w-4 h-4 text-gray-400" /> Change password
-            </h2>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Input
-                type="password"
-                placeholder="Current password"
-                value={currentPw}
-                onChange={(e) => setCurrentPw(e.target.value)}
-              />
-              <Input
-                type="password"
-                placeholder="New password (min 8)"
-                value={newPw}
-                onChange={(e) => setNewPw(e.target.value)}
-              />
-              <Button
-                onClick={handleChangePassword}
-                disabled={pwBusy || !currentPw || newPw.length < 8}
-              >
-                {pwBusy ? "Changing…" : "Change"}
-              </Button>
-            </div>
-            {pwError && <p className="text-xs text-red-600">{pwError}</p>}
-            {pwNotice && <p className="text-xs text-green-700">{pwNotice}</p>}
-            <p className="text-[11px] text-gray-400">
-              A wrong current password counts toward the login lockout.
-            </p>
-          </section>
-
-          {/* AI provider / BYOK (admins only, Phase 26) */}
-          {isTenantAdmin && <LLMProviderSettings />}
-
-          {/* Tenant users (admins only) */}
-          {isTenantAdmin ? (
-            profile && (
-              <UsersAdmin currentUserId={profile.id} />
-            )
-          ) : (
-            <p className="text-xs text-gray-400 text-center">
-              User management requires the tenant admin role.
-            </p>
-          )}
+            {/* AI provider / BYOK (admins only, Phase 26) */}
+            {isTenantAdmin && (
+              <TabsContent value="ai-provider">
+                <LLMProviderSettings />
+              </TabsContent>
+            )}
+          </Tabs>
         </div>
       </main>
     </div>

@@ -86,6 +86,23 @@ export const TenantProvisionSchema = z.object({
 
 export type TenantProvision = z.infer<typeof TenantProvisionSchema>;
 
+/** Tenant user creation (Phase 23) — matches the POST /users payload */
+export const UserCreateSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  roles: z.array(z.enum(["user", "admin"])).min(1, "At least one role is required"),
+});
+
+export type UserCreate = z.infer<typeof UserCreateSchema>;
+
+/** Change password — matches the POST /auth/change-password payload */
+export const ChangePasswordSchema = z.object({
+  current_password: z.string().min(1, "Current password is required"),
+  new_password: z.string().min(8, "New password must be at least 8 characters"),
+});
+
+export type ChangePassword = z.infer<typeof ChangePasswordSchema>;
+
 /** Login response */
 export const LoginResponseSchema = z.object({
   access_token: z.string(),

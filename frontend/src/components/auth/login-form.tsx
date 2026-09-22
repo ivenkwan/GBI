@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Alert } from "@/components/ui/alert";
+import { LoginRequestSchema } from "@/lib/validators";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +36,11 @@ export function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    const parsed = LoginRequestSchema.safeParse({ email, password });
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message ?? "Invalid input");
+      return;
+    }
     setSubmitting(true);
     try {
       await login(email, password);

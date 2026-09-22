@@ -13,7 +13,9 @@ import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { DataTable, type Column } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
+import { UserCreateSchema } from "@/lib/validators";
 import { KeyRound, Plus, Trash2 } from "lucide-react";
 
 /**
@@ -70,17 +72,18 @@ export function UsersAdmin({
   };
 
   const handleCreate = async () => {
-    if (!form.email.includes("@") || form.password.length < 8) {
-      setFormError("Valid email and a password of at least 8 characters required");
+    const parsed = UserCreateSchema.safeParse({
+      email: form.email,
+      password: form.password,
+      roles: form.admin ? ["admin", "user"] : ["user"],
+    });
+    if (!parsed.success) {
+      setFormError(parsed.error.issues[0]?.message ?? "Invalid input");
       return;
     }
     setFormError("");
     await run("User created", async () => {
-      await createUser({
-        email: form.email,
-        password: form.password,
-        roles: form.admin ? ["admin", "user"] : ["user"],
-      });
+      await createUser(parsed.data);
       setCreateOpen(false);
       setForm({ email: "", password: "", admin: false });
     });
@@ -92,6 +95,99 @@ export function UsersAdmin({
     )
       .join("")
       .slice(0, 16);
+
+  const columns: Column<TenantUserRow>[] = [
+    { key: "email", header: "Email", className: "text-gray-800" },
+    {
+      key: "roles",
+      header: "Roles",
+      render: (u) => (
+        <select
+          className="text-xs border border-gray-200 rounded px-1.5 py-1 bg-white"
+          value={u.roles.includes("admin") ? "admin" : "user"}
+          disabled={busy || u.id === currentUserId}
+          onChange={(e) =>
+            run("Roles updated", () =>
+              updateUser(
+                u.id,
+                {
+                  roles:
+                    e.target.value === "admin" ? ["admin", "user"] : ["user"],
+                },
+                tenantId,
+              ),
+            )
+          }
+        >
+          <option value="user">user</option>
+          <option value="admin">admin</option>
+        </select>
+      ),
+    },
+    {
+      key: "status",
+      header: "Status",
+      render: (u) => (
+        <Badge variant={u.status === "active" ? "success" : "secondary"}>
+          {u.status}
+        </Badge>
+      ),
+    },
+    {
+      key: "last_login_at",
+      header: "Last login",
+      className: "text-xs text-gray-400",
+      render: (u) =>
+        u.last_login_at ? new Date(u.last_login_at).toLocaleString() : "never",
+    },
+    {
+      key: "actions",
+      header: "",
+      align: "right",
+      className: "space-x-1 whitespace-nowrap",
+      render: (u) => (
+        <>
+          <button
+            title={u.status === "active" ? "Disable" : "Enable"}
+            disabled={busy || u.id === currentUserId}
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 disabled:opacity-40"
+            onClick={() =>
+              run(
+                u.status === "active" ? "User disabled" : "User enabled",
+                () =>
+                  updateUser(
+                    u.id,
+                    { status: u.status === "active" ? "disabled" : "active" },
+                    tenantId,
+                  ),
+              )
+            }
+          >
+            {u.status === "active" ? "Disable" : "Enable"}
+          </button>
+          <button
+            title="Reset password"
+            disabled={busy}
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400"
+            onClick={() => {
+              setResetTarget(u);
+              setResetPw(generatePassword());
+            }}
+          >
+            <KeyRound className="w-3.5 h-3.5 inline" />
+          </button>
+          <button
+            title="Delete user"
+            disabled={busy || u.id === currentUserId}
+            className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 disabled:opacity-40"
+            onClick={() => setDeleteTarget(u)}
+          >
+            <Trash2 className="w-3.5 h-3.5 inline" />
+          </button>
+        </>
+      ),
+    },
+  ];
 
   return (
     <section className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
@@ -106,100 +202,12 @@ export function UsersAdmin({
       {error && <Alert className="text-xs">{error}</Alert>}
       {notice && <p className="text-xs text-green-700">{notice}</p>}
 
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-gray-200 text-left text-xs uppercase tracking-wide text-gray-400">
-            <th className="py-2">Email</th>
-            <th className="py-2">Roles</th>
-            <th className="py-2">Status</th>
-            <th className="py-2">Last login</th>
-            <th className="py-2" />
-          </tr>
-        </thead>
-        <tbody>
-          {users.map((u) => (
-            <tr key={u.id} className="border-b border-gray-100">
-              <td className="py-2.5 text-gray-800">{u.email}</td>
-              <td className="py-2.5">
-                <select
-                  className="text-xs border border-gray-200 rounded px-1.5 py-1 bg-white"
-                  value={u.roles.includes("admin") ? "admin" : "user"}
-                  disabled={busy || u.id === currentUserId}
-                  onChange={(e) =>
-                    run("Roles updated", () =>
-                      updateUser(
-                        u.id,
-                        {
-                          roles:
-                            e.target.value === "admin" ? ["admin", "user"] : ["user"],
-                        },
-                        tenantId,
-                      ),
-                    )
-                  }
-                >
-                  <option value="user">user</option>
-                  <option value="admin">admin</option>
-                </select>
-              </td>
-              <td className="py-2.5">
-                <Badge variant={u.status === "active" ? "success" : "secondary"}>
-                  {u.status}
-                </Badge>
-              </td>
-              <td className="py-2.5 text-xs text-gray-400">
-                {u.last_login_at ? new Date(u.last_login_at).toLocaleString() : "never"}
-              </td>
-              <td className="py-2.5 text-right space-x-1 whitespace-nowrap">
-                <button
-                  title={u.status === "active" ? "Disable" : "Enable"}
-                  disabled={busy || u.id === currentUserId}
-                  className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 disabled:opacity-40"
-                  onClick={() =>
-                    run(
-                      u.status === "active" ? "User disabled" : "User enabled",
-                      () =>
-                        updateUser(
-                          u.id,
-                          { status: u.status === "active" ? "disabled" : "active" },
-                          tenantId,
-                        ),
-                    )
-                  }
-                >
-                  {u.status === "active" ? "Disable" : "Enable"}
-                </button>
-                <button
-                  title="Reset password"
-                  disabled={busy}
-                  className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400"
-                  onClick={() => {
-                    setResetTarget(u);
-                    setResetPw(generatePassword());
-                  }}
-                >
-                  <KeyRound className="w-3.5 h-3.5 inline" />
-                </button>
-                <button
-                  title="Delete user"
-                  disabled={busy || u.id === currentUserId}
-                  className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 disabled:opacity-40"
-                  onClick={() => setDeleteTarget(u)}
-                >
-                  <Trash2 className="w-3.5 h-3.5 inline" />
-                </button>
-              </td>
-            </tr>
-          ))}
-          {users.length === 0 && (
-            <tr>
-              <td colSpan={5} className="py-6 text-center text-gray-400">
-                No users.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+      <DataTable
+        columns={columns}
+        rows={users}
+        keyField="id"
+        emptyText="No users."
+      />
 
       {/* Create dialog */}
       <ConfirmDialog
