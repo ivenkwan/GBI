@@ -18,7 +18,7 @@ export function ConversationSidebar({
   onNewChat: () => void;
 }) {
   return (
-    <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-gray-200 bg-white">
+    <>
       {listError && (
         <Alert variant="error" className="m-2 text-xs">
           {listError}
@@ -35,6 +35,6 @@ export function ConversationSidebar({
           emptyText="No conversations yet"
         />
       </div>
-    </aside>
+    </>
   );
 }

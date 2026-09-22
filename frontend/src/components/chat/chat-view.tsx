@@ -65,13 +65,15 @@ export function ChatView() {
   return (
     <div className="flex h-full bg-gray-50">
       {/* Conversations sidebar (Phase 14) */}
-      <ConversationSidebar
-        conversations={conversations}
-        activeId={conversationId}
-        listError={listError}
-        onSelect={handleSelect}
-        onNewChat={handleNewChat}
-      />
+      <aside className="hidden md:flex w-64 shrink-0 flex-col border-r border-gray-200 bg-white">
+        <ConversationSidebar
+          conversations={conversations}
+          activeId={conversationId}
+          listError={listError}
+          onSelect={handleSelect}
+          onNewChat={handleNewChat}
+        />
+      </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
         <button
@@ -84,13 +86,15 @@ export function ChatView() {
         </button>
 
         <Sheet open={listOpen} onOpenChange={setListOpen} title="Conversations">
-          <ConversationSidebar
-            conversations={conversations}
-            activeId={conversationId}
-            listError={listError}
-            onSelect={handleSelect}
-            onNewChat={handleNewChat}
-          />
+          <div className="flex h-full flex-col">
+            <ConversationSidebar
+              conversations={conversations}
+              activeId={conversationId}
+              listError={listError}
+              onSelect={handleSelect}
+              onNewChat={handleNewChat}
+            />
+          </div>
         </Sheet>
 
         <MessageList
