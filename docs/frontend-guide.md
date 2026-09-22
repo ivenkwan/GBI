@@ -10,7 +10,7 @@
 |---|---|
 | Framework | Next.js 15 (App Router) |
 | Language | TypeScript 5.9 (strict) |
-| Styling | Tailwind CSS v4 with `@theme` tokens (no `tailwind.config.ts`) |
+| Styling | Tailwind CSS v4 with CSS `@theme` tokens |
 | Components | shadcn/ui (Radix UI primitives) |
 | Validation | Zod 3.24 |
 | Icons | lucide-react |
@@ -45,8 +45,6 @@ Tailwind v4 is configured through CSS only. The file imports `tailwindcss` and d
   --color-ring: var(--color-brand-600);
 }
 ```
-
-There is **no `tailwind.config.ts`** in the project; the old JS-based config was removed in Task 1.
 
 ---
 
@@ -269,7 +267,7 @@ The persistent workspace layout introduced in Phase 27b.
 - Account section with **Settings** and **Admin portal** (only for `platform_admin`)
 - User card at the bottom showing initials, name/email, and logout
 - Mobile hamburger top bar
-- Replaces the old per-page headers and guards
+- Centralizes workspace navigation, user identity, and logout
 
 ### `PageHeader` (`src/components/layout/page-header.tsx`)
 
@@ -376,7 +374,7 @@ Wraps `/admin/*`. Adds a second gate on `user.platform_admin` and shows a "privi
 
 **File:** `src/components/ui/*.tsx` | **Utility:** `cn()` from `@/lib/shadcn`
 
-All 12 components use Radix UI primitives and Tailwind CSS with class-variance-authority (CVA) for variants.
+Radix-based components use Tailwind CSS with class-variance-authority (CVA) for variants; plain-HTML and `react-markdown` components are noted in the table below.
 
 | Component | Primitive | Variants / Notes |
 |---|---|---|
