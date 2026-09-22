@@ -9,8 +9,9 @@ import { newMessageId, type ChatMessage } from "@/components/chat/chat-types";
 /** Chat message state + SSE streaming lifecycle, extracted from chat-view.tsx.
  *  Parity extraction: semantics match the pre-refactor ChatView except where
  *  the deliberate flips have landed — confirm reuses the pending turn via
- *  confirmLargeQuery (T19); feedback always POSTs the pressed score (T20) and
- *  invalid input rejects silently (T21) are still parity quirks. */
+ *  confirmLargeQuery (T19); invalid input rejects silently (T21) is still a
+ *  parity quirk; feedback now posts the resulting score and rolls back on
+ *  failure (T20). */
 export function useChatStream({
   conversationId,
   onConversationId,
@@ -224,15 +225,14 @@ export function useChatStream({
   }, []);
 
   // Feedback (Phase 20): thumbs up/down on a completed response. The score
-  // lands on the session's audit rows; failures degrade silently.
+  // lands on the session's audit rows; failures roll the thumb back.
   const setFeedback = useCallback((msgId: string, score: 1 | -1) => {
-    setMessages((prev) =>
-      prev.map((m) => (m.id === msgId ? { ...m, feedback: m.feedback === score ? 0 : score } : m)),
-    );
     const msg = messagesRef.current.find((m) => m.id === msgId);
     if (!msg?.sessionId) return;
-    sendFeedback(msg.sessionId, score).catch(() => {
-      // Best-effort: the local toggle stays even if the audit store is down.
+    const next: 1 | -1 | 0 = msg.feedback === score ? 0 : score;
+    setMessages((prev) => prev.map((m) => (m.id === msgId ? { ...m, feedback: next } : m)));
+    sendFeedback(msg.sessionId, next).catch(() => {
+      setMessages((prev) => prev.map((m) => (m.id === msgId ? { ...m, feedback: msg.feedback ?? 0 } : m)));
     });
   }, []);
 
