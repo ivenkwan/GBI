@@ -1,14 +1,25 @@
 @import "tailwindcss";
 
-:root {
+@theme {
+  /* Brand scale (globals.css hexes win; 300/400 filled from old config) */
   --color-brand-50: #eef2ff;
   --color-brand-100: #e0e7ff;
-  --color-brand-200: #c7d2fe;
+  --color-brand-200: #c7d2fe;   /* keep name: ::selection consumes it */
+  --color-brand-300: #91a7ff;
+  --color-brand-400: #748ffc;
   --color-brand-500: #6366f1;
   --color-brand-600: #4c6ef5;
   --color-brand-700: #4263eb;
   --color-brand-800: #364fc7;
   --color-brand-900: #2b3a9e;
+
+  /* Semantic aliases (dark-ready; used by new/refactored components) */
+  --color-surface: #ffffff;
+  --color-surface-muted: #f9fafb;   /* gray-50 */
+  --color-border: #e5e7eb;          /* gray-200 */
+  --color-border-strong: #d1d5db;   /* gray-300 */
+  --color-text-muted: #6b7280;      /* gray-500 */
+  --color-ring: var(--color-brand-600);
 }
 
 body {
