@@ -1,6 +1,8 @@
 # Frontend Guide
 
 > Next.js 15 App Router, TypeScript 5.9, Tailwind CSS v4, shadcn/ui components.
+>
+> **Guide status:** rewritten after the UX refactor Tasks 1–3. It will be updated again as refactor Phases 1–4 land.
 
 ## Tech Stack
 
@@ -8,11 +10,43 @@
 |---|---|
 | Framework | Next.js 15 (App Router) |
 | Language | TypeScript 5.9 (strict) |
-| Styling | Tailwind CSS v4 with custom `brand` palette |
+| Styling | Tailwind CSS v4 with `@theme` tokens (no `tailwind.config.ts`) |
 | Components | shadcn/ui (Radix UI primitives) |
 | Validation | Zod 3.24 |
 | Icons | lucide-react |
-| Markdown | react-markdown (rehype + remark plugins) |
+| Markdown | react-markdown (remark-gfm, rehype-raw, rehype-sanitize) |
+
+### Tailwind v4 `@theme` tokens
+
+**File:** `frontend/src/app/globals.css`
+
+Tailwind v4 is configured through CSS only. The file imports `tailwindcss` and declares a single `@theme` block with the brand scale plus semantic aliases.
+
+```css
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-200: #c7d2fe;
+  --color-brand-300: #91a7ff;
+  --color-brand-400: #748ffc;
+  --color-brand-500: #6366f1;
+  --color-brand-600: #4c6ef5;
+  --color-brand-700: #4263eb;
+  --color-brand-800: #364fc7;
+  --color-brand-900: #2b3a9e;
+
+  --color-surface: #ffffff;
+  --color-surface-muted: #f9fafb;
+  --color-border: #e5e7eb;
+  --color-border-strong: #d1d5db;
+  --color-text-muted: #6b7280;
+  --color-ring: var(--color-brand-600);
+}
+```
+
+There is **no `tailwind.config.ts`** in the project; the old JS-based config was removed in Task 1.
 
 ---
 
@@ -21,34 +55,68 @@
 ```
 frontend/src/
 ├── app/
-│   ├── globals.css          ← Tailwind directives + brand palette
-│   ├── layout.tsx           ← RootLayout (metadata, AuthProvider)
-│   ├── page.tsx             ← Landing page (hero + auth-aware CTA)
+│   ├── globals.css              ← Tailwind v4 import + @theme tokens
+│   ├── layout.tsx               ← RootLayout (metadata, AuthProvider)
+│   ├── page.tsx                 ← Landing page (dark hero)
 │   ├── login/
-│   │   └── page.tsx         ← Login page (LoginForm → redirects to /chat)
-│   ├── chat/
-│   │   └── page.tsx         ← Chat page (AuthGuard → ChatView)
-│   └── explore/
-│       └── page.tsx         ← Explore page (AuthGuard → ExploreView)
+│   │   └── page.tsx             ← Login page (LoginForm → redirects to /chat)
+│   └── (app)/                   ← Workspace route group (no URL prefix)
+│       ├── layout.tsx           ← AuthGuard + AppShell wrapper
+│       ├── chat/
+│       │   └── page.tsx         ← ChatView
+│       ├── explore/
+│       │   └── page.tsx         ← ExploreView
+│       ├── reports/
+│       │   └── page.tsx         ← ReportsView
+│       ├── dashboards/
+│       │   └── page.tsx         ← DashboardsView
+│       ├── wiki/
+│       │   └── page.tsx         ← WikiView
+│       └── settings/
+│           └── page.tsx         ← SettingsView
+│   └── admin/                   ← Platform superuser portal
+│       ├── layout.tsx           ← AuthGuard + PlatformAdminGuard
+│       ├── page.tsx             ← Admin overview stats
+│       ├── tenants/
+│       │   ├── page.tsx         ← Tenant list + provision
+│       │   └── [id]/page.tsx    ← Tenant detail / users / LLM
+│       ├── admins/
+│       │   └── page.tsx         ← Superuser grants
+│       └── audit/
+│           └── page.tsx         ← Admin audit log
 ├── components/
+│   ├── admin/
+│   │   └── tenant-llm-panel.tsx ← BYOK LLM panel for a tenant
 │   ├── auth/
-│   │   ├── auth-provider.tsx    ← AuthProvider + AuthGuard (redirects to /login)
+│   │   ├── auth-provider.tsx    ← AuthProvider + AuthGuard + PlatformAdminGuard
 │   │   └── login-form.tsx       ← Email/password sign-in form
 │   ├── charts/
 │   │   └── chart-card.tsx       ← ChartCard + ChartGrid
 │   ├── chat/
 │   │   └── chat-view.tsx        ← Full ChatView with SSE consumption
+│   ├── dashboards/
+│   │   └── dashboards-view.tsx  ← Dashboard list + builder
 │   ├── explore/
 │   │   └── explore-view.tsx     ← Metric catalog + native query builder
-│   └── ui/                  ← 11 shadcn/ui primitives
+│   ├── layout/
+│   │   ├── app-shell.tsx        ← Persistent workspace sidebar + user card
+│   │   └── page-header.tsx      ← Shared in-page header component
+│   ├── reports/
+│   │   └── reports-view.tsx     ← Multi-chart report workbench
+│   ├── settings/
+│   │   ├── llm-provider.tsx     ← BYOK LLM provider settings
+│   │   ├── settings-view.tsx    ← Profile / password / users / LLM
+│   │   └── users-admin.tsx      ← Shared tenant user management table
+│   ├── wiki/
+│   │   └── wiki-view.tsx        ← Tenant knowledge base editor
+│   └── ui/                      ← 12 shadcn/ui primitives
 ├── lib/
-│   ├── api-client.ts        ← Centralized API client with JWT + SSE
-│   ├── auth-storage.ts      ← Session keys + localStorage helpers (genbi_token/genbi_user)
-│   ├── shadcn.ts            ← cn() utility (clsx + twMerge)
-│   └── validators.ts        ← Zod schemas with inferred types
+│   ├── api-client.ts            ← Centralized API client with JWT + SSE
+│   ├── auth-storage.ts          ← localStorage helpers (genbi_token / genbi_user)
+│   ├── shadcn.ts                ← cn() utility (clsx + twMerge) only
+│   └── validators.ts            ← Zod schemas with inferred types
 └── types/
-    ├── index.ts             ← Shared types
-    └── chart.ts             ← ChartAssemblyInput, enums
+    └── chart.ts                 ← ChartAssemblyInput, ChartBackend, ChartOutputFormat
 ```
 
 ---
@@ -62,13 +130,14 @@ Centralized fetch wrapper. All backend communication routes through this file.
 ### Core Request Function
 
 ```typescript
-async function request<T>(path: string, options: RequestInit = {}): Promise<T>
+async function request<T>(path: string, options: RequestOptions = {}): Promise<T>
 ```
 
 - Sets `Content-Type: application/json`
 - Attaches JWT from `auth-storage` (`genbi_token` key)
 - Throws `ApiError(status, code, message)` on non-OK responses
-- Default base URL: `http://localhost:8000/api/v1`
+- Base URL: `NEXT_PUBLIC_API_URL` or `http://localhost:8000/api/v1`
+- Relative bases are resolved same-origin for the proxy config; absolute bases are origin-pinned to prevent open redirects
 
 ### `ApiError` Class
 
@@ -83,18 +152,84 @@ class ApiError extends Error {
 ### Exported Functions
 
 ```typescript
-sendChat(req: ChatRequest): Promise<ChatResponse>              // POST /chat
-streamChat(req: ChatRequest, onEvent, onError): AbortController  // POST /chat/stream (SSE)
-renderChart(req: ChartRenderRequest): Promise<ChartRenderResponse>  // POST /charts/render
-listMetrics(): Promise<MetricListResponse>                    // GET /metrics/list (Phase 10)
-queryMetrics(req: MetricQueryRequest): Promise<MetricQueryResponse>  // POST /metrics/query (tenant-scoped)
-listDatasources(): Promise<{ datasources: DatasourceSummary[]; count: number }>  // GET /datasources
-healthCheck(): Promise<{ status: string; version: string }>     // GET /health
+// Chat
+streamChat(req: ChatRequest, onEvent, onError): AbortController          // POST /chat/stream (SSE)
+sendFeedback(sessionId, score): Promise<{ status; session_id; score }>   // POST /chat/feedback
+
+// Charts
+renderChart(req: ChartRenderRequest): Promise<ChartRenderResponse>       // POST /charts/render
+
+// Metrics
+listMetrics(): Promise<MetricListResponse>                               // GET /metrics/list
+queryMetrics(req: MetricQueryRequest): Promise<MetricQueryResponse>      // POST /metrics/query
+
+// Conversations
+listConversations(): Promise<{ conversations; count }>                   // GET /conversations
+listConversationMessages(conversationId): Promise<{ messages; count }>   // GET /conversations/:id/messages
+
+// Reports
+generateReport(prompt, maxSections): Promise<Report>                     // POST /reports/generate
+listReports(): Promise<{ reports; count }>                               // GET /reports
+getReport(reportId): Promise<Report>                                     // GET /reports/:id
+regenerateReport(reportId): Promise<Report>                              // POST /reports/:id/regenerate
+scheduleReport(reportId, frequency): Promise<ReportSchedule>             // POST /reports/:id/schedule
+getReportSchedule(reportId): Promise<ReportSchedule>                     // GET /reports/:id/schedule
+unscheduleReport(reportId): Promise<{ status }>                          // DELETE /reports/:id/schedule
+exportReportPdf(reportId): Promise<Blob>                                 // GET /reports/:id/pdf
+
+// Dashboards
+createDashboard(title, description?): Promise<{ dashboard_id; title; created_at }>  // POST /dashboards
+listDashboards(): Promise<{ dashboards; count }>                                      // GET /dashboards
+getDashboard(dashboardId): Promise<DashboardDetail>                                   // GET /dashboards/:id
+deleteDashboard(dashboardId): Promise<{ status }>                                     // DELETE /dashboards/:id
+pinSection(dashboardId, reportId, sectionPosition): Promise<{ pin_id; position }>     // POST /dashboards/:id/sections
+unpinSection(dashboardId, pinId): Promise<{ status }>                                 // DELETE /dashboards/:id/sections/:pinId
+
+// Admin (platform superuser)
+getAdminStats(): Promise<PlatformStats>                                  // GET /admin/stats
+listTenantsAdmin(): Promise<{ tenants; count }>                          // GET /admin/tenants
+provisionTenant(body): Promise<ProvisionResult>                          // POST /admin/tenants
+getTenantDetail(tenantId): Promise<TenantDetail>                         // GET /admin/tenants/:id
+updateTenantAdmin(tenantId, body): Promise<TenantDetail>                 // PATCH /admin/tenants/:id
+decommissionTenant(tenantId, force): Promise<{ status }>                 // DELETE /admin/tenants/:id
+listSuperadmins(): Promise<SuperadminGrant[]>                            // GET /admin/admins
+grantSuperadmin(body): Promise<SuperadminGrant>                          // POST /admin/admins
+revokeSuperadmin(userId): Promise<{ status }>                            // DELETE /admin/admins/:id
+listAdminAudit(limit?): Promise<AdminAuditEntry[]>                       // GET /admin/audit
+getTenantLLM(tenantId, days?): Promise<TenantLLM>                        // GET /admin/tenants/:id/llm
+putTenantLLM(tenantId, body): Promise<LLMProviderConfig>                 // PUT /admin/tenants/:id/llm
+patchTenantLLMStatus(tenantId, status): Promise<LLMProviderConfig>       // PATCH /admin/tenants/:id/llm
+
+// Tenant users + self-service
+getMe(): Promise<User>                                                   // GET /auth/me
+changePassword(currentPassword, newPassword): Promise<{ status }>        // POST /auth/change-password
+listUsers(tenantId?): Promise<{ users; count }>                          // GET /users
+createUser(body): Promise<TenantUserRow>                                 // POST /users
+updateUser(userId, body, tenantId?): Promise<TenantUserRow>              // PATCH /users/:id
+deleteUser(userId, tenantId?): Promise<{ status }>                       // DELETE /users/:id
+resetUserPassword(userId, password, tenantId?): Promise<{ status }>      // POST /users/:id/reset-password
+
+// Wiki
+listWikiPages(): Promise<WikiPageSummary[]>                              // GET /wiki
+getWikiPage(slug): Promise<WikiPage>                                     // GET /wiki/:slug
+upsertWikiPage(slug, body): Promise<WikiPage>                            // PUT /wiki/:slug
+deleteWikiPage(slug): Promise<{ status }>                                // DELETE /wiki/:slug
+getWikiHistory(slug): Promise<WikiRevision[]>                            // GET /wiki/:slug/history
+restoreWikiPage(slug, version): Promise<WikiPage>                        // POST /wiki/:slug/restore/:version
+searchWiki(q, topK?): Promise<WikiSearchHit[]>                           // GET /wiki/search
+
+// BYOK LLM providers
+getLLMConfig(): Promise<LLMProviderConfig>                               // GET /settings/llm
+saveLLMConfig(body): Promise<LLMProviderConfig>                          // PUT /settings/llm
+validateLLMConfig(body): Promise<{ status; provider }>                    // POST /settings/llm/validate
+setLLMStatus(status): Promise<LLMProviderConfig>                         // PATCH /settings/llm
+deleteLLMConfig(): Promise<{ status; provider }>                         // DELETE /settings/llm
 ```
 
 ### `streamChat` — SSE Implementation
 
-Uses `ReadableStream` reader with a line buffer:
+Uses `fetch` with an `AbortController` signal, reads the response body with `ReadableStream`:
+- Decodes chunks with `TextDecoder`
 - Splits on `\n`
 - Strips `data: ` prefix
 - Parses JSON via `JSON.parse`
@@ -112,13 +247,36 @@ All schemas use `z.object(...)` with inferred types:
 
 | Schema | Key Validations |
 |---|---|
-| `ChatRequestSchema` | `query: z.string().min(1).max(2000)`, optional `conversation_id: z.string().uuid()` |
-| `ChatResponseSchema` | All optional except `conversation_id`, `query`, `warnings` |
-| `SSEEventSchema` | `event: z.enum(["start","intent","sql","validation","data","chart","narrative","done"])` |
-| `ChartAssemblyInputSchema` | `chartType: z.string().min(1)`, `encodings`, `baseSize` (positive ints) |
-| `MetricDefinitionSchema` | `metric_type: z.enum([...9 types])` |
+| `ChatRequestSchema` | `query: z.string().min(1).max(2000)`, optional `conversation_id: z.string().uuid()`, optional `confirm_large_query: z.boolean()` |
+| `SSEEventSchema` | `event: z.enum(["start","intent","sql","validation","data","chart","narrative","done"])` plus optional fields for plan, SQL, chart spec, image, SVG, narrative, warnings, etc. |
+| `MetricListResponseSchema` | Array of metrics with name, title, description, metric_type, cube_name, measure_name, dimensions, time_dimensions |
+| `MetricQueryResponseSchema` | data, annotation, total, query, latency_ms, cached |
 | `LoginRequestSchema` | `email: z.string().email()`, `password: z.string().min(6)` |
-| `LoginResponseSchema` | `access_token`, `token_type`, `user: { id, email, name, tenant_id, roles }` |
+| `LoginResponseSchema` | access_token, token_type, user |
+| `TenantProvisionSchema` | name, slug regex, admin_email, seed_sample_data |
+| `LLMConfigSchema` | provider, api_key, base_url, reasoning_model, fast_model, embedding_model |
+
+---
+
+## App Shell and Page Header
+
+### `AppShell` (`src/components/layout/app-shell.tsx`)
+
+The persistent workspace layout introduced in Phase 27b.
+
+- Wraps every route under `(app)` via `app/(app)/layout.tsx`
+- Dark left sidebar (desktop) / drawer (mobile) with workspace nav: **Chat**, **Explore**, **Reports**, **Dashboards**, **Wiki**
+- Account section with **Settings** and **Admin portal** (only for `platform_admin`)
+- User card at the bottom showing initials, name/email, and logout
+- Mobile hamburger top bar
+- Replaces the old per-page headers and guards
+
+### `PageHeader` (`src/components/layout/page-header.tsx`)
+
+Shared in-page header for workspace views:
+- Icon + title + description on the left
+- Arbitrary actions slot on the right
+- Rendered as the first child of a view's content column
 
 ---
 
@@ -126,13 +284,13 @@ All schemas use `z.object(...)` with inferred types:
 
 **File:** `src/components/chat/chat-view.tsx`
 
-The main application component. Full-height flex layout with:
+The main application component. Full-height flex layout inside the AppShell content column.
 
 ### State
 ```typescript
-messages: ChatMessage[];    // User + assistant message pairs
-loading: boolean;            // In-flight request indicator
-abortRef: AbortController;  // SSE cancellation
+messages: ChatMessage[];     // User + assistant message pairs
+loading: boolean;             // In-flight request indicator
+abortRef: AbortController;   // SSE cancellation
 ```
 
 ### Pipeline Progress (Stage Badges)
@@ -154,9 +312,10 @@ A row of `Badge` components shows real-time pipeline progress: **Intent** → **
 
 ### Layout
 
-- **Header:** Logo, view toggle ("Chat" / "Metrics"), settings, user avatar, logout
-- **Messages area:** Scrolling container. Empty state: centered greeting with three suggestion chips ("Show revenue by region", "Monthly active users trend", "Top 10 customers by value"). User messages: right-aligned, `brand-600` background. Assistant messages: `Card` with stage badges, SQL block (dark terminal style with copy button), chart card, narrative text, amber warning boxes.
-- **Input bar:** Fixed-bottom styled `Input` with Send/Cancel button. Disclaimer: "GenBI can make mistakes. Verify important data."
+- No standalone top navbar (navigation moved to `AppShell` sidebar)
+- Messages area with scrolling container, empty state suggestions, user/assistant message styling
+- Input bar at the bottom with Send/Cancel
+- Feedback thumbs on completed assistant messages (`sendFeedback`)
 
 ---
 
@@ -168,10 +327,7 @@ A row of `Badge` components shows real-time pipeline progress: **Intent** → **
 
 Renders within a bordered `Card`:
 - **Header:** chart type label + "Flint" badge, format toggle (SVG/PNG), Download button
-- **Body:** Conditionally renders:
-  - SVG via `dangerouslySetInnerHTML` with `class="vis-flint-chart"`
-  - Base64 PNG `<img>` element
-  - Placeholder "Chart rendering..." while streaming
+- **Body:** Conditionally renders SVG via `dangerouslySetInnerHTML` with `class="vis-flint-chart"`, Base64 PNG `<img>`, or a placeholder while streaming
 
 **`ChartGrid`:** Responsive 1-column (mobile) / 2-column (desktop) grid layout for multiple charts.
 
@@ -194,9 +350,10 @@ interface AuthState {
 }
 ```
 
-- **Login:** POST to `/auth/login`, stores `genbi_token` + `genbi_user` in `localStorage` (via `lib/auth-storage.ts`)
+- **Login:** POST to `/auth/login`, stores `genbi_token` + `genbi_user` in `localStorage`
 - **Session restoration:** On mount, reads from `localStorage`. If parsing fails, clears both.
-- **Loading guard:** While `loading` is true, renders nothing (or bouncing dots in `AuthGuard`).
+- **Loading guard:** While `loading` is true, renders bouncing dots.
+- **User object** includes `platform_admin` flag minted at login.
 
 ### `AuthGuard` Component
 
@@ -204,6 +361,10 @@ Wraps protected pages. Shows:
 - Loading: bouncing dots animation
 - Unauthenticated: `router.replace("/login")` redirect
 - Authenticated: children
+
+### `PlatformAdminGuard` Component
+
+Wraps `/admin/*`. Adds a second gate on `user.platform_admin` and shows a "privileges required" message otherwise. The backend re-verifies the grant on every `/admin` call.
 
 ### `LoginForm` Component
 
@@ -215,7 +376,7 @@ Wraps protected pages. Shows:
 
 **File:** `src/components/ui/*.tsx` | **Utility:** `cn()` from `@/lib/shadcn`
 
-All 11 components use Radix UI primitives and Tailwind CSS with class-variance-authority (CVA) for variants.
+All 12 components use Radix UI primitives and Tailwind CSS with class-variance-authority (CVA) for variants.
 
 | Component | Primitive | Variants / Notes |
 |---|---|---|
@@ -226,6 +387,7 @@ All 11 components use Radix UI primitives and Tailwind CSS with class-variance-a
 | `Dialog` | `@radix-ui/react-dialog` | Overlay (bg-black/50), Content (centered, rounded-xl), with X close button |
 | `DropdownMenu` | `@radix-ui/react-dropdown-menu` | Content (z-50, min-w-8rem), Items with keyboard shortcuts, Separator |
 | `Input` | Plain `<input>` | h-10, rounded-lg border, focus ring-brand-600 |
+| `MarkdownText` | `react-markdown` | Shared markdown renderer for chat narratives and wiki content; allows `data:image/` URIs |
 | `Separator` | Plain div | Horizontal (`h-px w-full`) or Vertical |
 | `Skeleton` | Plain div | `animate-pulse rounded-md bg-gray-200` |
 | `Tabs` | `@radix-ui/react-tabs` | List (inline-flex, bg-gray-100), Trigger (pill, active=white bg+shadow), Content |
@@ -251,7 +413,10 @@ export interface ChartAssemblyInput {
   encodings: Record<string, { field: string }>;
   baseSize: { width: number; height: number };
   semantic_types?: Record<string, "Category" | "Quantity" | "Temporal">;
-  data: { values?: Record<string, unknown>[]; url?: string };
+  data: {
+    values?: Record<string, unknown>[];
+    url?: string;
+  };
 }
 
 export type ChartBackend = "vegalite" | "echarts" | "chartjs";
@@ -270,63 +435,92 @@ export type ChartOutputFormat = "png" | "svg";
 
 ### `page.tsx` — Landing Page
 
-Minimal hero (logo, tagline, CTA). The CTA routes to `/login` when signed out and `/chat` when signed in.
+Dark full-page hero with feature cards. The CTA routes to `/chat` when signed in and `/login` when signed out.
 
 ### `login/page.tsx` — Login Page
 
 Redirects to `/chat` if already authenticated; otherwise renders `LoginForm`, which navigates to `/chat` on success.
 
-### `chat/page.tsx` — Chat Page
+### `(app)/layout.tsx` — Workspace Layout
 
-Wraps `ChatView` in `AuthGuard` (redirects to `/login` when signed out). The header's database icon navigates to `/explore`; the file icon to `/reports`.
+Wraps workspace pages in a single `AuthGuard` and the shared `AppShell`. Pages inside this group no longer carry their own guards or top navbars.
 
-### `settings/page.tsx` — Settings Page (Phase 23)
+### `(app)/chat/page.tsx` — Chat Page
 
-Wraps `SettingsView` (`components/settings/settings-view.tsx`) in `AuthGuard`
-— the chat-header gear icon routes here. Three sections:
+Renders `ChatView`. Navigation is provided by the AppShell sidebar.
 
-- **Profile** from `GET /auth/me` (email, tenant, roles, platform-superuser badge).
-- **Change password** (`POST /auth/change-password`): current + new password;
-  a wrong current password counts toward the login lockout ( surfaced as a
-  hint).
-- **Tenant users** (visible to the tenant `admin` role): the shared
-  `UsersAdmin` table (`components/settings/users-admin.tsx`) — create (with
-  generated-password option + admin-role toggle), role select,
-  enable/disable, reset password (generated one-time value), delete with
-  confirm. Self-actions are disabled (you cannot demote/delete yourself).
-  The same component powers the admin portal's tenant detail page via the
-  superuser `?tenant_id=` path.
+### `(app)/explore/page.tsx` — Explore Page
 
-### `explore/page.tsx` — Explore Page (Phase 10)
+Wraps `ExploreView`. The semantic-layer workbench:
 
-Wraps `ExploreView` (`components/explore/explore-view.tsx`) in `AuthGuard`. The semantic-layer workbench:
+- **Catalog**: metrics from `GET /metrics/list` as clickable cards
+- **Query builder**: native `<select>` elements for measure, group-by dimension, optional time granularity, and row limit
+- **Run**: `POST /metrics/query` → results table + bar chart rendered via `ChartCard`
+- Empty results show an RLS-aware hint
 
-- **Catalog**: metrics from `GET /metrics/list` as clickable cards (title, cube, `metric_type` badge); selecting one sets the query's measure.
-- **Query builder**: native `<select>` elements (no new deps) for measure, group-by dimension (from the measure's dimensions), optional time granularity (day/month via its first time dimension), and row limit.
-- **Run**: `POST /metrics/query` → results table (hand-built Tailwind `<table>`, cube-prefix-stripped keys) +, when sliced by a dimension, a bar chart: the client builds a `ChartAssemblyInput` from the result rows, renders via `POST /charts/render`, and displays through the existing `ChartCard`.
-- Empty results show an RLS-aware hint (tenant has no data — `make seed`).
-- API functions live in `lib/api-client.ts` (`listMetrics`, `queryMetrics`, `listDatasources`); Zod schemas (`MetricQueryRequestSchema` etc.) in `lib/validators.ts`.
+### `(app)/reports/page.tsx` — Reports Page
 
-### `reports/page.tsx` — Reports Page (Phase 16)
+Wraps `ReportsView`. The multi-chart report workbench:
 
-Wraps `ReportsView` (`components/reports/reports-view.tsx`) in `AuthGuard`. The multi-chart report workbench:
+- **Generator**: prompt input + section-count select (2–4) + Generate → `POST /reports/generate`
+- **Sidebar**: past reports from `GET /reports`; select loads via `GET /reports/{id}`
+- **Report display**: title + summary + badges, per-section `ChartCard`s, warnings panel
+- Scheduling, regeneration, and PDF export are supported
 
-- **Generator**: prompt input + section-count select (2–4) + Generate → `POST /reports/generate`.
-- **Sidebar**: past reports from `GET /reports` (title, section count); select loads via `GET /reports/{id}`.
-- **Report display**: title + overall summary + badges, per-section cards (heading with total/row count, `ChartCard` with the persisted SVG, optional narrative), warnings panel (skipped metrics, persistence notice).
-- API functions: `generateReport`, `listReports`, `getReport` in `lib/api-client.ts`.
+### `(app)/dashboards/page.tsx` — Dashboards Page
 
-### Configuration
+Wraps `DashboardsView`. Boards of pinned report sections:
 
-**`next.config.js`:** `output: "standalone"` (containerized deployment)
+- Create/list/delete dashboards via `/dashboards`
+- Pin/unpin report sections into a board
+- Render persisted SVG charts
 
-**`tailwind.config.ts`:** Custom `brand` palette (indigo tones):
-```typescript
-brand: {
-  50: '#edf2ff', 100: '#dbe4ff', ...,
-  600: '#4c6ef5', 700: '#4263eb', ..., 900: '#1e2a8a'
-}
-```
+### `(app)/wiki/page.tsx` — Wiki Page
+
+Wraps `WikiView`. Tenant knowledge base:
+
+- List pages, edit markdown, set parent pages
+- Version history and restore
+- Semantic search over wiki chunks
+
+### `(app)/settings/page.tsx` — Settings Page
+
+Wraps `SettingsView`. Four sections:
+
+- **Profile** from `GET /auth/me` (email, tenant, roles, platform-superuser badge)
+- **Change password** (`POST /auth/change-password`)
+- **AI provider / BYOK** (`LLMProviderSettings`, tenant admins only)
+- **Tenant users** (`UsersAdmin`, tenant admins only) — create, role select, enable/disable, reset password, delete with confirm
+
+### `admin/layout.tsx` — Admin Portal Layout
+
+Wraps `/admin/*` in `AuthGuard` + `PlatformAdminGuard`. Own sidebar nav: **Overview**, **Tenants**, **Superusers**, **Audit log**. A "Back to GenBI" link returns to `/chat`.
+
+### `admin/page.tsx` — Platform Overview
+
+Stat cards from `GET /admin/stats`: tenants, users, LLM calls/tokens (24h), platform superusers.
+
+### `admin/tenants/page.tsx` — Tenant List
+
+Lists tenants, shows status badges, provisions new tenants with a one-time generated password.
+
+### `admin/tenants/[id]/page.tsx` — Tenant Detail
+
+Single-tenant management:
+
+- Suspend / activate / rename / decommission
+- Counters, recent admin actions
+- User management via `UsersAdmin` with `?tenant_id=` superuser path
+- BYOK LLM panel (`TenantLLMPanel`)
+- JSON tenant settings editor
+
+### `admin/admins/page.tsx` — Superuser Grants
+
+Lists `platform_admins` grants with history, grants/revokes by email.
+
+### `admin/audit/page.tsx` — Admin Audit Log
+
+Append-only control-plane audit feed from `GET /admin/audit`. Client-side filters for actor and action/target.
 
 ---
 
@@ -338,4 +532,5 @@ pnpm build        # Production build
 pnpm start        # Start production server
 pnpm lint         # ESLint
 pnpm typecheck    # tsc --noEmit
+pnpm format       # Prettier
 ```
