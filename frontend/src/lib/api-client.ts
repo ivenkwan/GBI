@@ -6,6 +6,8 @@
 
 import type { ChartAssemblyInput } from "@/types/chart";
 import { getStoredToken } from "@/lib/auth-storage";
+import { LoginResponseSchema, SSEEventSchema } from "@/lib/validators";
+import type { SSEEvent } from "@/lib/validators";
 
 // Normalized to a trailing slash so relative paths resolve against the base
 // path (e.g. "chat" against "http://host:8000/api/v1/" keeps /api/v1).
@@ -97,51 +99,78 @@ export function sendFeedback(
   return request("/chat/feedback", { method: "POST", body: { session_id: sessionId, score } });
 }
 
+export interface LoginResponse {
+  access_token: string;
+  token_type: string;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    tenant_id: string;
+    roles: string[];
+    platform_admin?: boolean;
+  };
+}
+
+export async function login(email: string, password: string): Promise<LoginResponse> {
+  const data = await request<unknown>("/auth/login", { method: "POST", body: { email, password } });
+  return LoginResponseSchema.parse(data);
+}
+
 export function streamChat(
   req: ChatRequest,
-  onEvent: (event: Record<string, unknown>) => void,
-  onError: (error: Error) => void,
+  onEvent: (event: SSEEvent) => void,
+  onError: (error: ApiError) => void,
+  onClose?: () => void,
 ): AbortController {
   const controller = new AbortController();
   const token = getStoredToken();
 
-  fetch(CHAT_STREAM_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify(req),
-    signal: controller.signal,
-  })
-    .then(async (res) => {
+  (async () => {
+    try {
+      const res = await fetch(CHAT_STREAM_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(req),
+        signal: controller.signal,
+      });
+
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ message: res.statusText }));
+        throw new ApiError(res.status, error.code ?? "UNKNOWN", error.message ?? "Request failed");
+      }
       const reader = res.body?.getReader();
-      if (!reader) return;
+      if (!reader) throw new ApiError(0, "NO_STREAM", "No response stream");
 
       const decoder = new TextDecoder();
       let buffer = "";
-
-      while (true) {
+      for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
-
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
         buffer = lines.pop() ?? "";
-
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            try {
-              const event = JSON.parse(line.slice(6));
-              onEvent(event);
-            } catch {
-              // Skip unparseable chunks
-            }
+        for (const raw of lines) {
+          const line = raw.trim();
+          if (!line.startsWith("data:")) continue;
+          const payload = line.slice(line.indexOf(":") + 1).trim();
+          if (!payload) continue;
+          try {
+            onEvent(SSEEventSchema.parse(JSON.parse(payload)));
+          } catch {
+            // Skip unparseable/invalid chunks — never kill the stream (Review Focus 1)
           }
         }
       }
-    })
-    .catch(onError);
+      if (!controller.signal.aborted) onClose?.();
+    } catch (err) {
+      if (controller.signal.aborted) return;
+      onError(err instanceof ApiError ? err : new ApiError(0, "NETWORK", err instanceof Error ? err.message : "Network error"));
+    }
+  })();
 
   return controller;
 }

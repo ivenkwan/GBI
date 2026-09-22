@@ -8,6 +8,7 @@ import {
   getStoredUser,
   storeSession,
 } from "@/lib/auth-storage";
+import { login as apiLogin } from "@/lib/api-client";
 
 interface User {
   id: string;
@@ -60,26 +61,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     setLoading(true);
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api/v1"}/auth/login`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-        },
-      );
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message ?? "Login failed");
-      }
-
-      const data = await res.json();
-      const { access_token, user: userData } = data;
-
-      setToken(access_token);
-      setUser(userData);
-      storeSession(access_token, userData);
+      const data = await apiLogin(email, password);
+      setToken(data.access_token);
+      setUser(data.user);
+      storeSession(data.access_token, data.user);
     } finally {
       setLoading(false);
     }

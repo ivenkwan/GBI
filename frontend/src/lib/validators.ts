@@ -96,6 +96,7 @@ export const LoginResponseSchema = z.object({
     name: z.string(),
     tenant_id: z.string(),
     roles: z.array(z.string()),
+    platform_admin: z.boolean().optional(),
   }),
 });
 
