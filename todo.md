@@ -1,6 +1,6 @@
 # GenBI Platform — Build Progress
 
-> **Last updated:** 2026-09-21 | **Stack tier:** Enterprise | **153/153 shipped (Phases 1–27b) · roadmap complete**
+> **Last updated:** 2026-09-23 | **Stack tier:** Enterprise | **188/188 shipped (Phases 1–28) · roadmap complete**
 
 ---
 
@@ -1905,6 +1905,59 @@ all → 148 last. Each task its own commit, matching the repo convention
   `http://<host>:3003/api/v1/auth/login` → 200 through the rewrite proxy;
   `/api/v1/chat/stream` routes (401 unauthenticated = expected). tsc 0 /
   eslint 0 / build 15/15 after the changes.
+
+---
+
+## Phase 28 — Frontend UX Refactor (Tasks 154–188)
+
+> ✅ **STATUS: VERIFIED 2026-09-23.** Design spec `docs/superpowers/specs/2026-09-22-frontend-ux-refactor-design.md` + plan `docs/superpowers/plans/2026-09-22-frontend-ux-refactor.md` (approved 2026-09-22). Executed via subagent-driven development: 34 tasks × (implement → task review → fix loop), whole-branch final review, fix wave, live verification. 46 commits on branch `ux-refactor` (PR #3 open). Backend contracts frozen throughout.
+
+| # | Task | Status |
+|---|---|---|
+| 154 | `@theme` design tokens (brand scale + semantic aliases) replacing the dead `:root` palette — acceptance grep proves `.bg-brand-600` now emitted (all 81 brand usages were no-ops); dead `tailwind.config.ts` deleted | ✅ |
+| 155 | Landing/login dark surfaces tokenized; inline-style fallbacks + white-on-white comments removed (zero inline hex in `src/`) | ✅ |
+| 156 | Dead-code purge (`sendChat`, `listDatasources`, `healthCheck`, 5 Zod schemas, `ChartGrid`, `onDownload`, `types/index.ts`); `ChartAssemblyInput` unified at `@/types/chart` | ✅ |
+| 157 | `docs/frontend-guide.md` rewritten to the current tree (stale pre-AppShell content replaced) | ✅ |
+| 158 | `Alert` primitive (error/success/warning variants); 11 banner blocks + 2 green notices + 6 inline error `<p>`s migrated | ✅ |
+| 159 | `Loader` primitive; 13 dot-loader call sites migrated (guards deferred to task 181) | ✅ |
+| 160 | `EmptyState` primitive; adopted in explore/dashboards/wiki/admin empty states (wiki role-conditional text preserved verbatim) | ✅ |
+| 161 | `Sheet` primitive on the installed Radix Dialog (no new deps) | ✅ |
+| 162 | `ConfirmDialog` primitive (`confirmVariant`, `requireText`, later `confirmDisabled`); all 5 hand-rolled modal overlays replaced | ✅ |
+| 163 | `SidebarList` primitive (label/`+`/active-row pattern unified) | ✅ |
+| 164 | `DataTable` primitive (generic columns, loading, empty row); proving adoption on `/admin/admins` | ✅ |
+| 165 | Shared `LLMProviderForm` (self/tenant modes) — duplicated BYOK form eliminated; settings + admin wrappers thinned | ✅ |
+| 166 | AppShell user card on `DropdownMenu`/`Avatar`/`Separator`; `Tooltip` on icon buttons (all 5 orphan primitives wired) | ✅ |
+| 167 | `streamChat` hardened (typed `SSEEvent`, `res.ok`, line trim, schema validation, `onClose`); login moved into api-client (`LoginResponseSchema.parse` + `platform_admin` field added — runtime strip would have broken the admin guard) | ✅ |
+| 168 | `chat-types.ts` (ChatMessage/StreamStage/`newMessageId`) + `useConversations` hook (listError replaces silent catch) | ✅ |
+| 169 | `useChatStream` hook — behavior-parity extraction of the message state machine onto the hardened streamChat | ✅ |
+| 170 | 8 chat presentational components (stage badges, SQL block, feedback thumbs, confirm panel, input, message list, assistant card, conversation sidebar) | ✅ |
+| 171 | `ChatView` recomposed as thin composer (585 → ~92 lines); parity review + suggestion-chip fill-input ruling | ✅ |
+| 172 | Large-query confirm reuses the pending bubble — no duplicate turn; reset clears streamed sql/chart fields | ✅ |
+| 173 | Feedback clear sends `score: 0`; optimistic toggle with guarded rollback (rapid-toggle race fixed) | ✅ |
+| 174 | Chat input validation hints (text preserved on failure); stream-error Alert with same-bubble retry; `finalizeIfCurrent` closes the stream-supersession race | ✅ |
+| 175 | Chat conversations reachable on mobile via Sheet (responsive shell lifted from component to host) | ✅ |
+| 176 | Admin portal merged into the AppShell (`app/admin` → `app/(app)/admin`, URLs unchanged); guard-only layout; gated Platform nav section; PageHeader + PageContainer on all 5 pages | ✅ |
+| 177 | `<main key={pathname}>` remount removed; explicit scroll restoration; per-view remount sweep clean | ✅ |
+| 178 | Route boundaries: branded `not-found`, root + in-shell `error`, in-shell `loading` | ✅ |
+| 179 | Mobile Sheets for reports/dashboards/wiki lists (shared content components, zero `hidden`-class ancestors in Sheet chains) | ✅ |
+| 180 | `useSelectionParam` deep links (`?conv=`/`?report=`/`?dash=`/`?page=`) with loop-guarded two-way sync; server-assigned chat ids become shareable; `force-dynamic` on the 4 pages | ✅ |
+| 181 | AuthGuard + PlatformAdminGuard on shared `Loader` (`animate-bounce` now primitive-only) | ✅ |
+| 182 | Explore: `listMetrics`/`queryMetrics` schema-validated; results → DataTable; zero-results EmptyState card restored | ✅ |
+| 183 | Reports: SidebarList (section-count secondary) + warnings Alert; deep link verified | ✅ |
+| 184 | Dashboards: SidebarList + create-in-Dialog (both entry points) + ConfirmDialog delete/unpin | ✅ |
+| 185 | Wiki sidebar shell aligned to the SidebarList pattern (recursive TreeView preserved; editor-only `+`) | ✅ |
+| 186 | Settings: sections → Tabs (admin-gated), users table → DataTable (self-actions disabled), create-user/change-password/login forms Zod-validated (`UserCreateSchema`, `ChangePasswordSchema`, `LoginRequestSchema`) | ✅ |
+| 187 | Admin tables → DataTable (tenants, audit, spend); six-way consistency sweep CLEAN; docs finalized | ✅ |
+| 188 | Whole-branch final review (all 6 spec criteria verified MET) + fix wave: shared `toApiError` FastAPI-envelope unwrap for all error flows, tenant-mode BYOK Validate restored, sidebar silent swallows → listError Alerts in reports/dashboards | ✅ |
+
+### Phase 28 — verified by
+
+- **Review evidence:** 34 independent task reviews (spec compliance + code quality); 8 fix rounds, all resolved at round 1 with clean scoped re-reviews; whole-branch final review on the most capable model — all six spec §1 success criteria verified MET on HEAD, zero Critical findings; deferred minors triaged ship-as-is.
+- **Gates on HEAD:** `pnpm typecheck` 0 errors; `pnpm lint` 0 errors (1 pre-existing `<img>` warning); `next build` 15/15 routes; production Docker image builds and serves (Linux — no Windows EPERM caveat).
+- **Live (demo stack, `verify.sh` 13/13, browser checklist on :3003):** brand styling visible across nav/buttons/badges/loaders; suggestion chips fill input (parity); whitespace validation hint; SSE stage badges stream, cancel mid-stream ends the skeleton; `?conv=` deep link set on stream start and restored after reload; history replay with SQL/narrative/feedback thumbs; explore metric query → DataTable + chart; seeded report/dashboard/wiki render with deep links; settings tabs gated correctly, users table self-row disabled; branded 404; admin guard message for non-superuser; after `create_admin` grant, Platform section + admin overview render inside the AppShell.
+- **Caveats:** mobile Sheet not exercisable with available browser tooling (mobile-emulation input unreliable; page proven stable/hydrated, AppShell drawer opened in the same context); LLM-dependent paths (narrative/confirm/feedback POST) not exercisable without `ANTHROPIC_API_KEY`; degraded-mode empty assistant cards confirmed pre-existing behavior.
+- **Deferred to a cleanup issue:** 18 minor findings (duplicated Sheet headings, thumb `disabled:` styling, retry-last-query semantics, dual `LoginResponse`/`Metric*` type declarations, deep-link stale-id inconsistency, primitive-migration pixel nits, one-word `frontend-guide.md` fix).
+- **Environment note:** stray empty dir `frontend/src/app/settings (auth)/` (Jul 4, untracked, pre-dates this work) — safe to delete locally.
 
 ---
 
